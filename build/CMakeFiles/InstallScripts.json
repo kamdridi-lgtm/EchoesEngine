@@ -1,0 +1,17 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/cmake_install.cmake",
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/core/cmake_install.cmake",
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/audio/cmake_install.cmake",
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/scene/cmake_install.cmake",
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/camera/cmake_install.cmake",
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/render/cmake_install.cmake",
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/ai/cmake_install.cmake",
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/ai_prompt/cmake_install.cmake",
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/export/cmake_install.cmake",
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/api/cmake_install.cmake",
+		"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/platform/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -1,0 +1,167 @@
+{
+  "product": "EchoesEngine",
+  "version": "0.3.0",
+  "block_size": 512,
+  "sample_rate": 44100,
+  "block_budget_us": 11610.0,
+  "results": {
+    "ai": [
+      {
+        "name": "Stub (bypass — timbreDepth=0)",
+        "mean_us": 0.2,
+        "p95_us":  0.2,
+        "p99_us":  0.2,
+        "std_us":  0.0,
+        "rt_factor": 71919.58,
+        "realtime_safe": true,
+        "notes": "identity transform, no alloc"
+      },
+      {
+        "name": "ONNX CPU (stub model, timbre=0.5)",
+        "mean_us": 0.17,
+        "p95_us":  0.17,
+        "p99_us":  0.18,
+        "std_us":  0.00,
+        "rt_factor": 70051.45,
+        "realtime_safe": true,
+        "notes": "YIN + mel + spectral blend, no real ORT"
+      },
+      {
+        "name": "Full Engine (AI enabled, no model)",
+        "mean_us": 41.26,
+        "p95_us":  47.00,
+        "p99_us":  49.33,
+        "std_us":  2.47,
+        "rt_factor": 281.38,
+        "realtime_safe": true,
+        "notes": "complete chain, AI bypassed (no model loaded)"
+      }
+    ],
+    "dsp": [
+      {
+        "name": "Full DSP chain (no AI)",
+        "mean_us": 43.47,
+        "p95_us":  49.56,
+        "p99_us":  55.06,
+        "std_us":  2.91,
+        "rt_factor": 267.10,
+        "realtime_safe": true,
+        "notes": "GainStage+Gate+Comp+EQ+OutGain"
+      },
+      {
+        "name": "GainStage only",
+        "mean_us": 2.67,
+        "p95_us":  2.71,
+        "p99_us":  2.91,
+        "std_us":  0.51,
+        "rt_factor": 4348.72,
+        "realtime_safe": true,
+        "notes": ""
+      },
+      {
+        "name": "NoiseGate only",
+        "mean_us": 5.96,
+        "p95_us":  7.25,
+        "p99_us":  12.27,
+        "std_us":  0.92,
+        "rt_factor": 1947.05,
+        "realtime_safe": true,
+        "notes": ""
+      },
+      {
+        "name": "Compressor (4:1 RMS)",
+        "mean_us": 13.83,
+        "p95_us":  16.28,
+        "p99_us":  21.12,
+        "std_us":  1.33,
+        "rt_factor": 839.47,
+        "realtime_safe": true,
+        "notes": "soft-knee, program-dependent release"
+      },
+      {
+        "name": "VocalEQ (5-band biquad)",
+        "mean_us": 14.97,
+        "p95_us":  15.92,
+        "p99_us":  20.73,
+        "std_us":  1.10,
+        "rt_factor": 775.56,
+        "realtime_safe": true,
+        "notes": "HP+LS+PK+HS+PK cascade"
+      }
+    ],
+    "dsp_scaling": [
+      {
+        "name": "Full DSP  block=128",
+        "mean_us": 10.64,
+        "p95_us":  12.08,
+        "p99_us":  18.09,
+        "std_us":  1.10,
+        "rt_factor": 272.67,
+        "realtime_safe": true,
+        "notes": ""
+      },
+      {
+        "name": "Full DSP  block=256",
+        "mean_us": 20.94,
+        "p95_us":  25.94,
+        "p99_us":  28.88,
+        "std_us":  1.86,
+        "rt_factor": 277.19,
+        "realtime_safe": true,
+        "notes": ""
+      },
+      {
+        "name": "Full DSP  block=512",
+        "mean_us": 43.99,
+        "p95_us":  49.41,
+        "p99_us":  53.43,
+        "std_us":  2.74,
+        "rt_factor": 263.90,
+        "realtime_safe": true,
+        "notes": ""
+      },
+      {
+        "name": "Full DSP  block=1024",
+        "mean_us": 245.42,
+        "p95_us":  270.66,
+        "p99_us":  281.43,
+        "std_us":  15.00,
+        "rt_factor": 94.61,
+        "realtime_safe": true,
+        "notes": ""
+      },
+      {
+        "name": "Full DSP  block=2048",
+        "mean_us": 716.68,
+        "p95_us":  706.76,
+        "p99_us":  3740.57,
+        "std_us":  613.61,
+        "rt_factor": 64.80,
+        "realtime_safe": true,
+        "notes": ""
+      }
+    ],
+    "pitch": [
+      {
+        "name": "YIN pitch estimator",
+        "mean_us": 0.67,
+        "p95_us":  0.68,
+        "p99_us":  0.71,
+        "std_us":  0.01,
+        "rt_factor": 17213.48,
+        "realtime_safe": true,
+        "notes": "parabolic interpolation, tauMax=882"
+      },
+      {
+        "name": "CREPE-Lite (YIN (fallback))",
+        "mean_us": 0.81,
+        "p95_us":  1.08,
+        "p99_us":  1.19,
+        "std_us":  0.12,
+        "rt_factor": 14324.37,
+        "realtime_safe": true,
+        "notes": "360-bin softmax, Gaussian weighted Hz"
+      }
+    ]
+  }
+}

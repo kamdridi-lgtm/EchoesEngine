@@ -1,0 +1,119 @@
+ECHoesEngine PRO HTTP server bootstrap
+HTTP API listening on http://127.0.0.1:8080
+Endpoints: POST /generate, GET /status/{job_id}, GET /video/{job_id}, GET /log/{job_id}
+[2026-03-18T10:47:55Z][INFO] job start: render_log=C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\jobs\job-1\render.log
+[2026-03-18T10:47:55Z][INFO] audio loading: source=C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\jobs\job-1\audio.wav
+[2026-03-18T10:47:55Z][INFO] audio loading ready: source=C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\jobs\job-1\audio.wav, analysis=C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\jobs\job-1\audio.wav
+[2026-03-18T10:47:57Z][INFO] audio loading complete: samples=10821888, sample_rate=44100
+[2026-03-18T10:48:27Z][INFO] audio analysis complete: bass=0.435906, mid=0.459127, treble=0.096701, energy=0.225005, beat=true, tempo=47.866791
+[2026-03-18T10:48:27Z][INFO] audio timeline complete: duration=245.394286s, total_frames=7362, fps=30
+[2026-03-18T10:48:27Z][INFO] scene generation start: scene_id=cyberpunk_city
+[2026-03-18T10:48:27Z][INFO] scene generation complete: scene_name=cyberpunk_city
+[2026-03-18T10:48:27Z][INFO] renderer start: backend=Vulkan
+[2026-03-18T10:48:27Z][INFO] renderer start complete
+[2026-03-18T10:48:27Z][INFO] scene render bootstrap complete
+[2026-03-18T10:48:27Z][INFO] frame generation start: prompt="Generate a cyberpunk rain loop with sodium reflections, signal towers, and thin lightning over a waking industrial city.", style=HyperPulse
+[2026-03-18T10:48:28Z][INFO] frame generation complete: ai job ready
+[2026-03-18T10:48:28Z][INFO] frame export start: exporting scene-driven frames to C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\renders\job-1
+[2026-03-18T10:48:28Z][INFO] frame rendering: index=0/7362
+[RenderPipeline] Executing pass Scene:cyberpunk_city -> 1280x720 drawCalls=6 shaders=(Compiled cyberpunk_city_vertex (VS) [cyberpunk_city] [GEOMETRY_3], Compiled cyberpunk_city_fragment (PS) [cyberpunk_city] [EMITTERS_2])
+[2026-03-18T10:48:58Z][INFO] frame rendering: index=10/7362
+[2026-03-18T10:49:22Z][INFO] frame rendering: index=20/7362
+[2026-03-18T10:49:45Z][INFO] frame rendering: index=30/7362
+[2026-03-18T10:50:06Z][INFO] frame rendering: index=40/7362
+[2026-03-18T10:50:28Z][INFO] frame rendering: index=50/7362
+[2026-03-18T10:50:50Z][INFO] frame rendering: index=60/7362
+[2026-03-18T10:51:10Z][INFO] frame rendering: index=70/7362
+[2026-03-18T10:51:30Z][INFO] frame rendering: index=80/7362
+[2026-03-18T10:51:50Z][INFO] frame rendering: index=90/7362
+[2026-03-18T10:52:09Z][INFO] frame rendering: index=100/7362
+[2026-03-18T10:52:28Z][INFO] frame rendering: index=110/7362
+[2026-03-18T10:52:49Z][INFO] frame rendering: index=120/7362
+[2026-03-18T10:53:10Z][INFO] frame rendering: index=130/7362
+[2026-03-18T10:53:35Z][INFO] frame rendering: index=140/7362
+[2026-03-18T10:53:56Z][INFO] frame rendering: index=150/7362
+[2026-03-18T10:54:16Z][INFO] frame rendering: index=160/7362
+[2026-03-18T10:54:35Z][INFO] frame rendering: index=170/7362
+[2026-03-18T10:54:56Z][INFO] frame rendering: index=180/7362
+[2026-03-18T10:55:15Z][INFO] frame rendering: index=190/7362
+[2026-03-18T10:55:35Z][INFO] frame rendering: index=200/7362
+[2026-03-18T10:55:53Z][INFO] frame rendering: index=210/7362
+[2026-03-18T10:56:12Z][INFO] frame rendering: index=220/7362
+[2026-03-18T10:56:30Z][INFO] frame rendering: index=230/7362
+[2026-03-18T10:56:49Z][INFO] frame rendering: index=240/7362
+[2026-03-18T10:57:07Z][INFO] frame rendering: index=250/7362
+[2026-03-18T10:57:29Z][INFO] frame rendering: index=260/7362
+[2026-03-18T10:57:52Z][INFO] frame rendering: index=270/7362
+[2026-03-18T10:58:16Z][INFO] frame rendering: index=280/7362
+[2026-03-18T10:58:38Z][INFO] frame rendering: index=290/7362
+[2026-03-18T10:59:01Z][INFO] frame rendering: index=300/7362
+[2026-03-18T10:59:23Z][INFO] frame rendering: index=310/7362
+[2026-03-18T10:59:44Z][INFO] frame rendering: index=320/7362
+[2026-03-18T11:00:04Z][INFO] frame rendering: index=330/7362
+[2026-03-18T11:00:24Z][INFO] frame rendering: index=340/7362
+[2026-03-18T11:00:43Z][INFO] frame rendering: index=350/7362
+[2026-03-18T11:01:02Z][INFO] frame rendering: index=360/7362
+[2026-03-18T11:01:21Z][INFO] frame rendering: index=370/7362
+[2026-03-18T11:01:40Z][INFO] frame rendering: index=380/7362
+[2026-03-18T11:01:59Z][INFO] frame rendering: index=390/7362
+[2026-03-18T11:02:18Z][INFO] frame rendering: index=400/7362
+[2026-03-18T11:02:37Z][INFO] frame rendering: index=410/7362
+[2026-03-18T11:02:58Z][INFO] frame rendering: index=420/7362
+[2026-03-18T11:03:19Z][INFO] frame rendering: index=430/7362
+[2026-03-18T11:03:40Z][INFO] frame rendering: index=440/7362
+[2026-03-18T11:04:05Z][INFO] frame rendering: index=450/7362
+[2026-03-18T11:04:27Z][INFO] frame rendering: index=460/7362
+[2026-03-18T11:04:48Z][INFO] frame rendering: index=470/7362
+[2026-03-18T11:05:09Z][INFO] frame rendering: index=480/7362
+[2026-03-18T11:05:29Z][INFO] frame rendering: index=490/7362
+[2026-03-18T11:05:56Z][INFO] frame rendering: index=500/7362
+[2026-03-18T11:06:15Z][INFO] frame rendering: index=510/7362
+[2026-03-18T11:06:35Z][INFO] frame rendering: index=520/7362
+[2026-03-18T11:06:55Z][INFO] frame rendering: index=530/7362
+[2026-03-18T11:07:15Z][INFO] frame rendering: index=540/7362
+[2026-03-18T11:07:35Z][INFO] frame rendering: index=550/7362
+[2026-03-18T11:07:57Z][INFO] frame rendering: index=560/7362
+[2026-03-18T11:08:21Z][INFO] frame rendering: index=570/7362
+[2026-03-18T11:08:46Z][INFO] frame rendering: index=580/7362
+[2026-03-18T11:09:08Z][INFO] frame rendering: index=590/7362
+[2026-03-18T11:09:29Z][INFO] frame rendering: index=600/7362
+[2026-03-18T11:09:51Z][INFO] frame rendering: index=610/7362
+[2026-03-18T11:11:10Z][INFO] frame rendering: index=620/7362
+[2026-03-18T11:11:44Z][INFO] frame rendering: index=630/7362
+[2026-03-18T11:12:10Z][INFO] frame rendering: index=640/7362
+[2026-03-18T11:12:32Z][INFO] frame rendering: index=650/7362
+[2026-03-18T11:12:55Z][INFO] frame rendering: index=660/7362
+[2026-03-18T11:13:18Z][INFO] frame rendering: index=670/7362
+[2026-03-18T11:13:42Z][INFO] frame rendering: index=680/7362
+[2026-03-18T11:14:02Z][INFO] frame rendering: index=690/7362
+[2026-03-18T11:14:26Z][INFO] frame rendering: index=700/7362
+[2026-03-18T11:14:48Z][INFO] frame rendering: index=710/7362
+[2026-03-18T11:15:09Z][INFO] frame rendering: index=720/7362
+[2026-03-18T11:15:30Z][INFO] frame rendering: index=730/7362
+[2026-03-18T11:15:52Z][INFO] frame rendering: index=740/7362
+[2026-03-18T11:16:20Z][INFO] frame rendering: index=750/7362
+[2026-03-18T11:16:42Z][INFO] frame rendering: index=760/7362
+[2026-03-18T11:17:02Z][INFO] frame rendering: index=770/7362
+[2026-03-18T11:17:20Z][INFO] frame rendering: index=780/7362
+[2026-03-18T11:17:39Z][INFO] frame rendering: index=790/7362
+[2026-03-18T11:17:58Z][INFO] frame rendering: index=800/7362
+[2026-03-18T11:18:21Z][INFO] frame rendering: index=810/7362
+[2026-03-18T11:18:48Z][INFO] frame rendering: index=820/7362
+[2026-03-18T11:19:10Z][INFO] frame rendering: index=830/7362
+[2026-03-18T11:19:32Z][INFO] frame rendering: index=840/7362
+[2026-03-18T11:19:53Z][INFO] frame rendering: index=850/7362
+[2026-03-18T11:20:18Z][INFO] frame rendering: index=860/7362
+[2026-03-18T11:20:41Z][INFO] frame rendering: index=870/7362
+[2026-03-18T11:21:05Z][INFO] frame rendering: index=880/7362
+[2026-03-18T11:21:28Z][INFO] frame rendering: index=890/7362
+[2026-03-18T11:21:52Z][INFO] frame rendering: index=900/7362
+[2026-03-18T11:22:15Z][INFO] frame rendering: index=910/7362
+[2026-03-18T11:22:38Z][INFO] frame rendering: index=920/7362
+[2026-03-18T11:23:03Z][INFO] frame rendering: index=930/7362
+[2026-03-18T11:23:33Z][INFO] frame rendering: index=940/7362
+[2026-03-18T11:23:59Z][INFO] frame rendering: index=950/7362
+[2026-03-18T11:24:21Z][INFO] frame rendering: index=960/7362
+[2026-03-18T11:24:47Z][INFO] frame rendering: index=970/7362
+[2026-03-18T11:25:10Z][INFO] frame rendering: index=980/7362
+[2026-03-18T11:25:39Z][INFO] frame rendering: index=990/7362
+[2026-03-18T11:26:16Z][INFO] frame re

@@ -1,0 +1,8 @@
+{
+  "jobs": {
+    "pending": [],
+    "running": [],
+    "finished": ["job-1"],
+    "failed": []
+  }
+}

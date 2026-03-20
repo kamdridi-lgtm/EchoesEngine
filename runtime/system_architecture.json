@@ -1,0 +1,10 @@
+{
+  "orchestrator": "OrchestratorAgent",
+  "specialized_agents": ["OrchestratorAgent", "AutoJobAgent", "SceneAgent", "AudioAgent", "RenderAgent", "EncodingAgent", "UploadAgent", "MonitoringAgent", "OptimizationAgent", "ScalingAgent"],
+  "shared_job_queue": "job_queue.json",
+  "pipeline": ["audio_analysis", "scene_generation", "render", "encoding", "export"],
+  "max_concurrent_jobs": 8,
+  "api_endpoint": "http://127.0.0.1:8080",
+  "render_output_directory": "renders",
+  "openclaw_subagents": ["/subagents spawn SceneAgent", "/subagents spawn RenderAgent", "/subagents spawn EncodingAgent"]
+}

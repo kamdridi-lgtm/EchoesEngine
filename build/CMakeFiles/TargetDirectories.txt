@@ -1,0 +1,15 @@
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/EchoesEngine.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/ECHoesEnginePro.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/EchoesStandalone.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/core/CMakeFiles/EchoesCore.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/audio/CMakeFiles/EchoesAudio.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/scene/CMakeFiles/EchoesScene.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/camera/CMakeFiles/EchoesCamera.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/render/CMakeFiles/EchoesRender.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/ai/CMakeFiles/EchoesAI.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/ai_prompt/CMakeFiles/EchoesPrompt.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/export/CMakeFiles/EchoesExport.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/api/CMakeFiles/EchoesApi.dir
+C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/platform/CMakeFiles/EchoesPlatform.dir

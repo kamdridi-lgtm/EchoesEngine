@@ -1,0 +1,5 @@
+{
+  "under_load": false,
+  "recommendation": "pipeline synchronized; keep next job prepared during rendering",
+  "active_agents": ["OrchestratorAgent", "AutoJobAgent", "SceneAgent", "AudioAgent", "RenderAgent", "EncodingAgent", "UploadAgent", "MonitoringAgent", "OptimizationAgent", "ScalingAgent"]
+}

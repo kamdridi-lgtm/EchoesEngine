@@ -1,0 +1,144 @@
+{
+  "product": "EchoesEcosystem",
+  "version": "0.3.0",
+  "built_at": "2026-02-27T00:12:02.477267+00:00",
+  "compilation": {
+    "standard": "C++20",
+    "compiler": "GCC 11",
+    "flags": "-O2 -std=c++20",
+    "status": "PASS \u2014 0 errors, 0 warnings"
+  },
+  "benchmark": {
+    "blocks_tested": 10,
+    "all_realtime_safe": true,
+    "full_dsp_mean_us": 43.5,
+    "full_dsp_rt_factor": 267,
+    "yin_pitch_mean_us": 0.7,
+    "budget_us": 11610
+  },
+  "components": {
+    "Engine.h": "v2 \u2014 ExtendedStats, AI setters, TRT status",
+    "Engine.cpp": "v2 \u2014 CrepeLight + TRT async build + pitch live in chain",
+    "OnnxVoiceProcessor": "YIN + Mel80 + ONNX encoder/decoder + breath + blend",
+    "CrepeLight": "CREPE-Lite ONNX + YIN fallback + Viterbi smoothing",
+    "TensorRTEngine": "FP16/INT8 build + cache + dynamic shapes + CUDA async",
+    "echoes_benchmark": "10 tests, DSP/Pitch/AI, JSON report, RT-safety check",
+    "echoes_updater": "GitHub releases + SHA256 + backup + rollback",
+    "echoes_codesign": "Self-signed + Authenticode + macOS notarize guide",
+    "EchoesHub": "Unified dashboard \u2014 Engine + Forge + Monitor tabs",
+    "echoes_bridge": "WebSocket 20Hz \u2014 stats/forge/health relay",
+    "echoes_installer": "NSIS \u2014 VST3 deploy + start menu + Add/Remove Programs",
+    "build_release": "CMake + JUCE + NSIS + ZIP + SHA256 manifest",
+    "echoes_model_manager": "Download / .pth\u2192.onnx / SHA256 verify / test"
+  },
+  "files": {
+    "CMakeLists.txt": {
+      "size_bytes": 9125,
+      "sha256": "3b85ae3877009dcf469db7848f4828b9da253e68d6cc84f1c82d19662eae46e4"
+    },
+    "README.md": {
+      "size_bytes": 2693,
+      "sha256": "27eabedb08f8b51025f98047c28a8c4663f0f23fb0911043ba788d6e0e38287a"
+    },
+    "RELEASE_MANIFEST.json": {
+      "size_bytes": 4600,
+      "sha256": "0c7bb153de0edae1c0ae42b1e08d76627bc566f7a739da3528496f29c2d529f0"
+    },
+    "app/CMakeLists.txt": {
+      "size_bytes": 1132,
+      "sha256": "269ba648c978d4687631502cb44c0f113055150c60e81012d640c51882e83977"
+    },
+    "app/echoes_benchmark.cpp": {
+      "size_bytes": 20589,
+      "sha256": "dd5612fbb9b9bf7a755da6152332c2a5ae5f7baa429a12ef285b475321a5b64c"
+    },
+    "app/main.cpp": {
+      "size_bytes": 3250,
+      "sha256": "1a70cbb5e2f7aac6620695d29b01fe65872a9a8368dd9af897f7bdd76cbd58e6"
+    },
+    "app/standalone_processor.cpp": {
+      "size_bytes": 13174,
+      "sha256": "c3fc1a2dfce42b5b684c314673c109f94c71e4b32c97344736876ee75b563c22"
+    },
+    "benchmark_report.json": {
+      "size_bytes": 4136,
+      "sha256": "9daec35cd7563ccd89a3fa089d9b824c0d541bf6c79a4609afd22db7ca1093d0"
+    },
+    "engine/CMakeLists.txt": {
+      "size_bytes": 429,
+      "sha256": "eb81195c1294ce708a2813785d38a3d0e0cfaedaf16076a81c7985cfe0da42d7"
+    },
+    "engine/include/EchoesEngine/Engine.h": {
+      "size_bytes": 2720,
+      "sha256": "5677e1682dad91fb2e7717204981f65ad63e685affe045163893ec799a99155b"
+    },
+    "engine/include/EchoesEngine/audio/AudioBuffer.h": {
+      "size_bytes": 4908,
+      "sha256": "c652fb02ea4779cc37d72d5280e50516ed000a9b03bd4f10211844b21e8bcc51"
+    },
+    "engine/include/EchoesEngine/audio/RingBuffer.h": {
+      "size_bytes": 2467,
+      "sha256": "a806e8747fddcc4d81bfc77454081838df35462f7dfd6d4fa55361e8293307ec"
+    },
+    "engine/include/EchoesEngine/dsp/BiquadFilter.h": {
+      "size_bytes": 3556,
+      "sha256": "7d2acbeb902cac413db29add68be497522f1b3bd2200c6e9ff458da19a9e5f5f"
+    },
+    "engine/include/EchoesEngine/dsp/Compressor.h": {
+      "size_bytes": 3919,
+      "sha256": "275537a564899951b0ab4e89ae4509fbfb427c644f61c92b96dcb35d6fb12486"
+    },
+    "engine/include/EchoesEngine/dsp/GainStage.h": {
+      "size_bytes": 1834,
+      "sha256": "f07a91e74177aa73738b78b1b0f0055df388c912ad95ec55c6a113a43f28e203"
+    },
+    "engine/include/EchoesEngine/dsp/NoiseGate.h": {
+      "size_bytes": 4150,
+      "sha256": "ed13c475daa02a7ed8dfcc0b3e97a5ae6e4b03c5b504b9b061b300e88b2ec826"
+    },
+    "engine/include/EchoesEngine/dsp/VocalEQ.h": {
+      "size_bytes": 3084,
+      "sha256": "c5147a2b8af3c9fe180d0b53e856c09257bec5f5a64b2d434066a4d22bd123f4"
+    },
+    "engine/include/EchoesEngine/neural/AIVoiceProcessor.h": {
+      "size_bytes": 3702,
+      "sha256": "f003a2a667b5b81e3b3b7a4ea8081ba5232adc8249239c77db78e1554adc9d21"
+    },
+    "engine/include/EchoesEngine/neural/CrepeLight.h": {
+      "size_bytes": 15411,
+      "sha256": "90f83ecdb65b480450e4614081ace07fe8bb995d3bfdb3422e55902c66d77cec"
+    },
+    "engine/include/EchoesEngine/neural/OnnxVoiceProcessor.h": {
+      "size_bytes": 31348,
+      "sha256": "d8a646fdbfdc545a61e76115317e347334e0ae9d9152d0b5694292c770fee0f8"
+    },
+    "engine/include/EchoesEngine/neural/TensorRTEngine.h": {
+      "size_bytes": 19794,
+      "sha256": "a63b006101cae085582c10242edabeef012afbabaf654b6a730872e8e2f95d41"
+    },
+    "engine/include/EchoesEngine/vst/EchoesJUCEPlugin.h": {
+      "size_bytes": 7466,
+      "sha256": "ad7cefeb3c59aaa3d0760c9653d2213a1fa27849ab99ad9abc784cb52444a495"
+    },
+    "engine/include/EchoesEngine/vst/EchoesVSTAdapter.h": {
+      "size_bytes": 7226,
+      "sha256": "0b9f1fd74263491d289903ebb75cef3797d5727e4571b9c6256d6cddeccb0dc1"
+    },
+    "engine/include/EchoesEngine/vst/IVSTPlugin.h": {
+      "size_bytes": 4079,
+      "sha256": "6bfccf1002758e133eb648daf2796a680e1932b0d89976a61f4b81b7ee1b8d58"
+    },
+    "engine/src/Engine.cpp": {
+      "size_bytes": 14419,
+      "sha256": "93fe84458a37b0e8d5c15b624216e37a380bd66150a3c7e6ef3e6e50536e7243"
+    },
+    "plugin/EchoesPluginProcessor.cpp": {
+      "size_bytes": 11177,
+      "sha256": "941f6a006927eaba12ef68a813a9ef9181e617a8e211e3662190ce1a10bbc76f"
+    },
+    "scripts/build.bat": {
+      "size_bytes": 577,
+      "sha256": "3358e1033580e3ea9f58b1a3c9fdd6ed25d251b8063dcb517d3e3a5f6b6c1450"
+    }
+  }
+}

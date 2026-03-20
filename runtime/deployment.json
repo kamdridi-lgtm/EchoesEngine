@@ -1,0 +1,9 @@
+{
+  "service": "EchoesEnginePro",
+  "orchestrator": "OrchestratorAgent",
+  "api_endpoint": "http://127.0.0.1:8080",
+  "api": ["POST /generate", "GET /status/{job_id}", "GET /video/{job_id}"],
+  "mode": "continuous",
+  "render_output_directory": "renders",
+  "active_agents": ["OrchestratorAgent", "AutoJobAgent", "SceneAgent", "AudioAgent", "RenderAgent", "EncodingAgent", "UploadAgent", "MonitoringAgent", "OptimizationAgent", "ScalingAgent"]
+}

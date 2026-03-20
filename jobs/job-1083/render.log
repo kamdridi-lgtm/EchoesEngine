@@ -1,0 +1,16 @@
+[2026-03-20T04:18:32Z][INFO] job start: render_log=C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\jobs\job-1083\render.log
+[2026-03-20T04:18:32Z][INFO] audio loading: source=C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\jobs\synthetic-test-0p3s.wav
+[2026-03-20T04:18:32Z][INFO] audio loading ready: source=C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\jobs\synthetic-test-0p3s.wav, analysis=C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\jobs\synthetic-test-0p3s.wav
+[2026-03-20T04:18:32Z][INFO] audio loading complete: samples=14400, sample_rate=48000
+[2026-03-20T04:18:32Z][INFO] audio analysis complete: bass=0.000184, mid=0.999816, treble=0.000000, energy=0.088377, beat=false, tempo=96.000000
+[2026-03-20T04:18:32Z][INFO] audio timeline complete: duration=0.300000s, total_frames=9, fps=30
+[2026-03-20T04:18:32Z][INFO] render request overrides: width=1280, height=720, requested_duration=0.000000
+[2026-03-20T04:18:32Z][INFO] scene generation start: scene_id=nebula_space
+[2026-03-20T04:18:32Z][INFO] scene generation complete: scene_name=nebula_space
+[2026-03-20T04:18:32Z][INFO] renderer start: backend=Vulkan
+[2026-03-20T04:18:32Z][INFO] renderer start complete
+[2026-03-20T04:18:32Z][INFO] scene render bootstrap complete
+[2026-03-20T04:18:32Z][INFO] frame generation start: prompt="Autonomous EchoesEngine render 1083 | style=nebula | camera_motion=orbital sweep | duration=37.5s", style=Nebula Bloom
+[2026-03-20T04:18:32Z][INFO] frame generation complete: ai job ready
+[2026-03-20T04:18:32Z][INFO] frame export start: exporting scene-driven frames to C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\renders\job-1083
+[2026-03-20T04:18:32Z][INFO] frame rendering: index=0/9

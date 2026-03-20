@@ -1,0 +1,1780 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineSystem.cmake:212 (message)"
+      - "CMakeLists.txt:21 (project)"
+    message: |
+      The system is: Windows - 10.0.26200 - AMD64
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:468 (find_file)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:506 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/"
+    found: "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:21 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      1
+      MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+      Build started 2026-03-17 10:22:23 AM.
+      
+      Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" on node 1 (default targets).
+      PrepareForBuild:
+        Creating directory "Debug\\".
+        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+        Creating directory "Debug\\CompilerIdCXX.tlog\\".
+      InitializeBuildStatus:
+        Creating "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+        Touching "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc145.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001: Invalid command line switch for "CL.exe". System.ArgumentException: Item has already been added. Key in dictionary: 'Path'  Key being added: 'PATH' [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Collections.Hashtable.Insert(Object key, Object nvalue, Boolean add) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Diagnostics.ProcessStartInfo.get_EnvironmentVariables() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.GetProcessStartInfo(String pathToTool, String commandLineCommands, String responseFileSwitch) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.TrackerExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.CL.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.Execute() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default targets) -- FAILED.
+      
+      Build FAILED.
+      
+      "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default target) (1) ->
+      (ClCompile target) -> 
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001: Invalid command line switch for "CL.exe". System.ArgumentException: Item has already been added. Key in dictionary: 'Path'  Key being added: 'PATH' [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Collections.Hashtable.Insert(Object key, Object nvalue, Boolean add) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Diagnostics.ProcessStartInfo.get_EnvironmentVariables() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.GetProcessStartInfo(String pathToTool, String commandLineCommands, String responseFileSwitch) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.TrackerExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.CL.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.Execute() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      
+          0 Warning(s)
+          1 Error(s)
+      
+      Time Elapsed 00:00:00.38
+      
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:468 (find_file)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:506 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/"
+    found: "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:21 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      1
+      MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+      Build started 2026-03-17 10:22:23 AM.
+      
+      Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" on node 1 (default targets).
+      PrepareForBuild:
+        Creating directory "Debug\\".
+        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+        Creating directory "Debug\\CompilerIdCXX.tlog\\".
+      InitializeBuildStatus:
+        Creating "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+        Touching "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc145.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001: Invalid command line switch for "CL.exe". System.ArgumentException: Item has already been added. Key in dictionary: 'Path'  Key being added: 'PATH' [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Collections.Hashtable.Insert(Object key, Object nvalue, Boolean add) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Diagnostics.ProcessStartInfo.get_EnvironmentVariables() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.GetProcessStartInfo(String pathToTool, String commandLineCommands, String responseFileSwitch) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.TrackerExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.CL.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.Execute() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default targets) -- FAILED.
+      
+      Build FAILED.
+      
+      "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default target) (1) ->
+      (ClCompile target) -> 
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001: Invalid command line switch for "CL.exe". System.ArgumentException: Item has already been added. Key in dictionary: 'Path'  Key being added: 'PATH' [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Collections.Hashtable.Insert(Object key, Object nvalue, Boolean add) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Diagnostics.ProcessStartInfo.get_EnvironmentVariables() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.GetProcessStartInfo(String pathToTool, String commandLineCommands, String responseFileSwitch) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.TrackerExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.CL.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.Execute() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      
+          0 Warning(s)
+          1 Error(s)
+      
+      Time Elapsed 00:00:00.39
+      
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:103 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/"
+    searched_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/link.com"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/link.exe"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/link"
+      - "C:/Windows/System32/link.com"
+      - "C:/Windows/System32/link.exe"
+      - "C:/Windows/System32/link"
+      - "C:/Windows/link.com"
+      - "C:/Windows/link.exe"
+      - "C:/Windows/link"
+      - "C:/Windows/System32/wbem/link.com"
+      - "C:/Windows/System32/wbem/link.exe"
+      - "C:/Windows/System32/wbem/link"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/link.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/link.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/link"
+      - "C:/Windows/System32/OpenSSH/link.com"
+      - "C:/Windows/System32/OpenSSH/link.exe"
+      - "C:/Windows/System32/OpenSSH/link"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/link.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/link.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/link"
+      - "C:/Program Files/HP/HP One Agent/link.com"
+      - "C:/Program Files/HP/HP One Agent/link.exe"
+      - "C:/Program Files/HP/HP One Agent/link"
+      - "C:/Program Files/nodejs/link.com"
+      - "C:/Program Files/nodejs/link.exe"
+      - "C:/Program Files/nodejs/link"
+      - "C:/Program Files/Amazon/AWSCLIV2/link.com"
+      - "C:/Program Files/Amazon/AWSCLIV2/link.exe"
+      - "C:/Program Files/Amazon/AWSCLIV2/link"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/link.com"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/link.exe"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/link"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/link.com"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/link.exe"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/link"
+      - "C:/Program Files/dotnet/link.com"
+      - "C:/Program Files/dotnet/link.exe"
+      - "C:/Program Files/dotnet/link"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/link"
+      - "C:/Program Files/Git/cmd/link.com"
+      - "C:/Program Files/Git/cmd/link.exe"
+      - "C:/Program Files/Git/cmd/link"
+      - "C:/Program Files/CMake/bin/link.com"
+      - "C:/Program Files/CMake/bin/link.exe"
+      - "C:/Program Files/CMake/bin/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/link"
+      - "C:/Users/Administrator/AppData/Roaming/npm/link.com"
+      - "C:/Users/Administrator/AppData/Roaming/npm/link.exe"
+      - "C:/Users/Administrator/AppData/Roaming/npm/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/link"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/link"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/link.com"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/link"
+      - "C:/Users/Administrator/.dotnet/tools/link.com"
+      - "C:/Users/Administrator/.dotnet/tools/link.exe"
+      - "C:/Users/Administrator/.dotnet/tools/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/link"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/link"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/link.com"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/link.exe"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/link"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:104 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lld-link"
+    candidate_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/"
+    searched_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/lld-link.com"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/lld-link.exe"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/lld-link"
+      - "C:/Windows/System32/lld-link.com"
+      - "C:/Windows/System32/lld-link.exe"
+      - "C:/Windows/System32/lld-link"
+      - "C:/Windows/lld-link.com"
+      - "C:/Windows/lld-link.exe"
+      - "C:/Windows/lld-link"
+      - "C:/Windows/System32/wbem/lld-link.com"
+      - "C:/Windows/System32/wbem/lld-link.exe"
+      - "C:/Windows/System32/wbem/lld-link"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link"
+      - "C:/Windows/System32/OpenSSH/lld-link.com"
+      - "C:/Windows/System32/OpenSSH/lld-link.exe"
+      - "C:/Windows/System32/OpenSSH/lld-link"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lld-link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lld-link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lld-link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link"
+      - "C:/Program Files/HP/HP One Agent/lld-link.com"
+      - "C:/Program Files/HP/HP One Agent/lld-link.exe"
+      - "C:/Program Files/HP/HP One Agent/lld-link"
+      - "C:/Program Files/nodejs/lld-link.com"
+      - "C:/Program Files/nodejs/lld-link.exe"
+      - "C:/Program Files/nodejs/lld-link"
+      - "C:/Program Files/Amazon/AWSCLIV2/lld-link.com"
+      - "C:/Program Files/Amazon/AWSCLIV2/lld-link.exe"
+      - "C:/Program Files/Amazon/AWSCLIV2/lld-link"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lld-link.com"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lld-link.exe"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lld-link"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lld-link.com"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lld-link.exe"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lld-link"
+      - "C:/Program Files/dotnet/lld-link.com"
+      - "C:/Program Files/dotnet/lld-link.exe"
+      - "C:/Program Files/dotnet/lld-link"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link"
+      - "C:/Program Files/Git/cmd/lld-link.com"
+      - "C:/Program Files/Git/cmd/lld-link.exe"
+      - "C:/Program Files/Git/cmd/lld-link"
+      - "C:/Program Files/CMake/bin/lld-link.com"
+      - "C:/Program Files/CMake/bin/lld-link.exe"
+      - "C:/Program Files/CMake/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lld-link"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lld-link.com"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lld-link"
+      - "C:/Users/Administrator/.dotnet/tools/lld-link.com"
+      - "C:/Users/Administrator/.dotnet/tools/lld-link.exe"
+      - "C:/Users/Administrator/.dotnet/tools/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/lld-link"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/lld-link.com"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/lld-link.exe"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/lld-link"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "CMAKE_LINKER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/"
+    searched_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/link.com"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/link.exe"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/link"
+      - "C:/Windows/System32/link.com"
+      - "C:/Windows/System32/link.exe"
+      - "C:/Windows/System32/link"
+      - "C:/Windows/link.com"
+      - "C:/Windows/link.exe"
+      - "C:/Windows/link"
+      - "C:/Windows/System32/wbem/link.com"
+      - "C:/Windows/System32/wbem/link.exe"
+      - "C:/Windows/System32/wbem/link"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/link.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/link.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/link"
+      - "C:/Windows/System32/OpenSSH/link.com"
+      - "C:/Windows/System32/OpenSSH/link.exe"
+      - "C:/Windows/System32/OpenSSH/link"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/link.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/link.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/link"
+      - "C:/Program Files/HP/HP One Agent/link.com"
+      - "C:/Program Files/HP/HP One Agent/link.exe"
+      - "C:/Program Files/HP/HP One Agent/link"
+      - "C:/Program Files/nodejs/link.com"
+      - "C:/Program Files/nodejs/link.exe"
+      - "C:/Program Files/nodejs/link"
+      - "C:/Program Files/Amazon/AWSCLIV2/link.com"
+      - "C:/Program Files/Amazon/AWSCLIV2/link.exe"
+      - "C:/Program Files/Amazon/AWSCLIV2/link"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/link.com"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/link.exe"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/link"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/link.com"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/link.exe"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/link"
+      - "C:/Program Files/dotnet/link.com"
+      - "C:/Program Files/dotnet/link.exe"
+      - "C:/Program Files/dotnet/link"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/link"
+      - "C:/Program Files/Git/cmd/link.com"
+      - "C:/Program Files/Git/cmd/link.exe"
+      - "C:/Program Files/Git/cmd/link"
+      - "C:/Program Files/CMake/bin/link.com"
+      - "C:/Program Files/CMake/bin/link.exe"
+      - "C:/Program Files/CMake/bin/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/link"
+      - "C:/Users/Administrator/AppData/Roaming/npm/link.com"
+      - "C:/Users/Administrator/AppData/Roaming/npm/link.exe"
+      - "C:/Users/Administrator/AppData/Roaming/npm/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/link"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/link"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/link.com"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/link"
+      - "C:/Users/Administrator/.dotnet/tools/link.com"
+      - "C:/Users/Administrator/.dotnet/tools/link.exe"
+      - "C:/Users/Administrator/.dotnet/tools/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/link"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/link"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/link.com"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/link.exe"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/link"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "CMAKE_MT"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "mt"
+    candidate_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/"
+    searched_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/mt.com"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/mt.exe"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/mt"
+      - "C:/Windows/System32/mt.com"
+      - "C:/Windows/System32/mt.exe"
+      - "C:/Windows/System32/mt"
+      - "C:/Windows/mt.com"
+      - "C:/Windows/mt.exe"
+      - "C:/Windows/mt"
+      - "C:/Windows/System32/wbem/mt.com"
+      - "C:/Windows/System32/wbem/mt.exe"
+      - "C:/Windows/System32/wbem/mt"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt"
+      - "C:/Windows/System32/OpenSSH/mt.com"
+      - "C:/Windows/System32/OpenSSH/mt.exe"
+      - "C:/Windows/System32/OpenSSH/mt"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/mt.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/mt.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/mt"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/mt.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/mt.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/mt"
+      - "C:/Program Files/HP/HP One Agent/mt.com"
+      - "C:/Program Files/HP/HP One Agent/mt.exe"
+      - "C:/Program Files/HP/HP One Agent/mt"
+      - "C:/Program Files/nodejs/mt.com"
+      - "C:/Program Files/nodejs/mt.exe"
+      - "C:/Program Files/nodejs/mt"
+      - "C:/Program Files/Amazon/AWSCLIV2/mt.com"
+      - "C:/Program Files/Amazon/AWSCLIV2/mt.exe"
+      - "C:/Program Files/Amazon/AWSCLIV2/mt"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/mt.com"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/mt.exe"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/mt"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/mt.com"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/mt.exe"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/mt"
+      - "C:/Program Files/dotnet/mt.com"
+      - "C:/Program Files/dotnet/mt.exe"
+      - "C:/Program Files/dotnet/mt"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt"
+      - "C:/Program Files/Git/cmd/mt.com"
+      - "C:/Program Files/Git/cmd/mt.exe"
+      - "C:/Program Files/Git/cmd/mt"
+      - "C:/Program Files/CMake/bin/mt.com"
+      - "C:/Program Files/CMake/bin/mt.exe"
+      - "C:/Program Files/CMake/bin/mt"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/mt"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/mt"
+      - "C:/Users/Administrator/AppData/Roaming/npm/mt.com"
+      - "C:/Users/Administrator/AppData/Roaming/npm/mt.exe"
+      - "C:/Users/Administrator/AppData/Roaming/npm/mt"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/mt"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/mt"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/mt"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/mt"
+      - "C:/Users/Administrator/.dotnet/tools/mt.com"
+      - "C:/Users/Administrator/.dotnet/tools/mt.exe"
+      - "C:/Users/Administrator/.dotnet/tools/mt"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/mt"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/mt.com"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/mt"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/mt.com"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/mt.exe"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/mt"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "CMAKE_AR"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lib"
+    candidate_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/"
+    searched_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/lib.com"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/lib.exe"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/lib"
+      - "C:/Windows/System32/lib.com"
+      - "C:/Windows/System32/lib.exe"
+      - "C:/Windows/System32/lib"
+      - "C:/Windows/lib.com"
+      - "C:/Windows/lib.exe"
+      - "C:/Windows/lib"
+      - "C:/Windows/System32/wbem/lib.com"
+      - "C:/Windows/System32/wbem/lib.exe"
+      - "C:/Windows/System32/wbem/lib"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lib.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lib.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lib"
+      - "C:/Windows/System32/OpenSSH/lib.com"
+      - "C:/Windows/System32/OpenSSH/lib.exe"
+      - "C:/Windows/System32/OpenSSH/lib"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lib.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lib.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lib"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lib.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lib.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lib"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lib.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lib.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lib"
+      - "C:/Program Files/HP/HP One Agent/lib.com"
+      - "C:/Program Files/HP/HP One Agent/lib.exe"
+      - "C:/Program Files/HP/HP One Agent/lib"
+      - "C:/Program Files/nodejs/lib.com"
+      - "C:/Program Files/nodejs/lib.exe"
+      - "C:/Program Files/nodejs/lib"
+      - "C:/Program Files/Amazon/AWSCLIV2/lib.com"
+      - "C:/Program Files/Amazon/AWSCLIV2/lib.exe"
+      - "C:/Program Files/Amazon/AWSCLIV2/lib"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lib.com"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lib.exe"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lib"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lib.com"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lib.exe"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lib"
+      - "C:/Program Files/dotnet/lib.com"
+      - "C:/Program Files/dotnet/lib.exe"
+      - "C:/Program Files/dotnet/lib"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lib.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lib.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lib"
+      - "C:/Program Files/Git/cmd/lib.com"
+      - "C:/Program Files/Git/cmd/lib.exe"
+      - "C:/Program Files/Git/cmd/lib"
+      - "C:/Program Files/CMake/bin/lib.com"
+      - "C:/Program Files/CMake/bin/lib.exe"
+      - "C:/Program Files/CMake/bin/lib"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lib.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lib.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lib"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lib.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lib.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lib"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lib.com"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lib.exe"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lib"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lib.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lib.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lib"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lib.com"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lib.exe"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lib"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lib.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lib.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lib"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lib.com"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lib.exe"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lib"
+      - "C:/Users/Administrator/.dotnet/tools/lib.com"
+      - "C:/Users/Administrator/.dotnet/tools/lib.exe"
+      - "C:/Users/Administrator/.dotnet/tools/lib"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/lib.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/lib.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/lib"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/lib.com"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/lib.exe"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/lib"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/lib.com"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/lib.exe"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/lib"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+...
+
+---
+events:
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:468 (find_file)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:506 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/"
+    found: "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files/EchoesEcosystem"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:21 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      1
+      MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+      Build started 2026-03-17 10:52:06 PM.
+      
+      Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" on node 1 (default targets).
+      PrepareForBuild:
+        Creating directory "Debug\\".
+        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+        Creating directory "Debug\\CompilerIdCXX.tlog\\".
+      InitializeBuildStatus:
+        Creating "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+        Touching "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc145.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001: Invalid command line switch for "CL.exe". System.ArgumentException: Item has already been added. Key in dictionary: 'Path'  Key being added: 'PATH' [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Collections.Hashtable.Insert(Object key, Object nvalue, Boolean add) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Diagnostics.ProcessStartInfo.get_EnvironmentVariables() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.GetProcessStartInfo(String pathToTool, String commandLineCommands, String responseFileSwitch) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.TrackerExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.CL.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.Execute() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default targets) -- FAILED.
+      
+      Build FAILED.
+      
+      "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default target) (1) ->
+      (ClCompile target) -> 
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001: Invalid command line switch for "CL.exe". System.ArgumentException: Item has already been added. Key in dictionary: 'Path'  Key being added: 'PATH' [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Collections.Hashtable.Insert(Object key, Object nvalue, Boolean add) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Diagnostics.ProcessStartInfo.get_EnvironmentVariables() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.GetProcessStartInfo(String pathToTool, String commandLineCommands, String responseFileSwitch) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.TrackerExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.CL.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.Execute() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      
+          0 Warning(s)
+          1 Error(s)
+      
+      Time Elapsed 00:00:00.32
+      
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:468 (find_file)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:506 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/"
+    found: "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files/EchoesEcosystem"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:21 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      1
+      MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+      Build started 2026-03-17 10:52:07 PM.
+      
+      Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" on node 1 (default targets).
+      PrepareForBuild:
+        Creating directory "Debug\\".
+        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+        Creating directory "Debug\\CompilerIdCXX.tlog\\".
+      InitializeBuildStatus:
+        Creating "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+        Touching "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc145.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001: Invalid command line switch for "CL.exe". System.ArgumentException: Item has already been added. Key in dictionary: 'Path'  Key being added: 'PATH' [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Collections.Hashtable.Insert(Object key, Object nvalue, Boolean add) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Diagnostics.ProcessStartInfo.get_EnvironmentVariables() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.GetProcessStartInfo(String pathToTool, String commandLineCommands, String responseFileSwitch) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.TrackerExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.CL.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.Execute() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default targets) -- FAILED.
+      
+      Build FAILED.
+      
+      "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default target) (1) ->
+      (ClCompile target) -> 
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001: Invalid command line switch for "CL.exe". System.ArgumentException: Item has already been added. Key in dictionary: 'Path'  Key being added: 'PATH' [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Collections.Hashtable.Insert(Object key, Object nvalue, Boolean add) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at System.Diagnostics.ProcessStartInfo.get_EnvironmentVariables() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.GetProcessStartInfo(String pathToTool, String commandLineCommands, String responseFileSwitch) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.TrackerExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.TrackedVCToolTask.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.CPPTasks.CL.ExecuteTool(String pathToTool, String responseFileCommands, String commandLineCommands) [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Microsoft\\VC\\v180\\Microsoft.CppCommon.targets(788,5): error MSB6001:    at Microsoft.Build.Utilities.ToolTask.Execute() [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build-vs\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj]
+      
+          0 Warning(s)
+          1 Error(s)
+      
+      Time Elapsed 00:00:00.32
+      
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:103 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/"
+    searched_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/link.com"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/link.exe"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/link"
+      - "C:/Windows/System32/link.com"
+      - "C:/Windows/System32/link.exe"
+      - "C:/Windows/System32/link"
+      - "C:/Windows/link.com"
+      - "C:/Windows/link.exe"
+      - "C:/Windows/link"
+      - "C:/Windows/System32/wbem/link.com"
+      - "C:/Windows/System32/wbem/link.exe"
+      - "C:/Windows/System32/wbem/link"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/link.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/link.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/link"
+      - "C:/Windows/System32/OpenSSH/link.com"
+      - "C:/Windows/System32/OpenSSH/link.exe"
+      - "C:/Windows/System32/OpenSSH/link"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/link.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/link.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/link"
+      - "C:/Program Files/HP/HP One Agent/link.com"
+      - "C:/Program Files/HP/HP One Agent/link.exe"
+      - "C:/Program Files/HP/HP One Agent/link"
+      - "C:/Program Files/nodejs/link.com"
+      - "C:/Program Files/nodejs/link.exe"
+      - "C:/Program Files/nodejs/link"
+      - "C:/Program Files/Amazon/AWSCLIV2/link.com"
+      - "C:/Program Files/Amazon/AWSCLIV2/link.exe"
+      - "C:/Program Files/Amazon/AWSCLIV2/link"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/link.com"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/link.exe"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/link"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/link.com"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/link.exe"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/link"
+      - "C:/Program Files/dotnet/link.com"
+      - "C:/Program Files/dotnet/link.exe"
+      - "C:/Program Files/dotnet/link"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/link"
+      - "C:/Program Files/Git/cmd/link.com"
+      - "C:/Program Files/Git/cmd/link.exe"
+      - "C:/Program Files/Git/cmd/link"
+      - "C:/Program Files/CMake/bin/link.com"
+      - "C:/Program Files/CMake/bin/link.exe"
+      - "C:/Program Files/CMake/bin/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/link"
+      - "C:/Users/Administrator/AppData/Roaming/npm/link.com"
+      - "C:/Users/Administrator/AppData/Roaming/npm/link.exe"
+      - "C:/Users/Administrator/AppData/Roaming/npm/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/link"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/link"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/link.com"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/link"
+      - "C:/Users/Administrator/.dotnet/tools/link.com"
+      - "C:/Users/Administrator/.dotnet/tools/link.exe"
+      - "C:/Users/Administrator/.dotnet/tools/link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/link"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/link.com"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/link.exe"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/link"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/link.com"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/link.exe"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/link"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files/EchoesEcosystem"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:104 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lld-link"
+    candidate_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/"
+    searched_directories:
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/lld-link.com"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/lld-link.exe"
+      - "C:/Users/Administrator/.codex/tmp/arg0/codex-arg0i5qop5/lld-link"
+      - "C:/Windows/System32/lld-link.com"
+      - "C:/Windows/System32/lld-link.exe"
+      - "C:/Windows/System32/lld-link"
+      - "C:/Windows/lld-link.com"
+      - "C:/Windows/lld-link.exe"
+      - "C:/Windows/lld-link"
+      - "C:/Windows/System32/wbem/lld-link.com"
+      - "C:/Windows/System32/wbem/lld-link.exe"
+      - "C:/Windows/System32/wbem/lld-link"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link"
+      - "C:/Windows/System32/OpenSSH/lld-link.com"
+      - "C:/Windows/System32/OpenSSH/lld-link.exe"
+      - "C:/Windows/System32/OpenSSH/lld-link"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lld-link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lld-link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lld-link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link"
+      - "C:/Program Files/HP/HP One Agent/lld-link.com"
+      - "C:/Program Files/HP/HP One Agent/lld-link.exe"
+      - "C:/Program Files/HP/HP One Agent/lld-link"
+      - "C:/Program Files/nodejs/lld-link.com"
+      - "C:/Program Files/nodejs/lld-link.exe"
+      - "C:/Program Files/nodejs/lld-link"
+      - "C:/Program Files/Amazon/AWSCLIV2/lld-link.com"
+      - "C:/Program Files/Amazon/AWSCLIV2/lld-link.exe"
+      - "C:/Program Files/Amazon/AWSCLIV2/lld-link"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lld-link.com"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lld-link.exe"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lld-link"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lld-link.com"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lld-link.exe"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lld-link"
+      - "C:/Program Files/dotnet/lld-link.com"
+      - "C:/Program Files/dotnet/lld-link.exe"
+      - "C:/Program Files/dotnet/lld-link"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link"
+      - "C:/Program Files/Git/cmd/lld-link.com"
+      - "C:/Program Files/Git/cmd/lld-link.exe"
+      - "C:/Program Files/Git/cmd/lld-link"
+      - "C:/Program Files/CMake/bin/lld-link.com"
+      - "C:/Program Files/CMake/bin/lld-link.exe"
+      - "C:/Program Files/CMake/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lld-link"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lld-link.com"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lld-link"
+      - "C:/Users/Administrator/.dotnet/tools/lld-link.com"
+      - "C:/Users/Administrator/.dotnet/tools/lld-link.exe"
+      - "C:/Users/Administrator/.dotnet/tools/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Antigravity/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/OpenAI/Codex/bin/lld-link"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/lld-link.com"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/lld-link.exe"
+      - "C:/Program Files/WindowsApps/OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0/app/resources/lld-link"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\Administrator\\.codex\\tmp\\arg0\\codex-arg0i5qop5"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\OpenAI\\Codex\\bin"
+        - "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\\app\\resources"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files/EchoesEcosystem"
+...

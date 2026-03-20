@@ -1,0 +1,12 @@
+{
+  "agent": "AutoJobAgent",
+  "enabled": false,
+  "interval_seconds": 10,
+  "audio_file": "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\jobs/synthetic-test-0p3s.wav",
+  "scene_style": "nebula",
+  "camera_motion": "orbital sweep",
+  "duration_seconds": 37.5,
+  "last_job_id": "",
+  "seconds_until_next_run": 0,
+  "max_concurrent_jobs": 8
+}

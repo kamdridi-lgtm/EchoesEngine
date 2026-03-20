@@ -1,0 +1,11 @@
+{
+  "agent": "OrchestratorAgent",
+  "responsibilities": ["manage job queue", "spawn sub-agents", "monitor tasks", "coordinate pipeline"],
+  "api_endpoint": "http://127.0.0.1:8080",
+  "render_output_directory": "renders",
+  "max_concurrent_jobs": 8,
+  "pipeline": ["audio_analysis", "scene_generation", "render", "encoding", "export"],
+  "active_agents": ["OrchestratorAgent", "AutoJobAgent", "SceneAgent", "AudioAgent", "RenderAgent", "EncodingAgent", "UploadAgent", "MonitoringAgent", "OptimizationAgent", "ScalingAgent"],
+  "supported_commands": ["/subagents spawn OrchestratorAgent", "/subagents spawn AutoJobAgent", "/subagents spawn SceneAgent", "/subagents spawn AudioAgent", "/subagents spawn RenderAgent", "/subagents spawn EncodingAgent", "/subagents spawn UploadAgent", "/subagents spawn MonitoringAgent", "/subagents spawn OptimizationAgent", "/subagents spawn ScalingAgent"],
+  "loop": "while system_running: generate scene -> render video -> encode video -> store output"
+}

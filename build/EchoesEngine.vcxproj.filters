@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\src\CoreAudioPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\src\Engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\opencl\opencl_context.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\opencl\kernel_loader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{A49FFBFF-C316-3602-B639-3B33FF8D493D}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

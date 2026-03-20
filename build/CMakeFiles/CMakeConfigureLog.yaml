@@ -1,0 +1,1539 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineSystem.cmake:212 (message)"
+      - "CMakeLists.txt:21 (project)"
+    message: |
+      The system is: Windows - 10.0.26200 - AMD64
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:468 (find_file)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:506 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/"
+    found: "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{PATH}:
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:21 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+      Build started 3/7/2026 10:14:58 AM.
+      
+      Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" on node 1 (default targets).
+      PrepareForBuild:
+        Creating directory "Debug\\".
+        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+        Creating directory "Debug\\CompilerIdCXX.tlog\\".
+      InitializeBuildStatus:
+        Creating "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+        Touching "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc145.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+        CMakeCXXCompilerId.cpp
+      Link:
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCXX.lib" /MACHINE:X64 Debug\\CMakeCXXCompilerId.obj
+        CompilerIdCXX.vcxproj -> C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.exe
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_CXX_COMPILER=C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        Deleting file "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+        Touching "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.lastbuildstate".
+      Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\4.3.0-rc2\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default targets).
+      
+      Build succeeded.
+          0 Warning(s)
+          0 Error(s)
+      
+      Time Elapsed 00:00:00.97
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+      
+      The CXX compiler identification is MSVC, found in:
+        C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/4.3.0-rc2/CompilerIdCXX/CompilerIdCXX.exe
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:103 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.com"
+    found: "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:104 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lld-link"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lld-link.com"
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lld-link.exe"
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lld-link"
+      - "C:/Windows/System32/lld-link.com"
+      - "C:/Windows/System32/lld-link.exe"
+      - "C:/Windows/System32/lld-link"
+      - "C:/Windows/lld-link.com"
+      - "C:/Windows/lld-link.exe"
+      - "C:/Windows/lld-link"
+      - "C:/Windows/System32/wbem/lld-link.com"
+      - "C:/Windows/System32/wbem/lld-link.exe"
+      - "C:/Windows/System32/wbem/lld-link"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link"
+      - "C:/Windows/System32/OpenSSH/lld-link.com"
+      - "C:/Windows/System32/OpenSSH/lld-link.exe"
+      - "C:/Windows/System32/OpenSSH/lld-link"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lld-link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lld-link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/lld-link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link"
+      - "C:/Program Files/HP/HP One Agent/lld-link.com"
+      - "C:/Program Files/HP/HP One Agent/lld-link.exe"
+      - "C:/Program Files/HP/HP One Agent/lld-link"
+      - "C:/Program Files/nodejs/lld-link.com"
+      - "C:/Program Files/nodejs/lld-link.exe"
+      - "C:/Program Files/nodejs/lld-link"
+      - "C:/Program Files/Amazon/AWSCLIV2/lld-link.com"
+      - "C:/Program Files/Amazon/AWSCLIV2/lld-link.exe"
+      - "C:/Program Files/Amazon/AWSCLIV2/lld-link"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lld-link.com"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lld-link.exe"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/lld-link"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lld-link.com"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lld-link.exe"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/lld-link"
+      - "C:/Program Files/dotnet/lld-link.com"
+      - "C:/Program Files/dotnet/lld-link.exe"
+      - "C:/Program Files/dotnet/lld-link"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link"
+      - "C:/Program Files/Git/cmd/lld-link.com"
+      - "C:/Program Files/Git/cmd/lld-link.exe"
+      - "C:/Program Files/Git/cmd/lld-link"
+      - "C:/Program Files/CMake/bin/lld-link.com"
+      - "C:/Program Files/CMake/bin/lld-link.exe"
+      - "C:/Program Files/CMake/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/lld-link"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lld-link.com"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Roaming/npm/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/lld-link"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lld-link.com"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lld-link.exe"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/lld-link"
+      - "C:/Users/Administrator/.dotnet/tools/lld-link.com"
+      - "C:/Users/Administrator/.dotnet/tools/lld-link.exe"
+      - "C:/Users/Administrator/.dotnet/tools/lld-link"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "CMAKE_LINKER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.com"
+    found: "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "CMAKE_MT"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "mt"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/mt.com"
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/mt.exe"
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/mt"
+      - "C:/Windows/System32/mt.com"
+      - "C:/Windows/System32/mt.exe"
+      - "C:/Windows/System32/mt"
+      - "C:/Windows/mt.com"
+      - "C:/Windows/mt.exe"
+      - "C:/Windows/mt"
+      - "C:/Windows/System32/wbem/mt.com"
+      - "C:/Windows/System32/wbem/mt.exe"
+      - "C:/Windows/System32/wbem/mt"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt"
+      - "C:/Windows/System32/OpenSSH/mt.com"
+      - "C:/Windows/System32/OpenSSH/mt.exe"
+      - "C:/Windows/System32/OpenSSH/mt"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/mt.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/mt.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/mt"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/mt.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/mt.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/mt"
+      - "C:/Program Files/HP/HP One Agent/mt.com"
+      - "C:/Program Files/HP/HP One Agent/mt.exe"
+      - "C:/Program Files/HP/HP One Agent/mt"
+      - "C:/Program Files/nodejs/mt.com"
+      - "C:/Program Files/nodejs/mt.exe"
+      - "C:/Program Files/nodejs/mt"
+      - "C:/Program Files/Amazon/AWSCLIV2/mt.com"
+      - "C:/Program Files/Amazon/AWSCLIV2/mt.exe"
+      - "C:/Program Files/Amazon/AWSCLIV2/mt"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/mt.com"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/mt.exe"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/mt"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/mt.com"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/mt.exe"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/mt"
+      - "C:/Program Files/dotnet/mt.com"
+      - "C:/Program Files/dotnet/mt.exe"
+      - "C:/Program Files/dotnet/mt"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt"
+      - "C:/Program Files/Git/cmd/mt.com"
+      - "C:/Program Files/Git/cmd/mt.exe"
+      - "C:/Program Files/Git/cmd/mt"
+      - "C:/Program Files/CMake/bin/mt.com"
+      - "C:/Program Files/CMake/bin/mt.exe"
+      - "C:/Program Files/CMake/bin/mt"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/mt"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/mt"
+      - "C:/Users/Administrator/AppData/Roaming/npm/mt.com"
+      - "C:/Users/Administrator/AppData/Roaming/npm/mt.exe"
+      - "C:/Users/Administrator/AppData/Roaming/npm/mt"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/mt"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/mt"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/mt"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/mt.com"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/mt.exe"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/mt"
+      - "C:/Users/Administrator/.dotnet/tools/mt.com"
+      - "C:/Users/Administrator/.dotnet/tools/mt.exe"
+      - "C:/Users/Administrator/.dotnet/tools/mt"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "CMAKE_AR"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lib"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lib.com"
+    found: "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lib.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineRCCompiler.cmake:40 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/Platform/Windows-MSVC.cmake:583 (enable_language)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/Platform/Windows-MSVC.cmake:556 (__windows_compiler_msvc_enable_rc)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/Platform/Windows-MSVC-CXX.cmake:6 (__windows_compiler_msvc)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeCXXInformation.cmake:48 (include)"
+      - "CMakeLists.txt:21 (project)"
+    mode: "program"
+    variable: "CMAKE_RC_COMPILER"
+    description: "RC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "rc"
+    candidate_directories:
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
+      - "C:/Program Files/HP/HP One Agent/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Program Files/Amazon/AWSCLIV2/"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/Administrator/AppData/Roaming/npm/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Administrator/.dotnet/tools/"
+      - "C:/Program Files/bin/"
+      - "C:/Program Files/sbin/"
+      - "C:/Program Files/"
+      - "C:/Program Files (x86)/bin/"
+      - "C:/Program Files (x86)/sbin/"
+      - "C:/Program Files (x86)/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files/CMake/sbin/"
+      - "C:/Program Files/CMake/"
+      - "C:/Program Files (x86)/EchoesEcosystem/bin/"
+      - "C:/Program Files (x86)/EchoesEcosystem/sbin/"
+      - "C:/Program Files (x86)/EchoesEcosystem/"
+    searched_directories:
+      - "C:/Windows/System32/rc.com"
+      - "C:/Windows/System32/rc.exe"
+      - "C:/Windows/System32/rc"
+      - "C:/Windows/rc.com"
+      - "C:/Windows/rc.exe"
+      - "C:/Windows/rc"
+      - "C:/Windows/System32/wbem/rc.com"
+      - "C:/Windows/System32/wbem/rc.exe"
+      - "C:/Windows/System32/wbem/rc"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc"
+      - "C:/Windows/System32/OpenSSH/rc.com"
+      - "C:/Windows/System32/OpenSSH/rc.exe"
+      - "C:/Windows/System32/OpenSSH/rc"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/rc.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/rc.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NGX/rc"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/rc.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/rc.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/rc"
+      - "C:/Program Files/HP/HP One Agent/rc.com"
+      - "C:/Program Files/HP/HP One Agent/rc.exe"
+      - "C:/Program Files/HP/HP One Agent/rc"
+      - "C:/Program Files/nodejs/rc.com"
+      - "C:/Program Files/nodejs/rc.exe"
+      - "C:/Program Files/nodejs/rc"
+      - "C:/Program Files/Amazon/AWSCLIV2/rc.com"
+      - "C:/Program Files/Amazon/AWSCLIV2/rc.exe"
+      - "C:/Program Files/Amazon/AWSCLIV2/rc"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/rc.com"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/rc.exe"
+      - "C:/Program Files/Microsoft SQL Server/170/Tools/Binn/rc"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/rc.com"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/rc.exe"
+      - "C:/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/rc"
+      - "C:/Program Files/dotnet/rc.com"
+      - "C:/Program Files/dotnet/rc.exe"
+      - "C:/Program Files/dotnet/rc"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc"
+      - "C:/Program Files/Git/cmd/rc.com"
+      - "C:/Program Files/Git/cmd/rc.exe"
+      - "C:/Program Files/Git/cmd/rc"
+      - "C:/Program Files/CMake/bin/rc.com"
+      - "C:/Program Files/CMake/bin/rc.exe"
+      - "C:/Program Files/CMake/bin/rc"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/rc.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/rc.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/Scripts/rc"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/rc.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/rc.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Python/Python310/rc"
+      - "C:/Users/Administrator/AppData/Roaming/npm/rc.com"
+      - "C:/Users/Administrator/AppData/Roaming/npm/rc.exe"
+      - "C:/Users/Administrator/AppData/Roaming/npm/rc"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/rc.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/rc.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Microsoft VS Code/bin/rc"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/rc.com"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/rc.exe"
+      - "C:/Users/Administrator/AppData/Local/Python/bin/rc"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/rc.com"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/rc.exe"
+      - "C:/Users/Administrator/AppData/Local/Programs/Ollama/rc"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/rc.com"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/rc.exe"
+      - "C:/Users/Administrator/AppData/Local/Microsoft/WindowsApps/rc"
+      - "C:/Users/Administrator/.dotnet/tools/rc.com"
+      - "C:/Users/Administrator/.dotnet/tools/rc.exe"
+      - "C:/Users/Administrator/.dotnet/tools/rc"
+      - "C:/Program Files/bin/rc.com"
+      - "C:/Program Files/bin/rc.exe"
+      - "C:/Program Files/bin/rc"
+      - "C:/Program Files/sbin/rc.com"
+      - "C:/Program Files/sbin/rc.exe"
+      - "C:/Program Files/sbin/rc"
+      - "C:/Program Files/rc.com"
+      - "C:/Program Files/rc.exe"
+      - "C:/Program Files/rc"
+      - "C:/Program Files (x86)/bin/rc.com"
+      - "C:/Program Files (x86)/bin/rc.exe"
+      - "C:/Program Files (x86)/bin/rc"
+      - "C:/Program Files (x86)/sbin/rc.com"
+      - "C:/Program Files (x86)/sbin/rc.exe"
+      - "C:/Program Files (x86)/sbin/rc"
+      - "C:/Program Files (x86)/rc.com"
+      - "C:/Program Files (x86)/rc.exe"
+      - "C:/Program Files (x86)/rc"
+      - "C:/Program Files/CMake/bin/rc.com"
+      - "C:/Program Files/CMake/bin/rc.exe"
+      - "C:/Program Files/CMake/bin/rc"
+      - "C:/Program Files/CMake/sbin/rc.com"
+      - "C:/Program Files/CMake/sbin/rc.exe"
+      - "C:/Program Files/CMake/sbin/rc"
+      - "C:/Program Files/CMake/rc.com"
+      - "C:/Program Files/CMake/rc.exe"
+      - "C:/Program Files/CMake/rc"
+      - "C:/Program Files (x86)/EchoesEcosystem/bin/rc.com"
+      - "C:/Program Files (x86)/EchoesEcosystem/bin/rc.exe"
+      - "C:/Program Files (x86)/EchoesEcosystem/bin/rc"
+      - "C:/Program Files (x86)/EchoesEcosystem/sbin/rc.com"
+      - "C:/Program Files (x86)/EchoesEcosystem/sbin/rc.exe"
+      - "C:/Program Files (x86)/EchoesEcosystem/sbin/rc"
+      - "C:/Program Files (x86)/EchoesEcosystem/rc.com"
+      - "C:/Program Files (x86)/EchoesEcosystem/rc.exe"
+      - "C:/Program Files (x86)/EchoesEcosystem/rc"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NGX"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\HP One Agent"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\Amazon\\AWSCLIV2\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Administrator\\.dotnet\\tools"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/EchoesEcosystem"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "C:/Program Files"
+        - "C:/Program Files (x86)"
+        - "C:/Program Files/CMake"
+        - "C:/Program Files (x86)/EchoesEcosystem"
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:21 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-dt443m"
+      binary: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-dt443m"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-dt443m'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_aca10.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+        Build started 3/7/2026 10:15:00 AM.
+        
+        Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-dt443m\\cmTC_aca10.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-dt443m\\Debug\\".
+          Creating directory "cmTC_aca10.dir\\Debug\\cmTC_aca10.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_aca10.dir\\Debug\\cmTC_aca10.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_aca10.dir\\Debug\\cmTC_aca10.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /Fo"cmTC_aca10.dir\\Debug\\\\" /Fd"cmTC_aca10.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.3\\Modules\\CMakeCXXCompilerABI.cpp"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35725 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /Fo"cmTC_aca10.dir\\Debug\\\\" /Fd"cmTC_aca10.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.3\\Modules\\CMakeCXXCompilerABI.cpp"
+          CMakeCXXCompilerABI.cpp
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /OUT:"C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-dt443m\\Debug\\cmTC_aca10.exe" /INCREMENTAL /ILK:"cmTC_aca10.dir\\Debug\\cmTC_aca10.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-dt443m/Debug/cmTC_aca10.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-dt443m/Debug/cmTC_aca10.lib" /MACHINE:X64  /machine:x64 cmTC_aca10.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_aca10.vcxproj -> C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-dt443m\\Debug\\cmTC_aca10.exe
+        FinalizeBuildStatus:
+          Deleting file "cmTC_aca10.dir\\Debug\\cmTC_aca10.tlog\\unsuccessfulbuild".
+          Touching "cmTC_aca10.dir\\Debug\\cmTC_aca10.tlog\\cmTC_aca10.lastbuildstate".
+        Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-dt443m\\cmTC_aca10.vcxproj" (default targets).
+        
+        Build succeeded.
+            0 Warning(s)
+            0 Error(s)
+        
+        Time Elapsed 00:00:00.53
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:21 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        linker tool for 'CXX': C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/HostX64/x64/link.exe
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/Internal/CMakeDetermineLinkerId.cmake:38 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:21 (project)"
+    message: |
+      Running the CXX compiler's linker: "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.50.35725.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckIncludeFiles.cmake:201 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:110 (check_include_files)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:169 (_FIND_OPENCL_VERSION)"
+      - "CMakeLists.txt:64 (find_package)"
+    checks:
+      - "Looking for include file OpenCL/cl.h"
+    directories:
+      source: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-6itf11"
+      binary: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-6itf11"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "OpenCL_HAVE_OPENCL_CL_H"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-6itf11'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_3d4b4.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+        Build started 3/20/2026 12:19:08 AM.
+        
+        Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\cmTC_3d4b4.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\Debug\\".
+          Creating directory "cmTC_3d4b4.dir\\Debug\\cmTC_3d4b4.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_3d4b4.dir\\Debug\\cmTC_3d4b4.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_3d4b4.dir\\Debug\\cmTC_3d4b4.tlog\\unsuccessfulbuild".
+        ComputeStdModulesCompileInputs:
+          Reading library manifest file 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\modules.json' which provides data for library 'microsoft/STL'.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.ixx' from library 'microsoft/STL' to be built with this project.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.compat.ixx' from library 'microsoft/STL' to be built with this project.
+        MakeDirsForCl:
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\cmTC_3d4b4.dir\\Debug\\microsoft\\STL".
+        SetModuleDependencies:
+          Creating directory "cmTC_3d4b4.dir\\Debug\\cmTC_3d4b4_MD.tlog\\".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_3d4b4.dir\\Debug\\\\" /Fd"cmTC_3d4b4.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\OpenCL_HAVE_OPENCL_CL_H.cpp"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35725 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_3d4b4.dir\\Debug\\\\" /Fd"cmTC_3d4b4.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\OpenCL_HAVE_OPENCL_CL_H.cpp"
+          OpenCL_HAVE_OPENCL_CL_H.cpp
+        C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\OpenCL_HAVE_OPENCL_CL_H.cpp(2,10): error C1083: Cannot open include file: 'OpenCL/cl.h': No such file or directory [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\cmTC_3d4b4.vcxproj]
+        Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\cmTC_3d4b4.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\cmTC_3d4b4.vcxproj" (default target) (1) ->
+        (ClCompile target) -> 
+          C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\OpenCL_HAVE_OPENCL_CL_H.cpp(2,10): error C1083: Cannot open include file: 'OpenCL/cl.h': No such file or directory [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6itf11\\cmTC_3d4b4.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.94
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:102 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:119 (check_symbol_exists)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:169 (_FIND_OPENCL_VERSION)"
+      - "CMakeLists.txt:64 (find_package)"
+    checks:
+      - "Looking for CL_VERSION_3_0"
+    directories:
+      source: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-i8z8ve"
+      binary: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-i8z8ve"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "OPENCL_VERSION_3_0"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-i8z8ve'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_0b2c7.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+        Build started 3/20/2026 12:19:10 AM.
+        
+        Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\cmTC_0b2c7.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\Debug\\".
+          Creating directory "cmTC_0b2c7.dir\\Debug\\cmTC_0b2c7.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_0b2c7.dir\\Debug\\cmTC_0b2c7.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_0b2c7.dir\\Debug\\cmTC_0b2c7.tlog\\unsuccessfulbuild".
+        ComputeStdModulesCompileInputs:
+          Reading library manifest file 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\modules.json' which provides data for library 'microsoft/STL'.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.ixx' from library 'microsoft/STL' to be built with this project.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.compat.ixx' from library 'microsoft/STL' to be built with this project.
+        MakeDirsForCl:
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\cmTC_0b2c7.dir\\Debug\\microsoft\\STL".
+        SetModuleDependencies:
+          Creating directory "cmTC_0b2c7.dir\\Debug\\cmTC_0b2c7_MD.tlog\\".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_0b2c7.dir\\Debug\\\\" /Fd"cmTC_0b2c7.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\CheckSymbolExists.cxx"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35725 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_0b2c7.dir\\Debug\\\\" /Fd"cmTC_0b2c7.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\CheckSymbolExists.cxx"
+          CheckSymbolExists.cxx
+        C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_3_0': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\cmTC_0b2c7.vcxproj]
+        Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\cmTC_0b2c7.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\cmTC_0b2c7.vcxproj" (default target) (1) ->
+        (ClCompile target) -> 
+          C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_3_0': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i8z8ve\\cmTC_0b2c7.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.44
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:102 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:119 (check_symbol_exists)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:169 (_FIND_OPENCL_VERSION)"
+      - "CMakeLists.txt:64 (find_package)"
+    checks:
+      - "Looking for CL_VERSION_2_2"
+    directories:
+      source: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-ycxu0y"
+      binary: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-ycxu0y"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "OPENCL_VERSION_2_2"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-ycxu0y'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_79851.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+        Build started 3/20/2026 12:19:10 AM.
+        
+        Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\cmTC_79851.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\Debug\\".
+          Creating directory "cmTC_79851.dir\\Debug\\cmTC_79851.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_79851.dir\\Debug\\cmTC_79851.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_79851.dir\\Debug\\cmTC_79851.tlog\\unsuccessfulbuild".
+        ComputeStdModulesCompileInputs:
+          Reading library manifest file 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\modules.json' which provides data for library 'microsoft/STL'.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.ixx' from library 'microsoft/STL' to be built with this project.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.compat.ixx' from library 'microsoft/STL' to be built with this project.
+        MakeDirsForCl:
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\cmTC_79851.dir\\Debug\\microsoft\\STL".
+        SetModuleDependencies:
+          Creating directory "cmTC_79851.dir\\Debug\\cmTC_79851_MD.tlog\\".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_79851.dir\\Debug\\\\" /Fd"cmTC_79851.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\CheckSymbolExists.cxx"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35725 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_79851.dir\\Debug\\\\" /Fd"cmTC_79851.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\CheckSymbolExists.cxx"
+          CheckSymbolExists.cxx
+        C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_2_2': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\cmTC_79851.vcxproj]
+        Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\cmTC_79851.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\cmTC_79851.vcxproj" (default target) (1) ->
+        (ClCompile target) -> 
+          C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_2_2': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ycxu0y\\cmTC_79851.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.41
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:102 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:119 (check_symbol_exists)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:169 (_FIND_OPENCL_VERSION)"
+      - "CMakeLists.txt:64 (find_package)"
+    checks:
+      - "Looking for CL_VERSION_2_1"
+    directories:
+      source: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-7dv0hr"
+      binary: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-7dv0hr"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "OPENCL_VERSION_2_1"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-7dv0hr'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_af113.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+        Build started 3/20/2026 12:19:11 AM.
+        
+        Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\cmTC_af113.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\Debug\\".
+          Creating directory "cmTC_af113.dir\\Debug\\cmTC_af113.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_af113.dir\\Debug\\cmTC_af113.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_af113.dir\\Debug\\cmTC_af113.tlog\\unsuccessfulbuild".
+        ComputeStdModulesCompileInputs:
+          Reading library manifest file 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\modules.json' which provides data for library 'microsoft/STL'.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.ixx' from library 'microsoft/STL' to be built with this project.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.compat.ixx' from library 'microsoft/STL' to be built with this project.
+        MakeDirsForCl:
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\cmTC_af113.dir\\Debug\\microsoft\\STL".
+        SetModuleDependencies:
+          Creating directory "cmTC_af113.dir\\Debug\\cmTC_af113_MD.tlog\\".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_af113.dir\\Debug\\\\" /Fd"cmTC_af113.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\CheckSymbolExists.cxx"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35725 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_af113.dir\\Debug\\\\" /Fd"cmTC_af113.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\CheckSymbolExists.cxx"
+          CheckSymbolExists.cxx
+        C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_2_1': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\cmTC_af113.vcxproj]
+        Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\cmTC_af113.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\cmTC_af113.vcxproj" (default target) (1) ->
+        (ClCompile target) -> 
+          C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_2_1': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7dv0hr\\cmTC_af113.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.38
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:102 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:119 (check_symbol_exists)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:169 (_FIND_OPENCL_VERSION)"
+      - "CMakeLists.txt:64 (find_package)"
+    checks:
+      - "Looking for CL_VERSION_2_0"
+    directories:
+      source: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-eo9y86"
+      binary: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-eo9y86"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "OPENCL_VERSION_2_0"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-eo9y86'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_18653.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+        Build started 3/20/2026 12:19:12 AM.
+        
+        Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\cmTC_18653.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\Debug\\".
+          Creating directory "cmTC_18653.dir\\Debug\\cmTC_18653.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_18653.dir\\Debug\\cmTC_18653.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_18653.dir\\Debug\\cmTC_18653.tlog\\unsuccessfulbuild".
+        ComputeStdModulesCompileInputs:
+          Reading library manifest file 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\modules.json' which provides data for library 'microsoft/STL'.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.ixx' from library 'microsoft/STL' to be built with this project.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.compat.ixx' from library 'microsoft/STL' to be built with this project.
+        MakeDirsForCl:
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\cmTC_18653.dir\\Debug\\microsoft\\STL".
+        SetModuleDependencies:
+          Creating directory "cmTC_18653.dir\\Debug\\cmTC_18653_MD.tlog\\".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_18653.dir\\Debug\\\\" /Fd"cmTC_18653.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\CheckSymbolExists.cxx"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35725 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_18653.dir\\Debug\\\\" /Fd"cmTC_18653.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\CheckSymbolExists.cxx"
+          CheckSymbolExists.cxx
+        C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_2_0': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\cmTC_18653.vcxproj]
+        Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\cmTC_18653.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\cmTC_18653.vcxproj" (default target) (1) ->
+        (ClCompile target) -> 
+          C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_2_0': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-eo9y86\\cmTC_18653.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.40
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:102 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:119 (check_symbol_exists)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:169 (_FIND_OPENCL_VERSION)"
+      - "CMakeLists.txt:64 (find_package)"
+    checks:
+      - "Looking for CL_VERSION_1_2"
+    directories:
+      source: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-l5pum3"
+      binary: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-l5pum3"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "OPENCL_VERSION_1_2"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-l5pum3'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_b13e3.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+        Build started 3/20/2026 12:19:13 AM.
+        
+        Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\cmTC_b13e3.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\Debug\\".
+          Creating directory "cmTC_b13e3.dir\\Debug\\cmTC_b13e3.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_b13e3.dir\\Debug\\cmTC_b13e3.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_b13e3.dir\\Debug\\cmTC_b13e3.tlog\\unsuccessfulbuild".
+        ComputeStdModulesCompileInputs:
+          Reading library manifest file 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\modules.json' which provides data for library 'microsoft/STL'.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.ixx' from library 'microsoft/STL' to be built with this project.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.compat.ixx' from library 'microsoft/STL' to be built with this project.
+        MakeDirsForCl:
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\cmTC_b13e3.dir\\Debug\\microsoft\\STL".
+        SetModuleDependencies:
+          Creating directory "cmTC_b13e3.dir\\Debug\\cmTC_b13e3_MD.tlog\\".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_b13e3.dir\\Debug\\\\" /Fd"cmTC_b13e3.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\CheckSymbolExists.cxx"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35725 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_b13e3.dir\\Debug\\\\" /Fd"cmTC_b13e3.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\CheckSymbolExists.cxx"
+          CheckSymbolExists.cxx
+        C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_1_2': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\cmTC_b13e3.vcxproj]
+        Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\cmTC_b13e3.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\cmTC_b13e3.vcxproj" (default target) (1) ->
+        (ClCompile target) -> 
+          C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_1_2': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5pum3\\cmTC_b13e3.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.39
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:102 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:119 (check_symbol_exists)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:169 (_FIND_OPENCL_VERSION)"
+      - "CMakeLists.txt:64 (find_package)"
+    checks:
+      - "Looking for CL_VERSION_1_1"
+    directories:
+      source: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-54y4y7"
+      binary: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-54y4y7"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "OPENCL_VERSION_1_1"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-54y4y7'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_cacb2.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+        Build started 3/20/2026 12:19:13 AM.
+        
+        Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\cmTC_cacb2.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\Debug\\".
+          Creating directory "cmTC_cacb2.dir\\Debug\\cmTC_cacb2.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_cacb2.dir\\Debug\\cmTC_cacb2.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_cacb2.dir\\Debug\\cmTC_cacb2.tlog\\unsuccessfulbuild".
+        ComputeStdModulesCompileInputs:
+          Reading library manifest file 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\modules.json' which provides data for library 'microsoft/STL'.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.ixx' from library 'microsoft/STL' to be built with this project.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.compat.ixx' from library 'microsoft/STL' to be built with this project.
+        MakeDirsForCl:
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\cmTC_cacb2.dir\\Debug\\microsoft\\STL".
+        SetModuleDependencies:
+          Creating directory "cmTC_cacb2.dir\\Debug\\cmTC_cacb2_MD.tlog\\".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_cacb2.dir\\Debug\\\\" /Fd"cmTC_cacb2.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\CheckSymbolExists.cxx"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35725 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_cacb2.dir\\Debug\\\\" /Fd"cmTC_cacb2.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\CheckSymbolExists.cxx"
+          CheckSymbolExists.cxx
+        C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_1_1': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\cmTC_cacb2.vcxproj]
+        Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\cmTC_cacb2.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\cmTC_cacb2.vcxproj" (default target) (1) ->
+        (ClCompile target) -> 
+          C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_1_1': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-54y4y7\\cmTC_cacb2.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.38
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/CheckSymbolExists.cmake:102 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:119 (check_symbol_exists)"
+      - "C:/Program Files/CMake/share/cmake-4.3/Modules/FindOpenCL.cmake:169 (_FIND_OPENCL_VERSION)"
+      - "CMakeLists.txt:64 (find_package)"
+    checks:
+      - "Looking for CL_VERSION_1_0"
+    directories:
+      source: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-ttn73t"
+      binary: "C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-ttn73t"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "OPENCL_VERSION_1_0"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/CMakeScratch/TryCompile-ttn73t'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_0e2c7.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+        Build started 3/20/2026 12:19:14 AM.
+        
+        Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\cmTC_0e2c7.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\Debug\\".
+          Creating directory "cmTC_0e2c7.dir\\Debug\\cmTC_0e2c7.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_0e2c7.dir\\Debug\\cmTC_0e2c7.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_0e2c7.dir\\Debug\\cmTC_0e2c7.tlog\\unsuccessfulbuild".
+        ComputeStdModulesCompileInputs:
+          Reading library manifest file 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\modules.json' which provides data for library 'microsoft/STL'.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.ixx' from library 'microsoft/STL' to be built with this project.
+          Adding module source 'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\modules\\std.compat.ixx' from library 'microsoft/STL' to be built with this project.
+        MakeDirsForCl:
+          Creating directory "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\cmTC_0e2c7.dir\\Debug\\microsoft\\STL".
+        SetModuleDependencies:
+          Creating directory "cmTC_0e2c7.dir\\Debug\\cmTC_0e2c7_MD.tlog\\".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_0e2c7.dir\\Debug\\\\" /Fd"cmTC_0e2c7.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\CheckSymbolExists.cxx"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35725 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /IC:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\engine\\opencl\\vendor /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /std:c++20 /Fo"cmTC_0e2c7.dir\\Debug\\\\" /Fd"cmTC_0e2c7.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\CheckSymbolExists.cxx"
+          CheckSymbolExists.cxx
+        C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_1_0': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\cmTC_0e2c7.vcxproj]
+        Done Building Project "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\cmTC_0e2c7.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\cmTC_0e2c7.vcxproj" (default target) (1) ->
+        (ClCompile target) -> 
+          C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\CheckSymbolExists.cxx(8,19): error C2065: 'CL_VERSION_1_0': undeclared identifier [C:\\Users\\Administrator\\OneDrive\\Documents\\EchoesEngine_complete\\EchoesEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ttn73t\\cmTC_0e2c7.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.40
+        
+      exitCode: 1
+...

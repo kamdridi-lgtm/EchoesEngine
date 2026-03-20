@@ -1,0 +1,5 @@
+{
+  "orchestrator": "OrchestratorAgent",
+  "active": ["OrchestratorAgent", "AutoJobAgent", "SceneAgent", "AudioAgent", "RenderAgent", "EncodingAgent", "UploadAgent", "MonitoringAgent", "OptimizationAgent", "ScalingAgent"],
+  "commands": ["/subagents spawn OrchestratorAgent", "/subagents spawn AutoJobAgent", "/subagents spawn SceneAgent", "/subagents spawn AudioAgent", "/subagents spawn RenderAgent", "/subagents spawn EncodingAgent", "/subagents spawn UploadAgent", "/subagents spawn MonitoringAgent", "/subagents spawn OptimizationAgent", "/subagents spawn ScalingAgent"]
+}

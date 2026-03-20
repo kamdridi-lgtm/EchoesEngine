@@ -1,0 +1,429 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{10F746AC-2F1C-31B7-BF86-C675D18E1082}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>ECHoesEnginePro</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ECHoesEnginePro.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ECHoesEnginePro</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ECHoesEnginePro.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ECHoesEnginePro</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">ECHoesEnginePro.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">ECHoesEnginePro</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">ECHoesEnginePro.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">ECHoesEnginePro</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;ECHOES_USE_OPENCL=1;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;ECHOES_USE_OPENCL=1;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>Debug\EchoesEngine.lib;core\Debug\EchoesCore.lib;audio\Debug\EchoesAudio.lib;render\Debug\EchoesRender.lib;scene\Debug\EchoesScene.lib;camera\Debug\EchoesCamera.lib;ai\Debug\EchoesAI.lib;ai_prompt\Debug\EchoesPrompt.lib;export\Debug\EchoesExport.lib;api\Debug\EchoesApi.lib;platform\Debug\EchoesPlatform.lib;opencl\OpenCL.lib;audio\Debug\EchoesAudio.lib;core\Debug\EchoesCore.lib;api\Debug\EchoesApi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/Debug/ECHoesEnginePro.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/Debug/ECHoesEnginePro.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ECHOES_USE_OPENCL=1;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ECHOES_USE_OPENCL=1;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>Release\EchoesEngine.lib;core\Release\EchoesCore.lib;audio\Release\EchoesAudio.lib;render\Release\EchoesRender.lib;scene\Release\EchoesScene.lib;camera\Release\EchoesCamera.lib;ai\Release\EchoesAI.lib;ai_prompt\Release\EchoesPrompt.lib;export\Release\EchoesExport.lib;api\Release\EchoesApi.lib;platform\Release\EchoesPlatform.lib;opencl\OpenCL.lib;audio\Release\EchoesAudio.lib;core\Release\EchoesCore.lib;api\Release\EchoesApi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/Release/ECHoesEnginePro.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/Release/ECHoesEnginePro.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ECHOES_USE_OPENCL=1;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ECHOES_USE_OPENCL=1;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>MinSizeRel\EchoesEngine.lib;core\MinSizeRel\EchoesCore.lib;audio\MinSizeRel\EchoesAudio.lib;render\MinSizeRel\EchoesRender.lib;scene\MinSizeRel\EchoesScene.lib;camera\MinSizeRel\EchoesCamera.lib;ai\MinSizeRel\EchoesAI.lib;ai_prompt\MinSizeRel\EchoesPrompt.lib;export\MinSizeRel\EchoesExport.lib;api\MinSizeRel\EchoesApi.lib;platform\MinSizeRel\EchoesPlatform.lib;opencl\OpenCL.lib;audio\MinSizeRel\EchoesAudio.lib;core\MinSizeRel\EchoesCore.lib;api\MinSizeRel\EchoesApi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/MinSizeRel/ECHoesEnginePro.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/MinSizeRel/ECHoesEnginePro.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ECHOES_USE_OPENCL=1;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ECHOES_USE_OPENCL=1;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\engine;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\core\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\audio\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\render;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\scene\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\camera;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\ai_prompt\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\export\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\api\include;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\platform\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>RelWithDebInfo\EchoesEngine.lib;core\RelWithDebInfo\EchoesCore.lib;audio\RelWithDebInfo\EchoesAudio.lib;render\RelWithDebInfo\EchoesRender.lib;scene\RelWithDebInfo\EchoesScene.lib;camera\RelWithDebInfo\EchoesCamera.lib;ai\RelWithDebInfo\EchoesAI.lib;ai_prompt\RelWithDebInfo\EchoesPrompt.lib;export\RelWithDebInfo\EchoesExport.lib;api\RelWithDebInfo\EchoesApi.lib;platform\RelWithDebInfo\EchoesPlatform.lib;opencl\OpenCL.lib;audio\RelWithDebInfo\EchoesAudio.lib;core\RelWithDebInfo\EchoesCore.lib;api\RelWithDebInfo\EchoesApi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/RelWithDebInfo/ECHoesEnginePro.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/RelWithDebInfo/ECHoesEnginePro.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine -BC:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build --check-stamp-file C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakePushCheckState.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindOpenCL.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\WindowsPaths.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeCXXCompiler.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeRCCompiler.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeSystem.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine -BC:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build --check-stamp-file C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakePushCheckState.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindOpenCL.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\WindowsPaths.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeCXXCompiler.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeRCCompiler.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeSystem.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine -BC:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build --check-stamp-file C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakePushCheckState.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindOpenCL.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\WindowsPaths.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeCXXCompiler.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeRCCompiler.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeSystem.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine -BC:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build --check-stamp-file C:/Users/Administrator/OneDrive/Documents/EchoesEngine_complete/EchoesEngine/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakePushCheckState.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindOpenCL.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\WindowsPaths.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeCXXCompiler.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeRCCompiler.cmake;C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\4.3.0-rc2\CMakeSystem.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\main.cpp" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\ZERO_CHECK.vcxproj">
+      <Project>{E9228D38-5CB8-3F4E-8678-6E8D303E756F}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\ai\EchoesAI.vcxproj">
+      <Project>{7190354D-0110-33DC-9270-D60F25060469}</Project>
+      <Name>EchoesAI</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\api\EchoesApi.vcxproj">
+      <Project>{619A63BA-AFEA-3489-9DD4-CC0F7EEC0C3A}</Project>
+      <Name>EchoesApi</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\audio\EchoesAudio.vcxproj">
+      <Project>{D29087A9-1BDD-3928-822E-55F664500837}</Project>
+      <Name>EchoesAudio</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\camera\EchoesCamera.vcxproj">
+      <Project>{DBCCB77A-1DE3-33A7-A0D1-4A85F7AE4730}</Project>
+      <Name>EchoesCamera</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\core\EchoesCore.vcxproj">
+      <Project>{12E4AEFE-0C81-3641-B53E-4430337C8DC0}</Project>
+      <Name>EchoesCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\EchoesEngine.vcxproj">
+      <Project>{5BF5B5FD-1EA7-378C-BFF0-FC3DE9641A10}</Project>
+      <Name>EchoesEngine</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\export\EchoesExport.vcxproj">
+      <Project>{E8D32EF3-EC3B-3EF8-B8A6-0E60F4876BAE}</Project>
+      <Name>EchoesExport</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\platform\EchoesPlatform.vcxproj">
+      <Project>{14AF143C-F1EF-385D-9096-54B6C4618A9F}</Project>
+      <Name>EchoesPlatform</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\ai_prompt\EchoesPrompt.vcxproj">
+      <Project>{5BA84319-E26C-34C6-BC72-91D81391E8DC}</Project>
+      <Name>EchoesPrompt</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\render\EchoesRender.vcxproj">
+      <Project>{ABA1D135-B153-31F6-A334-A424853E00F3}</Project>
+      <Name>EchoesRender</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\build\scene\EchoesScene.vcxproj">
+      <Project>{06A72C22-391A-3868-A29A-3901A29A214E}</Project>
+      <Name>EchoesScene</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

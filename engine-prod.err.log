@@ -1,0 +1,4 @@
+[2026-03-18T18:16:51Z][ERROR] frame generation failed: could not write frame file
+[2026-03-18T18:16:54Z][ERROR] audio loading failed: could not prepare analysis audio from C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\jobs\job-5\audio.mp3
+[2026-03-18T18:25:09Z][ERROR] frame generation failed: could not write frame file
+[2026-03-18T18:25:12Z][ERROR] audio loading failed: could not prepare analysis audio from C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine\jobs\job-4\audio.mp3

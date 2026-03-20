@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Solution>
+	<Configurations>
+		<BuildType Name="Debug"/>
+		<BuildType Name="Release"/>
+		<BuildType Name="MinSizeRel"/>
+		<BuildType Name="RelWithDebInfo"/>
+		<Platform Name="x64"/>
+	</Configurations>
+	<Project Path="ALL_BUILD.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="5e22a6df-c0ad-3c8c-ba0b-aee0c5eff3e9" DefaultStartup="true">
+		<BuildDependency Project="ECHoesEnginePro.vcxproj"/>
+		<BuildDependency Project="ai/EchoesAI.vcxproj"/>
+		<BuildDependency Project="api/EchoesApi.vcxproj"/>
+		<BuildDependency Project="audio/EchoesAudio.vcxproj"/>
+		<BuildDependency Project="camera/EchoesCamera.vcxproj"/>
+		<BuildDependency Project="core/EchoesCore.vcxproj"/>
+		<BuildDependency Project="EchoesEngine.vcxproj"/>
+		<BuildDependency Project="export/EchoesExport.vcxproj"/>
+		<BuildDependency Project="platform/EchoesPlatform.vcxproj"/>
+		<BuildDependency Project="ai_prompt/EchoesPrompt.vcxproj"/>
+		<BuildDependency Project="render/EchoesRender.vcxproj"/>
+		<BuildDependency Project="scene/EchoesScene.vcxproj"/>
+		<BuildDependency Project="EchoesStandalone.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+		<Build Solution="Debug|*" Project="false"/>
+		<Build Solution="Release|*" Project="false"/>
+		<Build Solution="MinSizeRel|*" Project="false"/>
+		<Build Solution="RelWithDebInfo|*" Project="false"/>
+	</Project>
+	<Project Path="ECHoesEnginePro.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="10f746ac-2f1c-31b7-bf86-c675d18e1082">
+		<BuildDependency Project="ai/EchoesAI.vcxproj"/>
+		<BuildDependency Project="api/EchoesApi.vcxproj"/>
+		<BuildDependency Project="audio/EchoesAudio.vcxproj"/>
+		<BuildDependency Project="camera/EchoesCamera.vcxproj"/>
+		<BuildDependency Project="core/EchoesCore.vcxproj"/>
+		<BuildDependency Project="EchoesEngine.vcxproj"/>
+		<BuildDependency Project="export/EchoesExport.vcxproj"/>
+		<BuildDependency Project="platform/EchoesPlatform.vcxproj"/>
+		<BuildDependency Project="ai_prompt/EchoesPrompt.vcxproj"/>
+		<BuildDependency Project="render/EchoesRender.vcxproj"/>
+		<BuildDependency Project="scene/EchoesScene.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="ai/EchoesAI.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="7190354d-0110-33dc-9270-d60f25060469">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="api/EchoesApi.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="619a63ba-afea-3489-9dd4-cc0f7eec0c3a">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="audio/EchoesAudio.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="d29087a9-1bdd-3928-822e-55f664500837">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="camera/EchoesCamera.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="dbccb77a-1de3-33a7-a0d1-4a85f7ae4730">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="core/EchoesCore.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="12e4aefe-0c81-3641-b53e-4430337c8dc0">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="EchoesEngine.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="5bf5b5fd-1ea7-378c-bff0-fc3de9641a10">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="export/EchoesExport.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="e8d32ef3-ec3b-3ef8-b8a6-0e60f4876bae">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="platform/EchoesPlatform.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="14af143c-f1ef-385d-9096-54b6c4618a9f">
+		<BuildDependency Project="api/EchoesApi.vcxproj"/>
+		<BuildDependency Project="core/EchoesCore.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="ai_prompt/EchoesPrompt.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="5ba84319-e26c-34c6-bc72-91d81391e8dc">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="render/EchoesRender.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="aba1d135-b153-31f6-a334-a424853e00f3">
+		<BuildDependency Project="audio/EchoesAudio.vcxproj"/>
+		<BuildDependency Project="camera/EchoesCamera.vcxproj"/>
+		<BuildDependency Project="scene/EchoesScene.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="scene/EchoesScene.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="06a72c22-391a-3868-a29a-3901a29a214e">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="EchoesStandalone.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="dbd1bedf-7dd2-3c3f-a9c7-7f775cb71840">
+		<BuildDependency Project="EchoesEngine.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="ZERO_CHECK.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="e9228d38-5cb8-3f4e-8678-6e8d303e756f"/>
+</Solution>
