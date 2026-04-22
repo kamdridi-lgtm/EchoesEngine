@@ -1,0 +1,28 @@
+# Local JUCE checkout used for local builds only
+JUCE/
+
+# In-tree build artefacts and generated outputs
+build/
+build-*/
+build*/
+EchoesPlugin_artefacts/
+**/*.vcxproj
+**/*.vcxproj.filters
+**/*.vcxproj.user
+**/*.sln
+**/*.dir/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/Makefile
+
+# Runtime/output pollution
+jobs/
+renders/
+runtime/
+*.log
+*.err.log
+*.out.log
+*.mp4
+benchmark_report.json
+test-*.wav
