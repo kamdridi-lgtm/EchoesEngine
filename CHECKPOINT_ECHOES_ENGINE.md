@@ -68,3 +68,33 @@ Expected outputs:
 - Do not restart from `C:\EchoesEngine`; use it only as historical evidence unless the user explicitly asks to archive/delete it.
 
 
+
+## Target Checkpoint Supplied By User - v2.4.0-multi-node-federation - 2026-05-01 01:06:17 -04:00
+
+Status in canonical folder: NOT INSTALLED YET. This is a target/roadmap checkpoint provided by the user, not verified active code.
+
+Expected components from the supplied checkpoint:
+- `deploy/docker-compose.cluster.yml`: multi-node orchestration, GPU runtime, healthchecks, isolated network.
+- `agents/cluster-sync.ts`: watch state/renders, sync to primary+secondary S3, DB catch-up, silent fallback.
+- `agents/gpu-router.ts`: node discovery, VRAM/load check, circuit breaker after 3 failures, automatic requeue.
+- `monitoring/otel-federation.yaml`: batching, 20% sampling, memory limiter, secondary export retry.
+- DB patches: `s3_synced`, `assigned_node`.
+- Gateway patch: route jobs through GPU router.
+- `.env` cluster additions.
+
+Network target:
+`Client -> Gateway :3000 -> GPU Router :3003 -> Node(s) :8081 -> S3 Primary/Secondary + OTel/Prometheus/Grafana`
+
+Next target phase:
+v2.5.0 Public API & Marketplace: OpenAPI spec, TS/Python SDK clients, credit system, public gallery, partner webhooks.
+
+Verification on 2026-05-01 01:06:17 -04:00:
+Missing in canonical folder:
+- `deploy/docker-compose.cluster.yml`
+- `agents/cluster-sync.ts`
+- `agents/gpu-router.ts`
+- `monitoring/otel-federation.yaml`
+- `gateway/api-gateway.ts`
+- `db/schema.sql`
+
+Do not claim v2.4.0 multi-node federation is active until these files are implemented and tested.
