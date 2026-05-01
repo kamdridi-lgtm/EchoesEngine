@@ -114,14 +114,14 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 
 ## v2.4.0 Prep - Dormant Adaptive Orchestrator - 2026-05-01 03:43:45 -04:00
 
-- Added gents/adaptive-orchestrator.ts in dormant mode.
+- Added gents/adaptive-orchestrator.ts in dormant mode.
 - Running it should only print [AdaptiveOrchestrator] Initialized (dormant mode).
 - It does not auto-submit jobs and does not affect the current C++ daemon, local jobs, renders, or scheduled task.
 - Future activation requires explicit wiring/calls.
 
 ## v2.4.0 Prep - Dormant Swarm Coordinator - 2026-05-01 03:51:25 -04:00
 
-- Added gents/swarm-coordinator.ts in dormant mode.
+- Added gents/swarm-coordinator.ts in dormant mode.
 - Running it should only print [SwarmCoordinator] Initialized (dormant mode).
 - It exports AgentRole, AgentNode, and SwarmCoordinator for future routing/heartbeat/load balancing.
 - It has no auto-submission, no intervals, no network calls, and does not affect the current C++ daemon, jobs, renders, or scheduled task.
@@ -132,3 +132,16 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Added package.json with dormant TS smoke-test scripts only.
 - Added CODEX_CONTEXT.md and RUN_INSTRUCTIONS.md to preserve the canonical folder, active runtime, and safety rules.
 - No changes to C++ build, daemon, jobs, renders, or scheduled task.
+
+## Report Review - AWS/Cloudflare Hunt - 2026-05-01 04:08:25 -04:00
+
+- Reviewed `C:\Users\Administrator\OneDrive\Bureau\echoesengine_d_aws_cf_hunt_2026-04-16_00-20-05.txt` as inventory only.
+- The report mostly lists `D:\A.I\openclaw` directories and many AWS-related `node_modules` dependencies.
+- Potential reference files if future gateway/cloud work needs examples:
+  - `D:\A.I\openclaw\docs\gateway\remote-gateway-readme.md`
+  - `D:\A.I\openclaw\docs\providers\cloudflare-ai-gateway.md`
+  - `D:\A.I\openclaw\src\agents\cloudflare-ai-gateway.ts`
+  - `D:\A.I\openclaw\src\gateway\server-methods\AGENTS.md`
+- No EchoesEngine-ready AWS/Cloudflare component was found in the report.
+- No action needed now; keep current v2.4 prep focused on dormant local infrastructure and agents.
+
