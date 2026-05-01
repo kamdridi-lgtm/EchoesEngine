@@ -194,3 +194,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Direct execution still only prints [ApiGateway] Initialized (dormant mode).
 - No auto-listen, no intervals, and no network calls on import/direct init.
 - Worker fetches occur only if future code explicitly calls outeToWorker().
+
+## v2.4.0 Prep - ESRGAN Audio Conditioning LoRA Dormant Prep - 2026-05-01 04:47:43 -04:00
+
+- Added gents/audio-conditioning.ts as pure audio-to-video conditioning helpers.
+- Added gents/post-processor.py as dormant future Real-ESRGAN/RIFE/FFmpeg planning worker for :8082.
+- Added gents/lora-trainer.py as dormant future QC-passed dataset planner.
+- Status: NOT ACTIVE. No C++ changes, no daemon changes, no auto-listen, no polling, no fetch on import, no filesystem writes on import/direct init.
