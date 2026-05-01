@@ -1,114 +1,98 @@
 ﻿// STATUS: DORMANT / v2.4.0-PREP / NOT ACTIVE
-// Purpose: Future quality-control gate before archive/notification.
-// Safe to commit. Exports only. NO auto-execution. NO intervals. NO filesystem/network writes.
-// Activation requires explicit import + manual method calls.
+// Purpose: Post-render quality control (black frames, audio clipping, corruption, duration).
+// Safe to commit. Exports only. NO auto-execution. NO FFmpeg calls on import/direct init.
+// Activation requires explicit method invocation + manual FFmpeg availability check.
 
-export type QcStatus = "passed" | "warning" | "failed";
+import { execSync } from "node:child_process";
 
-export interface QcInput {
-  jobId: string;
-  videoPath?: string;
-  durationSeconds?: number;
-  width?: number;
-  height?: number;
-  fps?: number;
-  loudnessLufs?: number;
-  peakDb?: number;
-  renderErrors?: string[];
-}
-
-export interface QcResult {
-  jobId: string;
-  status: QcStatus;
-  score: number;
+export interface QCResult {
+  passed: boolean;
   issues: string[];
-  checkedAt: string;
+  duration_sec: number;
+  audio_peak_db: number;
+  black_frames: number;
+  corruption: boolean;
 }
 
-export class QcGuard {
-  private minimumDurationSeconds = 1;
-  private minimumWidth = 320;
-  private minimumHeight = 180;
-  private targetLoudnessLufs = -14;
-  private loudnessTolerance = 4;
+export class QCGuard {
+  private ffmpegPath: string;
 
+  constructor(ffmpegPath?: string) {
+    this.ffmpegPath = ffmpegPath || process.env.ECHOES_FFMPEG_PATH || "ffmpeg";
+  }
+
+  /** Initialise le garde QC en mode dormant. Aucune execution. */
   async init(): Promise<void> {
-    console.log("[QcGuard] Initialized (dormant mode)");
+    console.log("[QCGuard] Initialized (dormant mode)");
   }
 
-  validate(input: QcInput): QcResult {
+  /** Analyse une video uniquement si appelee explicitement. */
+  runQC(videoPath: string): QCResult {
     const issues: string[] = [];
-    let score = 100;
+    let duration = 0;
+    let peakDb = -99;
+    let blackFrames = 0;
+    let corruption = false;
+    const normalizedVideoPath = videoPath.replace(/\\/g, "/").replace(/:/g, "\\:");
 
-    if (!input.jobId) {
-      issues.push("missing_job_id");
-      score -= 40;
-    }
+    try {
+      const probe = execSync(
+        `"${this.ffmpegPath}" -v error -select_streams v:0 -show_entries stream=duration -of csv=p=0 "${videoPath}"`,
+        { encoding: "utf-8" }
+      ).trim();
 
-    if (!input.videoPath) {
-      issues.push("missing_video_path");
-      score -= 25;
-    }
-
-    if ((input.durationSeconds ?? 0) < this.minimumDurationSeconds) {
-      issues.push("duration_too_short");
-      score -= 20;
-    }
-
-    if ((input.width ?? 0) < this.minimumWidth || (input.height ?? 0) < this.minimumHeight) {
-      issues.push("resolution_too_low");
-      score -= 15;
-    }
-
-    if (typeof input.loudnessLufs === "number") {
-      const loudnessDelta = Math.abs(input.loudnessLufs - this.targetLoudnessLufs);
-      if (loudnessDelta > this.loudnessTolerance) {
-        issues.push("loudness_out_of_range");
-        score -= 10;
+      duration = parseFloat(probe) || 0;
+      if (Number.isNaN(duration) || duration < 0.5) {
+        corruption = true;
+        issues.push("corrupted_or_empty");
       }
-    }
 
-    if (typeof input.peakDb === "number" && input.peakDb > -0.5) {
-      issues.push("peak_too_hot");
-      score -= 10;
-    }
+      const black = execSync(
+        `"${this.ffmpegPath}" -v error -f lavfi -i "movie='${normalizedVideoPath}',blackdetect=d=0.5:pix_th=0.05" -show_entries tags=lavfi.black_start -of csv=p=0`,
+        { encoding: "utf-8" }
+      );
 
-    if (input.renderErrors?.length) {
-      issues.push(...input.renderErrors.map((error) => `render_error:${error}`));
-      score -= Math.min(40, input.renderErrors.length * 10);
-    }
+      blackFrames = (black.match(/black_start/g) || []).length;
+      if (blackFrames > 2) issues.push(`excessive_black_frames:${blackFrames}`);
 
-    score = Math.max(0, Math.min(100, score));
+      const audio = execSync(
+        `"${this.ffmpegPath}" -v error -f lavfi -i "amovie='${normalizedVideoPath}',astats=metadata=1:reset=1" -show_entries frame_tags=lavfi.astats.Overall.Peak_level -of csv=p=0`,
+        { encoding: "utf-8" }
+      );
+
+      const peaks = audio.match(/-?\d+\.\d+/g)?.map(Number) || [];
+      peakDb = peaks.length ? Math.max(...peaks) : -99;
+      if (peakDb > -1.0) issues.push(`audio_clipping:${peakDb.toFixed(1)}dB`);
+    } catch {
+      corruption = true;
+      issues.push("ffprobe_failed");
+    }
 
     return {
-      jobId: input.jobId || "unknown",
-      status: score >= 85 ? "passed" : score >= 60 ? "warning" : "failed",
-      score,
+      passed: issues.length === 0 && !corruption,
       issues,
-      checkedAt: new Date().toISOString()
+      duration_sec: duration,
+      audio_peak_db: peakDb,
+      black_frames: blackFrames,
+      corruption
     };
   }
 
-  snapshot(): { mode: "dormant"; thresholds: Record<string, number> } {
-    return {
-      mode: "dormant",
-      thresholds: {
-        minimumDurationSeconds: this.minimumDurationSeconds,
-        minimumWidth: this.minimumWidth,
-        minimumHeight: this.minimumHeight,
-        targetLoudnessLufs: this.targetLoudnessLufs,
-        loudnessTolerance: this.loudnessTolerance
-      }
-    };
+  /** Retourne un instantane lecture-seule de la configuration. */
+  snapshot(): { ffmpegPath: string } {
+    return { ffmpegPath: this.ffmpegPath };
   }
 }
+
+// Backward-compatible alias from previous prep.
+export const QcGuard = QCGuard;
 
 const isDirectRun = process.argv[1]?.replace(/\\/g, "/").endsWith("agents/qc-guard.ts");
 
 if (isDirectRun) {
-  const guard = new QcGuard();
-  guard.init().catch((error) => {
-    console.error("[QcGuard] Init failed", error);
+  const qc = new QCGuard();
+  qc.init().catch((error) => {
+    console.error("[QCGuard] Init failed", error);
     process.exitCode = 1;
   });
 }

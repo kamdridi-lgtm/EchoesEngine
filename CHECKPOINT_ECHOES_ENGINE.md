@@ -201,3 +201,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Added gents/post-processor.py as dormant future Real-ESRGAN/RIFE/FFmpeg planning worker for :8082.
 - Added gents/lora-trainer.py as dormant future QC-passed dataset planner.
 - Status: NOT ACTIVE. No C++ changes, no daemon changes, no auto-listen, no polling, no fetch on import, no filesystem writes on import/direct init.
+
+## v2.4.0 Prep - Dormant FFmpeg QC Guard - 2026-05-01 04:52:40 -04:00
+
+- Updated gents/qc-guard.ts with manual unQC(videoPath) FFmpeg-based checks for duration/corruption, black frames, and audio peak.
+- Direct execution still only prints [QCGuard] Initialized (dormant mode) and does not call FFmpeg.
+- Exported backward-compatible QcGuard alias.
+- FFmpeg checks run only through explicit future method invocation.
