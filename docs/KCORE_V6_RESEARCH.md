@@ -1,4 +1,4 @@
-# K-CORE / v6 Archive Review
+﻿# K-CORE / v6 Archive Review
 
 Status: research only. Do not activate or import directly into the current EchoesEngine daemon.
 
@@ -190,6 +190,104 @@ SOURCE PACKAGE: staging-ready and locally build-verified
 AWS DEPLOY: not executed from this fix step
 ```
 
+## v6.7 AWS Staging Deployment Completed
+
+Date: 2026-05-01
+
+Codex deployed the corrected v6.7 package to AWS staging.
+
+Working folder:
+
+```text
+C:\tmp\kamdridi-v67-staging-ready\v6
+```
+
+Final corrected archive:
+
+```text
+C:\tmp\deliverables\kamdridi-v6.7-staging-ready-FIXED-DEPLOYED.zip
+```
+
+CloudFormation stack:
+
+```text
+kamdridi-revenue-v6
+```
+
+Region:
+
+```text
+us-east-1
+```
+
+Stage:
+
+```text
+staging
+```
+
+Why `staging` was used:
+
+- Existing production-named resources already exist outside this stack:
+  - `kamdridi-prod-*` DynamoDB tables
+  - `kamdridi-prod-assets-166763267873`
+- Deploying with `StageName=prod` failed CloudFormation early validation because those fixed resource names already existed.
+- Staging names were free and safe.
+
+Additional deployment fixes applied:
+
+- `template.yaml`
+  - `AdminProjectionRefreshRule` now references `!Ref AdminProjectionRefreshFlow` and has explicit `DependsOn`.
+  - `PipelineFailureAlarm` now references `!Ref LeadPipeline` and has explicit `DependsOn`.
+  - Removed all `ReservedConcurrentExecutions` values because the AWS account quota could not reserve that much concurrency while keeping the Lambda unreserved minimum.
+- `src/master_orchestrator/app.py`
+  - Converts lead `amount` to `Decimal` before DynamoDB writes.
+  - This fixed `/ingest` 500 errors caused by boto3 rejecting Python `float` values.
+- `tests/smoke_test.ps1`
+  - Rewritten in ASCII/UTF-8 because the original file had mojibake that broke PowerShell parsing.
+
+Deployment outputs:
+
+```text
+ApiEndpoint: https://lk4bdn1sii.execute-api.us-east-1.amazonaws.com/staging
+IngestEndpoint: https://lk4bdn1sii.execute-api.us-east-1.amazonaws.com/staging/ingest
+StripeWebhookEndpoint: https://lk4bdn1sii.execute-api.us-east-1.amazonaws.com/staging/stripe/webhook
+AdminDashboard: https://lk4bdn1sii.execute-api.us-east-1.amazonaws.com/staging/admin
+StateMachineArn: arn:aws:states:us-east-1:166763267873:stateMachine:kamdridi-staging-lead-pipeline
+MessagingFollowupFlowArn: arn:aws:states:us-east-1:166763267873:stateMachine:kamdridi-staging-messaging-followup
+OpsRecoveryFlowArn: arn:aws:states:us-east-1:166763267873:stateMachine:kamdridi-staging-ops-recovery
+AssetsBucket: kamdridi-staging-assets-166763267873
+```
+
+Smoke test result:
+
+```text
+POST /ingest (hot lead): PASS
+GET /admin/api/kpis: PASS
+GET /admin/api/leads: PASS
+POST /stripe/webhook without signature returns expected auth error: PASS
+
+Results: 4 passed, 0 failed
+```
+
+Current real status:
+
+```text
+AWS STAGING: LIVE AND SMOKE-TESTED
+PRODUCTION: NOT READY
+```
+
+Remaining production items:
+
+1. Confirm the SNS subscription email sent to `ops@kamdridi.com`.
+2. Verify SES sender/domain and request SES production access before `EmailDryRun=false`.
+3. Add real Stripe secret and webhook secret ARNs.
+4. Decide how to handle existing `kamdridi-prod-*` resources before any production stack deploy:
+   - import them into CloudFormation, or
+   - deploy production with a different naming/stage strategy, or
+   - migrate/delete only after a deliberate backup plan.
+5. Set real `PublicBaseUrl` instead of `https://example.com`.
+
 ## EchoesEngine Reuse Plan
 
 Near-term, safe dormant additions:
@@ -217,3 +315,4 @@ Windows Task Scheduler -> scripts/daemon.bat -> C++ EchoesEngine daemon -> 127.0
 ```
 
 No AWS deployment, no Firebase deployment, no webhook activation, and no polling service should be started unless explicitly requested.
+
