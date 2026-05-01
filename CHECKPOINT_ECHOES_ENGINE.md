@@ -159,3 +159,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Direct execution should only print [EchoesApiGateway] Initialized (dormant mode).
 - It prepares tier/quota validation and payload enrichment for future public API routing.
 - It does not listen on any port, submit jobs, or call the C++ daemon unless future code explicitly imports and calls methods.
+
+## v2.5.0 Prep - Dormant OpenAPI Spec - 2026-05-01 04:23:13 -04:00
+
+- Added public/openapi.json as dormant future API/marketplace documentation.
+- JSON parse verified locally.
+- It documents planned gateway endpoints and the current daemon-style /generate and /status/{jobId} shape.
+- It does not start services or affect the current daemon.

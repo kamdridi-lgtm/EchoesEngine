@@ -1,0 +1,133 @@
+﻿{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "EchoesEngine API",
+    "version": "2.4.0-prep",
+    "description": "Dormant OpenAPI preparation for the future public EchoesEngine gateway. Not active until the gateway is explicitly wired."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000",
+      "description": "Future local public gateway (dormant)"
+    },
+    {
+      "url": "http://127.0.0.1:8080",
+      "description": "Current local C++ daemon API"
+    }
+  ],
+  "paths": {
+    "/generate": {
+      "post": {
+        "summary": "Create a render job",
+        "description": "Future gateway endpoint. Current C++ daemon already supports job generation with prompt/style/audio/duration/resolution fields.",
+        "security": [{ "EchoesApiKey": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GenerateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Job accepted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GenerateResponse" }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid API key" },
+          "429": { "description": "Quota exceeded" }
+        }
+      }
+    },
+    "/status/{jobId}": {
+      "get": {
+        "summary": "Get render job status",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JobStatus" }
+              }
+            }
+          },
+          "404": { "description": "Job not found" }
+        }
+      }
+    },
+    "/usage": {
+      "get": {
+        "summary": "Get future gateway usage/quota state",
+        "security": [{ "EchoesApiKey": [] }],
+        "responses": {
+          "200": {
+            "description": "Usage information",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Usage" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "EchoesApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Echoes-Key"
+      }
+    },
+    "schemas": {
+      "GenerateRequest": {
+        "type": "object",
+        "required": ["prompt"],
+        "properties": {
+          "prompt": { "type": "string" },
+          "style": { "type": "string", "default": "dark_cinematic" },
+          "audio": { "type": "string" },
+          "duration": { "type": "number", "default": 15 },
+          "resolution": { "type": "string", "default": "1280x720" }
+        }
+      },
+      "GenerateResponse": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" }
+        }
+      },
+      "JobStatus": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" },
+          "status": { "type": "string" },
+          "progress": { "type": "number" },
+          "videoPath": { "type": "string" }
+        }
+      },
+      "Usage": {
+        "type": "object",
+        "properties": {
+          "tier": { "type": "string" },
+          "used": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "priority": { "type": "integer" }
+        }
+      }
+    }
+  }
+}
