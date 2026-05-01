@@ -285,3 +285,13 @@ activate-phase5.ps1 -Activate: OK, three finite dry-run cycles completed, no bac
 Import path fix:
 
 - Phase 4 and Phase 5 runner imports were corrected because generated runner files live in `agents/`.
+
+## Operational Checkpoint - EchoesEngine Lives
+**Date:** 2026-05-01 13:17:35 -04:00
+**Status:** ACTIVE LOCAL STACK / 24-7 TASKS ENABLED
+
+- Active on the Windows host: C++ daemon :8080, existing bridge :3000, public local API :4000, worker control plane :8081/:8082.
+- Startup tasks configured locally: `EchoesEngineDaemon`, `EchoesEnginePublicApi`, `EchoesEngineWorkerControl`.
+- `8081` is a control endpoint until `torch` and `diffusers` are installed/cached for real GPU diffusion.
+- `8082` is post-process control, not full RIFE/ESRGAN production wiring yet.
+- No public internet exposure was opened; services remain localhost-only.
