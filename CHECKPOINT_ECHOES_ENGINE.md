@@ -54,8 +54,17 @@ Expected outputs:
 
 ## Update - 2026-05-01 00:38:13 -04:00
 
-- Recovered disk after a failed full GitHub clone of kamdridi-lgtm/EchoesEngine; the clone failed because the remote repository tracks heavy enders/ and jobs/ artifacts.
+- Recovered disk after a failed full GitHub clone of kamdridi-lgtm/EchoesEngine; the clone failed because the remote repository tracks heavy `renders/` and `jobs/` artifacts.
 - Deleted only the temporary failed clone C:\tmp\EchoesEngine-main and restored roughly 17 GB free disk.
 - Restarted EchoesEngineDaemon; server verified listening on 127.0.0.1:8080.
 - Added .env.example with local runtime, autojob, FFmpeg, and future cloud/autopilot variables.
 - Current blocker for GitHub sync: GitHub app write access returns 403, and normal clone is unsafe until remote heavy artifacts are removed or sparse checkout is used.
+
+## Update - 2026-05-01 00:54:50 -04:00
+
+- Reviewed `C:\Users\Administrator\OneDrive\Bureau\echoesengine_report_2026-04-16_00-11-43.txt`.
+- That report points to old `C:\EchoesEngine`, but it was only a small/incomplete scaffold: it had `app`, `engine`, `build`, `CMakeLists.txt`, and `run.bat`, but was missing `scripts`, `runtime`, `jobs`, `core`, `main.cpp`, `README.md`, `AGENTS.md`, `CMakePresets.json`, and `RELEASE_MANIFEST.json`.
+- Canonical working folder remains `C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine`.
+- Do not restart from `C:\EchoesEngine`; use it only as historical evidence unless the user explicitly asks to archive/delete it.
+
+
