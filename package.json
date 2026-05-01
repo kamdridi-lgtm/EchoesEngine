@@ -1,0 +1,16 @@
+{
+  "name": "echoesengine-runtime-prep",
+  "version": "2.4.0-prep",
+  "private": true,
+  "type": "module",
+  "description": "Dormant TypeScript prep utilities for EchoesEngine. Current C++ daemon remains the active runtime.",
+  "scripts": {
+    "agents:adaptive:dormant": "tsx agents/adaptive-orchestrator.ts",
+    "agents:swarm:dormant": "tsx agents/swarm-coordinator.ts"
+  },
+  "devDependencies": {
+    "tsx": "latest",
+    "typescript": "latest"
+  },
+  "dependencies": {}
+}

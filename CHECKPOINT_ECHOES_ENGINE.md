@@ -125,3 +125,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Running it should only print [SwarmCoordinator] Initialized (dormant mode).
 - It exports AgentRole, AgentNode, and SwarmCoordinator for future routing/heartbeat/load balancing.
 - It has no auto-submission, no intervals, no network calls, and does not affect the current C++ daemon, jobs, renders, or scheduled task.
+
+## v2.4.0 Prep - Dormant Infrastructure Docs - 2026-05-01 03:55:33 -04:00
+
+- Added dormant docker-compose.yml for future local Postgres/Redis. It does not run unless explicitly invoked.
+- Added package.json with dormant TS smoke-test scripts only.
+- Added CODEX_CONTEXT.md and RUN_INSTRUCTIONS.md to preserve the canonical folder, active runtime, and safety rules.
+- No changes to C++ build, daemon, jobs, renders, or scheduled task.
