@@ -166,3 +166,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - JSON parse verified locally.
 - It documents planned gateway endpoints and the current daemon-style /generate and /status/{jobId} shape.
 - It does not start services or affect the current daemon.
+
+## v2.4.0 Prep - Safer Dormant API Gateway - 2026-05-01 04:26:08 -04:00
+
+- Updated gateway/api-gateway.ts to Qwen's safer dormant gateway shape.
+- Exports ApiGateway, TierConfig, UserState, and backward-compatible EchoesApiGateway alias.
+- Direct execution should only print [ApiGateway] Initialized (dormant mode).
+- No auto-listen, no intervals, no real proxy/fetch, and no network calls on import/direct init.

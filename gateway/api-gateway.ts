@@ -1,77 +1,86 @@
 ﻿// STATUS: DORMANT / v2.4.0-PREP / NOT ACTIVE
-// Purpose: Future public API gateway facade for EchoesEngine.
-// Safe to commit. NO auto-listen. NO server startup on import. NO network calls on import.
-// Activation requires explicit import + manual method calls or a future runner.
+// Purpose: Future public API gateway (auth, quotas, rate-limit, proxy to :8080).
+// Safe to commit. Exports only. NO auto-listen. NO intervals. NO network calls on import.
+// Activation requires explicit instantiation + manual .listen() call in future code.
 
-export type EchoesTier = "free" | "pro" | "elite";
-
-export type EchoesGatewayUser = {
-  apiKeyHash: string;
-  tier: EchoesTier;
-  rendersUsed: number;
+export interface TierConfig {
+  rpm: number;
   monthlyLimit: number;
-};
+  priority: number;
+}
 
-export type EchoesGeneratePayload = {
-  prompt: string;
-  style?: string;
-  audio?: string;
-  duration?: number;
-  resolution?: string;
-};
+export interface UserState {
+  tier: string;
+  used: number;
+  hash: string;
+}
 
-export type EchoesGatewayDecision = {
+export type ProxyResult = {
   ok: boolean;
   status: number;
-  reason?: string;
-  priority?: number;
+  body?: unknown;
 };
 
-const TIER_PRIORITY: Record<EchoesTier, number> = {
-  free: 0,
-  pro: 1,
-  elite: 2
-};
+export class ApiGateway {
+  private tiers: Record<string, TierConfig> = {
+    free: { rpm: 5, monthlyLimit: 10, priority: 0 },
+    pro: { rpm: 30, monthlyLimit: 150, priority: 1 },
+    studio: { rpm: 100, monthlyLimit: 1000, priority: 2 }
+  };
 
-export class EchoesApiGateway {
-  private readonly internalApiBase: string;
+  private users = new Map<string, UserState>();
+  private internalApi = process.env.ECHOES_API_URL ?? "http://127.0.0.1:8080";
 
-  constructor(internalApiBase = process.env.ECHOES_API_URL ?? "http://127.0.0.1:8080") {
-    this.internalApiBase = internalApiBase;
-  }
-
+  /** Initialise la gateway en mode dormant. Aucune ecoute reseau. */
   async init(): Promise<void> {
-    console.log("[EchoesApiGateway] Initialized (dormant mode)");
+    console.log("[ApiGateway] Initialized (dormant mode)");
   }
 
-  validateUser(user: EchoesGatewayUser | null | undefined): EchoesGatewayDecision {
-    if (!user) return { ok: false, status: 401, reason: "missing_user" };
-    if (user.rendersUsed >= user.monthlyLimit) return { ok: false, status: 429, reason: "quota_exceeded" };
-    return { ok: true, status: 200, priority: TIER_PRIORITY[user.tier] ?? 0 };
+  /** Enregistre une cle API hachee. Aucun I/O. */
+  registerKey(hash: string, tier: string = "free"): void {
+    this.users.set(hash, { tier, used: 0, hash });
   }
 
-  prepareGeneratePayload(user: EchoesGatewayUser, payload: EchoesGeneratePayload): EchoesGeneratePayload & { tier: EchoesTier; priority: number } {
-    const priority = TIER_PRIORITY[user.tier] ?? 0;
+  /** Verifie le quota sans effet de bord. Retourne true si autorise. */
+  checkQuota(hash: string): boolean {
+    const user = this.users.get(hash);
+    if (!user) return false;
 
+    const tier = this.tiers[user.tier] || this.tiers.free;
+    return user.used < tier.monthlyLimit;
+  }
+
+  /** Proxy simule (dormant). Ne fait aucun fetch reel tant que non active. */
+  async proxyRequest(_payload: Record<string, unknown>): Promise<ProxyResult> {
     return {
-      ...payload,
-      tier: user.tier,
-      priority
+      ok: true,
+      status: 200,
+      body: {
+        message: "dormant-proxy-ready",
+        internalApi: this.internalApi
+      }
     };
   }
 
-  targetUrl(path: string): string {
-    const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${this.internalApiBase}${cleanPath}`;
+  /** Retourne un instantane lecture-seule de la config. */
+  snapshot(): { tiers: Record<string, TierConfig>; users: number; internalApi: string } {
+    return {
+      tiers: this.tiers,
+      users: this.users.size,
+      internalApi: this.internalApi
+    };
   }
 }
+
+// Backward-compatible alias from the previous dormant gateway prep.
+export const EchoesApiGateway = ApiGateway;
 
 const isDirectRun = process.argv[1]?.replace(/\\/g, "/").endsWith("gateway/api-gateway.ts");
 
 if (isDirectRun) {
-  const gateway = new EchoesApiGateway();
+  const gateway = new ApiGateway();
   gateway.init().catch((error) => {
-    console.error("[EchoesApiGateway] Init failed", error);
+    console.error("[ApiGateway] Init failed", error);
     process.exitCode = 1;
   });
 }
