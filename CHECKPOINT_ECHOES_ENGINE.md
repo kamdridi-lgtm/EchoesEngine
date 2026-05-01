@@ -105,3 +105,9 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - It was reviewed but NOT executed because it deletes the target folder and creates a parallel scaffold.
 - Created QWEN_FULL_INJECTOR_REVIEW.md documenting useful concepts and integration risks.
 - Safe path: extract concepts gradually into the canonical folder; do not replace current working daemon/server/build files.
+
+## v2.4.0 Prep - Dormant DB Schema - 2026-05-01 03:39:42 -04:00
+
+- Added db/schema.sql as dormant PostgreSQL prep for future users/jobs/swarm node state.
+- Status: NOT ACTIVE. It does not affect the current C++ daemon, local jobs, renders, or scheduled task.
+- Activation requires explicit Docker/Postgres setup and agent/gateway wiring.
