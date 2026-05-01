@@ -118,3 +118,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Running it should only print [AdaptiveOrchestrator] Initialized (dormant mode).
 - It does not auto-submit jobs and does not affect the current C++ daemon, local jobs, renders, or scheduled task.
 - Future activation requires explicit wiring/calls.
+
+## v2.4.0 Prep - Dormant Swarm Coordinator - 2026-05-01 03:51:25 -04:00
+
+- Added gents/swarm-coordinator.ts in dormant mode.
+- Running it should only print [SwarmCoordinator] Initialized (dormant mode).
+- It exports AgentRole, AgentNode, and SwarmCoordinator for future routing/heartbeat/load balancing.
+- It has no auto-submission, no intervals, no network calls, and does not affect the current C++ daemon, jobs, renders, or scheduled task.
