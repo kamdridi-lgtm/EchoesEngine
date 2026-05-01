@@ -145,3 +145,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - No EchoesEngine-ready AWS/Cloudflare component was found in the report.
 - No action needed now; keep current v2.4 prep focused on dormant local infrastructure and agents.
 
+
+## v2.4.0 Prep - Adaptive Orchestrator Manual Methods - 2026-05-01 04:16:26 -04:00
+
+- Updated gents/adaptive-orchestrator.ts with manual submitIfCapacity, monitorJobs, and snapshot methods.
+- Still dormant: direct execution only prints [AdaptiveOrchestrator] Initialized (dormant mode) and exits.
+- No intervals, no auto-submission, and no network calls on import/direct init.
+- Manual methods are future prep and require explicit import/call.

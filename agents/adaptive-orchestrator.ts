@@ -1,58 +1,91 @@
-﻿/**
- * STATUS: DORMANT / v2.4.0-PREP / NOT ACTIVE
- * Purpose: future adaptive job orchestrator for EchoesEngine.
- * Safe to commit. It does not auto-submit jobs and does not affect the current C++ daemon.
- * Activation requires explicit code changes or a direct method call from a runner.
- */
+﻿// STATUS: DORMANT / v2.4.0-PREP / NOT ACTIVE
+// Purpose: Future metric-driven job submission & monitoring.
+// Safe to commit. NO auto-execution. NO intervals. NO network calls on import.
+// Activation requires explicit import + manual method calls.
 
-type EchoesJobStatus = "SUBMITTED" | "RUNNING" | "FINISHED" | "FAILED";
+import { randomUUID } from "node:crypto";
 
-type EchoesJobRecord = {
+type TrackedJob = {
   id: string;
-  status: EchoesJobStatus;
-  style?: string;
+  status: string;
+  style: string;
   submittedAt: string;
-  attempts: number;
+  attempts?: number;
 };
 
-const DEFAULT_API = process.env.ECHOES_API_URL ?? "http://127.0.0.1:8080";
-
 export class AdaptiveOrchestrator {
-  private readonly apiUrl: string;
-  private readonly jobs = new Map<string, EchoesJobRecord>();
-  private initialized = false;
+  private jobs = new Map<string, TrackedJob>();
+  private maxConcurrent = 3;
+  private apiBase = process.env.ECHOES_API_URL ?? "http://127.0.0.1:8080";
 
-  constructor(apiUrl = DEFAULT_API) {
-    this.apiUrl = apiUrl;
-  }
-
+  /** Initialise l'orchestrateur en mode dormant. Aucune boucle, aucun I/O. */
   async init(): Promise<void> {
-    this.initialized = true;
     console.log("[AdaptiveOrchestrator] Initialized (dormant mode)");
   }
 
-  /**
-   * Dormant by design. This method exists for future wiring, but it is not called automatically.
-   */
-  async submitIfCapacity(): Promise<false> {
-    if (!this.initialized) {
-      throw new Error("AdaptiveOrchestrator must be initialized before submitIfCapacity().");
-    }
+  /** Soumet un job uniquement si la capacite le permet. Aucune execution automatique. */
+  async submitIfCapacity(style: string, prompt: string, audioPath: string): Promise<string | null> {
+    const active = [...this.jobs.values()].filter((job) => !["FINISHED", "FAILED"].includes(job.status)).length;
+    if (active >= this.maxConcurrent) return null;
 
-    console.log(`[AdaptiveOrchestrator] Dormant: no job submitted. API target: ${this.apiUrl}`);
-    return false;
+    const id = randomUUID();
+
+    try {
+      const response = await fetch(`${this.apiBase}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: id, style, prompt, audio: audioPath })
+      });
+
+      if (!response.ok) return null;
+
+      this.jobs.set(id, {
+        id,
+        status: "SUBMITTED",
+        style,
+        submittedAt: new Date().toISOString()
+      });
+
+      return id;
+    } catch {
+      return null;
+    }
   }
 
-  snapshot(): EchoesJobRecord[] {
-    return [...this.jobs.values()];
+  /** Verifie l'etat des jobs en memoire. Aucun polling automatique. */
+  async monitorJobs(): Promise<void> {
+    for (const [id, job] of this.jobs) {
+      if (["FINISHED", "FAILED"].includes(job.status)) continue;
+
+      try {
+        const response = await fetch(`${this.apiBase}/status/${id}`);
+
+        if (!response.ok) {
+          job.attempts = (job.attempts || 0) + 1;
+          if (job.attempts > 10) job.status = "FAILED";
+          continue;
+        }
+
+        const data = await response.json() as { status?: string };
+        job.status = data.status || job.status;
+      } catch {
+        // Dormant safety: explicit monitor calls should not throw on temporary network failures.
+      }
+    }
+  }
+
+  /** Retourne un instantane lecture-seule des jobs suivis. */
+  snapshot(): Record<string, TrackedJob> {
+    return Object.fromEntries(this.jobs);
   }
 }
 
-if (process.argv[1]?.toLowerCase().endsWith("adaptive-orchestrator.ts")) {
+const isDirectRun = process.argv[1]?.replace(/\\/g, "/").endsWith("agents/adaptive-orchestrator.ts");
+
+if (isDirectRun) {
   const orchestrator = new AdaptiveOrchestrator();
   orchestrator.init().catch((error) => {
     console.error("[AdaptiveOrchestrator] Init failed", error);
     process.exitCode = 1;
   });
 }
-
