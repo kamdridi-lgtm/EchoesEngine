@@ -29,6 +29,7 @@ These commands should initialize and exit. They must not submit jobs.
 cd C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine
 pnpm dlx tsx agents/adaptive-orchestrator.ts
 pnpm dlx tsx agents/swarm-coordinator.ts
+pnpm dlx tsx agents/auto-curator.ts
 ```
 
 Expected output:
@@ -36,6 +37,7 @@ Expected output:
 ```text
 [AdaptiveOrchestrator] Initialized (dormant mode)
 [SwarmCoordinator] Initialized (dormant mode)
+[AutoCurator] Initialized (dormant mode)
 ```
 
 ## Dormant Database Stack

@@ -19,6 +19,7 @@ Do not use `C:\EchoesEngine` as the working folder. It is an old incomplete scaf
 - `db/schema.sql`: dormant PostgreSQL schema for future users/jobs/swarm state.
 - `agents/adaptive-orchestrator.ts`: dormant orchestrator. Running it only prints an init message.
 - `agents/swarm-coordinator.ts`: dormant swarm registry/load balancer. Running it only prints an init message.
+- `agents/auto-curator.ts`: dormant QC-passed render curator for future LoRA JSONL dataset prep.
 - `docker-compose.yml`: dormant local Postgres/Redis stack. It starts only if explicitly invoked.
 - `package.json`: minimal package metadata/scripts for dormant TypeScript utilities.
 
@@ -54,4 +55,4 @@ Future pipeline target:
 [QC Guard TS] -> validation -> archive S3/local -> notification
 ```
 
-Implemented prep so far: dormant gateway/router facade, dormant telemetry bridge, dormant QC guard, dormant orchestrator, dormant swarm coordinator, dormant DB schema.
+Implemented prep so far: dormant gateway/router facade, dormant telemetry bridge, dormant QC guard, dormant auto curator, dormant orchestrator, dormant swarm coordinator, dormant DB schema.

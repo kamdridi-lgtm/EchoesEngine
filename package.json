@@ -6,7 +6,8 @@
   "description": "Dormant TypeScript prep utilities for EchoesEngine. Current C++ daemon remains the active runtime.",
   "scripts": {
     "agents:adaptive:dormant": "tsx agents/adaptive-orchestrator.ts",
-    "agents:swarm:dormant": "tsx agents/swarm-coordinator.ts"
+    "agents:swarm:dormant": "tsx agents/swarm-coordinator.ts",
+    "agents:curator:dormant": "tsx agents/auto-curator.ts"
   },
   "devDependencies": {
     "tsx": "latest",
