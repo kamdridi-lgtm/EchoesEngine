@@ -98,3 +98,10 @@ Missing in canonical folder:
 - `db/schema.sql`
 
 Do not claim v2.4.0 multi-node federation is active until these files are implemented and tested.
+
+## Qwen Full Injector Review - 2026-05-01 01:15:23 -04:00
+
+- User provided EchoesEngine_Full_Injector.ps1 as Qwen 3.6 output.
+- It was reviewed but NOT executed because it deletes the target folder and creates a parallel scaffold.
+- Created QWEN_FULL_INJECTOR_REVIEW.md documenting useful concepts and integration risks.
+- Safe path: extract concepts gradually into the canonical folder; do not replace current working daemon/server/build files.
