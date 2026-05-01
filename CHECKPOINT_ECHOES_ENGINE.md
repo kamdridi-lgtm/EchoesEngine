@@ -241,3 +241,47 @@ pnpm exec tsx agents/node-discovery.ts
 pnpm exec tsx gateway/public-api.ts
 .\scripts\activate-phase4.ps1 -DryRun
 ```
+
+## Phase 5 - Closed Loop and Revenue Reinvestment - 2026-05-01
+
+Status: READY FOR MANUAL REHEARSAL, dormant by default.
+
+Codex did not run the raw EchoesEngine_Phase5_Codex_Injector.ps1 because it uses Set-Content and could overwrite existing files. Phase 5 was integrated manually with tighter safety:
+
+- No C++ or CMake files changed.
+- No secrets added or printed.
+- No AWS, Stripe, webhook, database, or scaling calls happen on import or direct execution.
+- agents/revenue-reinvestor.ts models revenue threshold decisions in memory only.
+- agents/closed-loop-runner.ts rehearses the intended full cycle as named steps only.
+- scripts/activate-phase5.ps1 is dry-run by default; with -Activate it runs exactly three local dry-run cycles and exits.
+
+Files added:
+
+- agents/revenue-reinvestor.ts
+- agents/closed-loop-runner.ts
+- scripts/activate-phase5.ps1
+- docs/CODEX_PHASE5_GUIDE.md
+
+Validation commands:
+
+```powershell
+pnpm exec tsx agents/revenue-reinvestor.ts
+pnpm exec tsx agents/closed-loop-runner.ts
+.\scripts\activate-phase5.ps1 -DryRun
+.\scripts\activate-phase5.ps1 -Activate
+```
+
+Production remains gated on SES production access, Stripe secrets, real PublicBaseUrl, prod resource import/migration strategy, Redis-backed public rate limiting, durable audit logs, and a manual kill switch.
+
+Validation result:
+
+```text
+agents:revenue:dormant: OK
+agents:closed-loop:dormant: OK
+activate-phase5.ps1 -DryRun: OK
+activate-phase5.ps1 -Activate: OK, three finite dry-run cycles completed, no background process left running
+```
+
+Import path fix:
+
+- Phase 4 and Phase 5 runner imports were corrected because generated runner files live in `agents/`.

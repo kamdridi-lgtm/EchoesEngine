@@ -5,9 +5,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$RepoRoot = "C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine"
-if (-not (Test-Path $RepoRoot)) {
-    $RepoRoot = Split-Path -Parent $PSScriptRoot
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+if (-not (Test-Path (Join-Path $RepoRoot "package.json"))) {
+    $RepoRoot = "C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine"
 }
 Set-Location $RepoRoot
 
@@ -35,9 +35,9 @@ if ($DryRun -and -not $Activate) {
 }
 
 $runnerCode = @"
-import { PublicApi } from './gateway/public-api.ts';
-import { LoraManager } from './agents/lora-manager.ts';
-import { NodeDiscovery } from './agents/node-discovery.ts';
+import { PublicApi } from '../gateway/public-api.ts';
+import { LoraManager } from './lora-manager.ts';
+import { NodeDiscovery } from './node-discovery.ts';
 
 async function main() {
   const api = new PublicApi({ dryRun: false });

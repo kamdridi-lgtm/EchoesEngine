@@ -13,7 +13,9 @@
     "agents:rate-limit:dormant": "tsx agents/rate-limiter.ts",
     "agents:lora:dormant": "tsx agents/lora-manager.ts",
     "agents:nodes:dormant": "tsx agents/node-discovery.ts",
-    "gateway:public:dormant": "tsx gateway/public-api.ts"
+    "gateway:public:dormant": "tsx gateway/public-api.ts",
+    "agents:revenue:dormant": "tsx agents/revenue-reinvestor.ts",
+    "agents:closed-loop:dormant": "tsx agents/closed-loop-runner.ts"
   },
   "devDependencies": {
     "tsx": "latest",
