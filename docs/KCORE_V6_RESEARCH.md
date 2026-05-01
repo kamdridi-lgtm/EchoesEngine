@@ -6,6 +6,7 @@ Reviewed sources:
 
 - `C:\Users\Administrator\OneDrive\Bureau\k-core-operational-control-merged-local-fresh-1776417777 (1).zip`
 - `C:\Users\Administrator\OneDrive\Bureau\v6`
+- `C:\Users\Administrator\OneDrive\Documents\Downloads\files (1).zip`
 
 ## What K-CORE Contains
 
@@ -71,6 +72,51 @@ Do not deploy from this folder directly:
 - It requires real AWS/SAM/Secrets/DynamoDB/SES setup.
 - It is not wired to the current local C++ daemon.
 - Some files have encoding artifacts from copied text.
+
+## v6.7 Deploy-Ready Patch Notes
+
+`files (1).zip` was reviewed as a follow-up v6.7 deploy-ready patch. The archive only contained:
+
+- `template.yaml`
+- `fix_and_deploy.py`
+
+It did not contain the full corrected source tree mentioned by the external report (`src/crm_agent/app.py`, `deploy.ps1`, or `docs/RUNBOOK.md` were not present in this zip).
+
+What the patched template confirms:
+
+- Serverless functions are wired through `CodeUri` paths like `src/master_orchestrator/`, `src/crm_agent/`, `src/revenue_agent/`, etc.
+- State machine circular dependencies are reduced by using explicit `!Sub arn:aws:states...` values and `DefinitionSubstitutions`.
+- SES-related environment values and permissions are present for email delivery.
+- Admin API key, Stripe secret, Stripe webhook secret, and email dry-run are still parameter-driven.
+- DynamoDB tables remain retained and encrypted.
+
+Deployment script note:
+
+- `fix_and_deploy.py` writes a `samconfig.toml`, runs `sam build`, then runs `sam deploy`.
+- It is operational, not dormant. Do not run it from Codex unless the user explicitly asks to deploy AWS.
+- It deploys with `EmailDryRun=true` and does not include production Stripe/Admin secret ARNs by default.
+
+Remaining production risks from the patch review:
+
+- SES sandbox can block real outgoing email until SES production access is approved.
+- `EmailDryRun=true` means no real emails are sent.
+- Empty `AdminApiKeySecretArn` means the admin dashboard can be public.
+- Empty `StripeSecretArn` and `StripeWebhookSecretArn` mean payments/webhooks are not production-ready.
+- Customer upsert still appears likely to need a better lookup/index path once data volume grows.
+
+Real status of this AWS package:
+
+```text
+STAGING-READY, not production-ready.
+```
+
+Production order should be:
+
+1. Verify SES sender/domain and request SES production access.
+2. Store Stripe live secret and webhook secret in AWS Secrets Manager.
+3. Create an admin API key secret for `AdminApiKeySecretArn`.
+4. Redeploy with real secret ARNs and `EmailDryRun=false`.
+5. Verify Stripe webhook, checkout, email delivery, admin auth, and CloudWatch alarms.
 
 ## EchoesEngine Reuse Plan
 
