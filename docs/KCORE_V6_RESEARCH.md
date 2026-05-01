@@ -173,6 +173,23 @@ ARCHITECTURE: staging-ready
 ZIP AS PROVIDED: not deployable until deploy.ps1 and samconfig.toml are cleaned
 ```
 
+Fix applied by Codex:
+
+- Cleaned `samconfig.toml` by adding top-level `version = 0.1`.
+- Rewrote `deploy.ps1` in plain ASCII/UTF-8 PowerShell without broken mojibake divider text.
+- Verified PowerShell parser passes on `deploy.ps1`.
+- Verified `sam validate --template-file .\template.yaml` passes.
+- Verified `sam build --template-file .\template.yaml` succeeds.
+- Created corrected package:
+  - `C:\Users\Administrator\OneDrive\Documents\Downloads\kamdridi-v6.7-staging-ready-FIXED.zip`
+
+Fixed package status:
+
+```text
+SOURCE PACKAGE: staging-ready and locally build-verified
+AWS DEPLOY: not executed from this fix step
+```
+
 ## EchoesEngine Reuse Plan
 
 Near-term, safe dormant additions:
