@@ -1,7 +1,7 @@
 ﻿// STATUS: DORMANT / v2.4.0-PREP / NOT ACTIVE
-// Purpose: Future public API gateway (auth, quotas, rate-limit, proxy to :8080).
-// Safe to commit. Exports only. NO auto-listen. NO intervals. NO network calls on import.
-// Activation requires explicit instantiation + manual .listen() call in future code.
+// Purpose: Secure gateway routing to diffusion (:8081) & post-process (:8082) workers.
+// Safe to commit. Exports only. NO auto-listen. NO intervals. No network calls on import/direct init.
+// Manual activation only: routeToWorker() performs fetch only when explicitly called.
 
 export interface TierConfig {
   rpm: number;
@@ -15,7 +15,9 @@ export interface UserState {
   hash: string;
 }
 
-export type ProxyResult = {
+export type WorkerTarget = "diffusion" | "post";
+
+export type GatewayRouteResult = {
   ok: boolean;
   status: number;
   body?: unknown;
@@ -29,19 +31,17 @@ export class ApiGateway {
   };
 
   private users = new Map<string, UserState>();
-  private internalApi = process.env.ECHOES_API_URL ?? "http://127.0.0.1:8080";
+  private diffusionWorker = process.env.ECHOES_DIFFUSION_WORKER_URL ?? "http://127.0.0.1:8081";
+  private postWorker = process.env.ECHOES_POST_WORKER_URL ?? "http://127.0.0.1:8082";
 
-  /** Initialise la gateway en mode dormant. Aucune ecoute reseau. */
   async init(): Promise<void> {
     console.log("[ApiGateway] Initialized (dormant mode)");
   }
 
-  /** Enregistre une cle API hachee. Aucun I/O. */
   registerKey(hash: string, tier: string = "free"): void {
     this.users.set(hash, { tier, used: 0, hash });
   }
 
-  /** Verifie le quota sans effet de bord. Retourne true si autorise. */
   checkQuota(hash: string): boolean {
     const user = this.users.get(hash);
     if (!user) return false;
@@ -50,29 +50,50 @@ export class ApiGateway {
     return user.used < tier.monthlyLimit;
   }
 
-  /** Proxy simule (dormant). Ne fait aucun fetch reel tant que non active. */
-  async proxyRequest(_payload: Record<string, unknown>): Promise<ProxyResult> {
-    return {
-      ok: true,
-      status: 200,
-      body: {
-        message: "dormant-proxy-ready",
-        internalApi: this.internalApi
-      }
-    };
+  /** Route une requete vers le worker approprie avec priorite & quota check. Manual only. */
+  async routeToWorker(hash: string, target: WorkerTarget, payload: Record<string, unknown>): Promise<GatewayRouteResult> {
+    if (!this.checkQuota(hash)) {
+      return { ok: false, status: 429, body: { error: "quota_exceeded" } };
+    }
+
+    const user = this.users.get(hash);
+    if (!user) {
+      return { ok: false, status: 401, body: { error: "unknown_user" } };
+    }
+
+    const tier = this.tiers[user.tier] || this.tiers.free;
+    const enriched = { ...payload, priority: tier.priority, tier: user.tier };
+    const workerUrl = target === "diffusion" ? `${this.diffusionWorker}/generate` : `${this.postWorker}/process`;
+
+    try {
+      const response = await fetch(workerUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(enriched)
+      });
+
+      const body = await response.json().catch(() => null);
+      if (response.ok) user.used++;
+
+      return { ok: response.ok, status: response.status, body };
+    } catch {
+      return { ok: false, status: 502, body: { error: "worker_unreachable" } };
+    }
   }
 
-  /** Retourne un instantane lecture-seule de la config. */
-  snapshot(): { tiers: Record<string, TierConfig>; users: number; internalApi: string } {
+  snapshot(): { tiers: Record<string, TierConfig>; users: number; workers: Record<WorkerTarget, string> } {
     return {
       tiers: this.tiers,
       users: this.users.size,
-      internalApi: this.internalApi
+      workers: {
+        diffusion: this.diffusionWorker,
+        post: this.postWorker
+      }
     };
   }
 }
 
-// Backward-compatible alias from the previous dormant gateway prep.
+// Backward-compatible alias from earlier dormant gateway prep.
 export const EchoesApiGateway = ApiGateway;
 
 const isDirectRun = process.argv[1]?.replace(/\\/g, "/").endsWith("gateway/api-gateway.ts");

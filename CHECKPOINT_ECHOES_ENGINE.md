@@ -187,3 +187,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Added gents/qc-guard.ts in dormant mode.
 - Direct execution should only print [QcGuard] Initialized (dormant mode).
 - It validates in-memory metadata only; no filesystem writes, no network calls, no archive, no notification, and no daemon impact.
+
+## v2.4.0 Prep - Dormant Worker Routing Gateway - 2026-05-01 04:44:51 -04:00
+
+- Updated gateway/api-gateway.ts with manual outeToWorker() routing for future diffusion worker :8081 and post-process worker :8082.
+- Direct execution still only prints [ApiGateway] Initialized (dormant mode).
+- No auto-listen, no intervals, and no network calls on import/direct init.
+- Worker fetches occur only if future code explicitly calls outeToWorker().
