@@ -111,3 +111,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Added db/schema.sql as dormant PostgreSQL prep for future users/jobs/swarm node state.
 - Status: NOT ACTIVE. It does not affect the current C++ daemon, local jobs, renders, or scheduled task.
 - Activation requires explicit Docker/Postgres setup and agent/gateway wiring.
+
+## v2.4.0 Prep - Dormant Adaptive Orchestrator - 2026-05-01 03:43:45 -04:00
+
+- Added gents/adaptive-orchestrator.ts in dormant mode.
+- Running it should only print [AdaptiveOrchestrator] Initialized (dormant mode).
+- It does not auto-submit jobs and does not affect the current C++ daemon, local jobs, renders, or scheduled task.
+- Future activation requires explicit wiring/calls.
