@@ -7,6 +7,7 @@ Reviewed sources:
 - `C:\Users\Administrator\OneDrive\Bureau\k-core-operational-control-merged-local-fresh-1776417777 (1).zip`
 - `C:\Users\Administrator\OneDrive\Bureau\v6`
 - `C:\Users\Administrator\OneDrive\Documents\Downloads\files (1).zip`
+- `C:\Users\Administrator\OneDrive\Documents\Downloads\kamdridi-v6.7-staging-ready.zip`
 
 ## What K-CORE Contains
 
@@ -117,6 +118,60 @@ Production order should be:
 3. Create an admin API key secret for `AdminApiKeySecretArn`.
 4. Redeploy with real secret ARNs and `EmailDryRun=false`.
 5. Verify Stripe webhook, checkout, email delivery, admin auth, and CloudWatch alarms.
+
+## v6.7 Staging-Ready Full Zip Notes
+
+`kamdridi-v6.7-staging-ready.zip` was reviewed after the smaller `files (1).zip` patch. This archive is more complete and includes:
+
+- `deploy.ps1`
+- `samconfig.toml`
+- `template.yaml`
+- `docs/RUNBOOK.md`
+- sample events:
+  - `sample_ingest_hot.json`
+  - `sample_ingest_cold.json`
+  - `sample_stripe_webhook.json`
+- Lambda source folders for admin, analytics, CRM, email, event receiver, master orchestrator, revenue, watchdog, and shared utilities.
+- Step Function ASL files.
+- `tests/smoke_test.ps1`
+
+Confirmed improvements:
+
+- `src/crm_agent/app.py` is reduced to 244 lines and has a single `handler()`.
+- `template.yaml` includes SES permissions with `ses:SendEmail` and `ses:SendRawEmail`.
+- `template.yaml` wires function `CodeUri` paths correctly.
+- Step Functions use `DefinitionUri` and `DefinitionSubstitutions`.
+- The runbook names the corrected event files.
+- The smoke test covers `/ingest`, admin KPIs/leads when an admin key is supplied, and webhook rejection without signature.
+
+Current blockers found by local inspection:
+
+- `samconfig.toml` still lacks the required top-level `version = 0.1`; SAM CLI rejects it before validation.
+- `deploy.ps1` does not currently parse in PowerShell because mojibake/encoding artifacts broke quoted strings and comment divider lines.
+- Because `deploy.ps1` is not parseable, the preflight/deploy command cannot be trusted until the script is rewritten or cleaned.
+
+Local command outcomes on the extracted copy:
+
+```text
+PowerShell parser: FAILED on deploy.ps1
+sam validate: FAILED before template validation because samconfig.toml has no version key
+```
+
+Recommended minimal fixes before using this zip:
+
+1. Add `version = 0.1` to `samconfig.toml`.
+2. Rewrite `deploy.ps1` as plain ASCII/UTF-8 without decorative box drawing characters.
+3. Re-run:
+   - `sam validate --template-file .\template.yaml`
+   - `sam build --template-file .\template.yaml`
+   - `.\deploy.ps1 ...`
+
+Status update:
+
+```text
+ARCHITECTURE: staging-ready
+ZIP AS PROVIDED: not deployable until deploy.ps1 and samconfig.toml are cleaned
+```
 
 ## EchoesEngine Reuse Plan
 
