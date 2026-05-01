@@ -208,3 +208,36 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Direct execution still only prints [QCGuard] Initialized (dormant mode) and does not call FFmpeg.
 - Exported backward-compatible QcGuard alias.
 - FFmpeg checks run only through explicit future method invocation.
+
+## Phase 4 - Public API, LoRA Live, Multi-Node Prep - 2026-05-01
+
+Status: READY FOR MANUAL ACTIVATION, dormant by default.
+
+Codex did not run the raw EchoesEngine_Phase4_Codex_Injector.ps1 because it uses Set-Content and could overwrite existing files. Instead, Phase 4 was integrated manually with these safety adjustments:
+
+- No C++ or CMake files changed.
+- No new external Node dependencies added.
+- gateway/public-api.ts uses Node's built-in http module instead of Fastify, so dormant verification works with the current package.json.
+- All modules remain dormant on import and direct execution.
+- scripts/activate-phase4.ps1 is dry-run by default and binds the public facade only to 127.0.0.1:4000 when explicitly activated.
+
+Files added:
+
+- agents/rate-limiter.ts
+- agents/lora-manager.ts
+- agents/node-discovery.ts
+- gateway/public-api.ts
+- scripts/activate-phase4.ps1
+- docs/CODEX_PHASE4_GUIDE.md
+- models/lora/.gitkeep
+- training_dataset/.gitkeep
+
+Validation commands:
+
+```powershell
+pnpm exec tsx agents/rate-limiter.ts
+pnpm exec tsx agents/lora-manager.ts
+pnpm exec tsx agents/node-discovery.ts
+pnpm exec tsx gateway/public-api.ts
+.\scripts\activate-phase4.ps1 -DryRun
+```

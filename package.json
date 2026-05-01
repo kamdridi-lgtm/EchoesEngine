@@ -9,7 +9,11 @@
     "agents:swarm:dormant": "tsx agents/swarm-coordinator.ts",
     "agents:curator:dormant": "tsx agents/auto-curator.ts",
     "agents:events:dormant": "tsx agents/event-dispatcher.ts",
-    "agents:notifications:dormant": "tsx agents/notification-bridge.ts"
+    "agents:notifications:dormant": "tsx agents/notification-bridge.ts",
+    "agents:rate-limit:dormant": "tsx agents/rate-limiter.ts",
+    "agents:lora:dormant": "tsx agents/lora-manager.ts",
+    "agents:nodes:dormant": "tsx agents/node-discovery.ts",
+    "gateway:public:dormant": "tsx gateway/public-api.ts"
   },
   "devDependencies": {
     "tsx": "latest",
