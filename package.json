@@ -8,7 +8,8 @@
     "agents:adaptive:dormant": "tsx agents/adaptive-orchestrator.ts",
     "agents:swarm:dormant": "tsx agents/swarm-coordinator.ts",
     "agents:curator:dormant": "tsx agents/auto-curator.ts",
-    "agents:events:dormant": "tsx agents/event-dispatcher.ts"
+    "agents:events:dormant": "tsx agents/event-dispatcher.ts",
+    "agents:notifications:dormant": "tsx agents/notification-bridge.ts"
   },
   "devDependencies": {
     "tsx": "latest",

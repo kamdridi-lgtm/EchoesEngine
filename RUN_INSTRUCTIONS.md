@@ -31,6 +31,7 @@ pnpm dlx tsx agents/adaptive-orchestrator.ts
 pnpm dlx tsx agents/swarm-coordinator.ts
 pnpm dlx tsx agents/auto-curator.ts
 pnpm dlx tsx agents/event-dispatcher.ts
+pnpm dlx tsx agents/notification-bridge.ts
 ```
 
 Expected output:
@@ -40,6 +41,7 @@ Expected output:
 [SwarmCoordinator] Initialized (dormant mode)
 [AutoCurator] Initialized (dormant mode)
 [EventDispatcher] Initialized (dormant mode)
+[NotificationBridge] Initialized (dormant mode)
 ```
 
 ## Dormant Database Stack

@@ -21,6 +21,7 @@ Do not use `C:\EchoesEngine` as the working folder. It is an old incomplete scaf
 - `agents/swarm-coordinator.ts`: dormant swarm registry/load balancer. Running it only prints an init message.
 - `agents/auto-curator.ts`: dormant QC-passed render curator for future LoRA JSONL dataset prep.
 - `agents/event-dispatcher.ts`: dormant lifecycle event formatter/queue for future webhook or agent notifications.
+- `agents/notification-bridge.ts`: dormant Discord/WhatsApp notification formatter with dry-run dispatch only.
 - `docker-compose.yml`: dormant local Postgres/Redis stack. It starts only if explicitly invoked.
 - `package.json`: minimal package metadata/scripts for dormant TypeScript utilities.
 
@@ -56,4 +57,4 @@ Future pipeline target:
 [QC Guard TS] -> validation -> archive S3/local -> notification
 ```
 
-Implemented prep so far: dormant gateway/router facade, dormant telemetry bridge, dormant QC guard, dormant auto curator, dormant event dispatcher, dormant orchestrator, dormant swarm coordinator, dormant DB schema.
+Implemented prep so far: dormant gateway/router facade, dormant telemetry bridge, dormant QC guard, dormant auto curator, dormant event dispatcher, dormant notification bridge, dormant orchestrator, dormant swarm coordinator, dormant DB schema.
