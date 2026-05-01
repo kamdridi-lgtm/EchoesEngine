@@ -152,3 +152,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Still dormant: direct execution only prints [AdaptiveOrchestrator] Initialized (dormant mode) and exits.
 - No intervals, no auto-submission, and no network calls on import/direct init.
 - Manual methods are future prep and require explicit import/call.
+
+## v2.4.0 Prep - Dormant API Gateway Facade - 2026-05-01 04:20:39 -04:00
+
+- Added gateway/api-gateway.ts in dormant mode.
+- Direct execution should only print [EchoesApiGateway] Initialized (dormant mode).
+- It prepares tier/quota validation and payload enrichment for future public API routing.
+- It does not listen on any port, submit jobs, or call the C++ daemon unless future code explicitly imports and calls methods.
