@@ -30,6 +30,7 @@ cd C:\Users\Administrator\OneDrive\Documents\EchoesEngine_complete\EchoesEngine
 pnpm dlx tsx agents/adaptive-orchestrator.ts
 pnpm dlx tsx agents/swarm-coordinator.ts
 pnpm dlx tsx agents/auto-curator.ts
+pnpm dlx tsx agents/event-dispatcher.ts
 ```
 
 Expected output:
@@ -38,6 +39,7 @@ Expected output:
 [AdaptiveOrchestrator] Initialized (dormant mode)
 [SwarmCoordinator] Initialized (dormant mode)
 [AutoCurator] Initialized (dormant mode)
+[EventDispatcher] Initialized (dormant mode)
 ```
 
 ## Dormant Database Stack

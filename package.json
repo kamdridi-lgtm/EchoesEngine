@@ -7,7 +7,8 @@
   "scripts": {
     "agents:adaptive:dormant": "tsx agents/adaptive-orchestrator.ts",
     "agents:swarm:dormant": "tsx agents/swarm-coordinator.ts",
-    "agents:curator:dormant": "tsx agents/auto-curator.ts"
+    "agents:curator:dormant": "tsx agents/auto-curator.ts",
+    "agents:events:dormant": "tsx agents/event-dispatcher.ts"
   },
   "devDependencies": {
     "tsx": "latest",
