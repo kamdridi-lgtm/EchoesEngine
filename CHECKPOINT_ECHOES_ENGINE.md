@@ -180,3 +180,10 @@ Do not claim v2.4.0 multi-node federation is active until these files are implem
 - Direct execution should only print [TelemetryBridge] Initialized (dormant mode).
 - It stores metrics/traces in memory only and exports TelemetryBridge, MetricType, TraceContext, and MetricRecord.
 - No auto-execution, no intervals, no network calls, and no OTel/Prometheus export until explicitly wired later.
+
+## v2.4.0 Prep - Target Render Pipeline + Dormant QC Guard - 2026-05-01 04:37:20 -04:00
+
+- Recorded target pipeline: C++ daemon :8080 -> TS Gateway/Router -> Python Diffusion Worker :8081 -> Python Post-Processor :8082 -> TS QC Guard -> archive/notification.
+- Added gents/qc-guard.ts in dormant mode.
+- Direct execution should only print [QcGuard] Initialized (dormant mode).
+- It validates in-memory metadata only; no filesystem writes, no network calls, no archive, no notification, and no daemon impact.

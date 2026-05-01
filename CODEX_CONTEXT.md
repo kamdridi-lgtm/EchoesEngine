@@ -35,3 +35,23 @@ Do not use `C:\EchoesEngine` as the working folder. It is an old incomplete scaf
 1. Keep active C++ daemon stable.
 2. Add future infrastructure and agents behind dormant/manual activation.
 3. Later implement gateway, GPU router, S3 sync, OTel federation, then public API/marketplace.
+
+## Target Render Pipeline
+
+Current authoritative runtime remains the C++ daemon on `127.0.0.1:8080`.
+
+Future pipeline target:
+
+```text
+[Daemon C++ :8080] <- unchanged, authoritative
+       ↓ HTTP POST /generate
+[Gateway/Router TS] -> routes toward GPU worker
+       ↓
+[Diffusion Worker Python :8081] -> LTX-Video / CogVideoX + audio conditioning
+       ↓
+[Post-Processor Python :8082] -> RIFE 60fps + RealESRGAN 2x + FFmpeg sync
+       ↓
+[QC Guard TS] -> validation -> archive S3/local -> notification
+```
+
+Implemented prep so far: dormant gateway/router facade, dormant telemetry bridge, dormant QC guard, dormant orchestrator, dormant swarm coordinator, dormant DB schema.
