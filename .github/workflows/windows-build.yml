@@ -18,17 +18,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure standalone build
+      - name: Configure minimal standalone build
         shell: pwsh
         run: |
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            -DUSE_OPENCL=OFF `
-            -DECHOES_WITH_ONNX=OFF `
-            -DJUCE_PATH="${{ github.workspace }}\_missing_juce"
+          cmake -S cmake/standalone -B build -G "Visual Studio 17 2022" -A x64
 
       - name: Build Release
         shell: pwsh
-        run: cmake --build build --config Release --target EchoesStandalone -- /m
+        run: cmake --build build --config Release --target EchoesStandaloneCI -- /m
 
       - name: Verify executable
         shell: pwsh
@@ -42,6 +39,7 @@ jobs:
             throw "EchoesEngine.exe was not produced"
           }
           Write-Host "Verified: $exe"
+          & $exe --help
 
       - name: Upload executable
         uses: actions/upload-artifact@v4
