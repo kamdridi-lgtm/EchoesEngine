@@ -37,6 +37,14 @@ jobs:
           }
           cmake --version
 
+      - name: Clean stale build cache
+        shell: pwsh
+        run: |
+          if (Test-Path build) {
+            Remove-Item build -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path build | Out-Null
+
       - name: Configure minimal standalone build
         shell: pwsh
         run: |
