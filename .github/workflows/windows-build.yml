@@ -18,14 +18,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify minimal source layout
+        shell: pwsh
+        run: |
+          $required = @(
+            "cmake/standalone/CMakeLists.txt",
+            "engine/src/CoreAudioPipeline.cpp",
+            "engine/src/Engine.cpp",
+            "engine/opencl/opencl_context.cpp",
+            "engine/opencl/kernel_loader.cpp",
+            "app/standalone_processor.cpp"
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path $path)) {
+              throw "Required source missing: $path"
+            }
+            Write-Host "FOUND $path"
+          }
+          cmake --version
+
       - name: Configure minimal standalone build
         shell: pwsh
         run: |
-          cmake -S cmake/standalone -B build -G "Visual Studio 17 2022" -A x64
+          $ErrorActionPreference = "Continue"
+          cmake -S cmake/standalone -B build -G "Visual Studio 17 2022" -A x64 2>&1 | Tee-Object -FilePath configure.log
+          $exitCode = $LASTEXITCODE
+          Get-Content configure.log
+          if ($exitCode -ne 0) {
+            throw "CMake configure failed with exit code $exitCode"
+          }
 
       - name: Build Release
         shell: pwsh
-        run: cmake --build build --config Release --target EchoesStandaloneCI -- /m
+        run: |
+          $ErrorActionPreference = "Continue"
+          cmake --build build --config Release --target EchoesStandaloneCI -- /m 2>&1 | Tee-Object -FilePath build.log
+          $exitCode = $LASTEXITCODE
+          Get-Content build.log
+          if ($exitCode -ne 0) {
+            throw "Build failed with exit code $exitCode"
+          }
 
       - name: Verify executable
         shell: pwsh
@@ -40,6 +72,17 @@ jobs:
           }
           Write-Host "Verified: $exe"
           & $exe --help
+
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: EchoesEngine-windows-diagnostics
+          path: |
+            configure.log
+            build.log
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Upload executable
         uses: actions/upload-artifact@v4
