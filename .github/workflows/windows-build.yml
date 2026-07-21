@@ -1,0 +1,53 @@
+name: EchoesEngine Windows Build
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure standalone build
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+            -DUSE_OPENCL=OFF `
+            -DECHOES_WITH_ONNX=OFF `
+            -DJUCE_PATH="${{ github.workspace }}\_missing_juce"
+
+      - name: Build Release
+        shell: pwsh
+        run: cmake --build build --config Release --target EchoesStandalone -- /m
+
+      - name: Verify executable
+        shell: pwsh
+        run: |
+          $exe = "build\Release\EchoesEngine.exe"
+          if (-not (Test-Path $exe)) {
+            $exe = "build\bin\Release\EchoesEngine.exe"
+          }
+          if (-not (Test-Path $exe)) {
+            Get-ChildItem build -Recurse -Filter EchoesEngine.exe | Format-Table FullName
+            throw "EchoesEngine.exe was not produced"
+          }
+          Write-Host "Verified: $exe"
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: EchoesEngine-windows-release
+          path: |
+            build/**/EchoesEngine.exe
+          if-no-files-found: error
+          retention-days: 14
