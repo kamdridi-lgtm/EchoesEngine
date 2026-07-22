@@ -65,7 +65,7 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive-only storage and stale-py recovery contract
+      - name: Verify D-drive-only storage, Python recovery, and quiet torch probe
         shell: python
         run: |
           from pathlib import Path
@@ -113,7 +113,12 @@ jobs:
           assert "TargetDir=$installRootFull" in ensure_python
           assert "Include_launcher=0" in ensure_python
           assert "Test-PythonCandidate" in ensure_python
-          print("D-drive-only storage, stale-py recovery and valid Windows installer pin PASS")
+
+          assert "function Test-PythonModuleImport" in bootstrap
+          assert '$ErrorActionPreference = "SilentlyContinue"' in bootstrap
+          assert "Test-PythonModuleImport -PythonPath $python -ModuleName \"torch\"" in bootstrap
+          assert '& $python -c "import torch; print(torch.__version__)" 2>$null' not in bootstrap
+          print("D-drive storage, Python recovery, installer pin, and quiet missing-torch probe PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
