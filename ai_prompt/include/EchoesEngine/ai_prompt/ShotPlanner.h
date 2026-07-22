@@ -51,7 +51,7 @@ public:
         PromptDirector::Settings promptSettings{};
     };
 
-    static ShotPlan build(const std::vector<SongSection>& sections, Settings settings = {});
+    static ShotPlan build(const std::vector<SongSection>& sections, Settings settings);
     static const char* camera_move_name(CameraMove move);
 };
 
