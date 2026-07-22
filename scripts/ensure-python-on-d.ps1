@@ -1,7 +1,7 @@
 param(
     [string]$InstallRoot = "D:\A.I\Python310",
     [string]$WorkspaceRoot = "D:\A.I\EchoesCinema",
-    [string]$PythonVersion = "3.10.20",
+    [string]$PythonVersion = "3.10.11",
     [switch]$ForceInstall
 )
 
@@ -66,6 +66,51 @@ function Get-RegisteredPythonCandidates {
         }
     }
     return $candidates
+}
+
+function Download-OfficialInstaller {
+    param(
+        [string]$Uri,
+        [string]$Destination
+    )
+
+    if (Test-Path -LiteralPath $Destination -PathType Leaf) {
+        $existingLength = (Get-Item -LiteralPath $Destination).Length
+        if ($existingLength -ge 20MB) {
+            Write-Host "Using cached Python installer: $Destination"
+            return
+        }
+        Remove-Item -LiteralPath $Destination -Force -ErrorAction SilentlyContinue
+    }
+
+    Write-Host "Downloading official Python installer: $Uri"
+    try {
+        Invoke-WebRequest `
+            -Uri $Uri `
+            -OutFile $Destination `
+            -UseBasicParsing `
+            -Headers @{ "User-Agent" = "EchoesCinemaBootstrap/1.0" }
+    } catch {
+        Remove-Item -LiteralPath $Destination -Force -ErrorAction SilentlyContinue
+        $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
+        if (-not $curl) {
+            throw "Python installer download failed and curl.exe is unavailable: $($_.Exception.Message)"
+        }
+        & $curl.Source -fL --retry 3 --retry-delay 2 --output $Destination $Uri
+        if ($LASTEXITCODE -ne 0) {
+            Remove-Item -LiteralPath $Destination -Force -ErrorAction SilentlyContinue
+            throw "Python installer download failed from $Uri"
+        }
+    }
+
+    if (-not (Test-Path -LiteralPath $Destination -PathType Leaf)) {
+        throw "Python installer was not downloaded: $Destination"
+    }
+    $downloadedLength = (Get-Item -LiteralPath $Destination).Length
+    if ($downloadedLength -lt 20MB) {
+        Remove-Item -LiteralPath $Destination -Force -ErrorAction SilentlyContinue
+        throw "Downloaded Python installer is unexpectedly small: $downloadedLength bytes"
+    }
 }
 
 if (-not (Test-Path "D:\")) {
@@ -136,6 +181,10 @@ if (-not $ForceInstall) {
     }
 }
 
+if ($PythonVersion -ne "3.10.11") {
+    throw "This Windows bootstrap is pinned to Python 3.10.11, the final Python 3.10 release that provides an official Windows installer. Requested: $PythonVersion"
+}
+
 $installerName = "python-$PythonVersion-amd64.exe"
 $installerPath = Join-Path $installerDirectory $installerName
 $installerUrl = "https://www.python.org/ftp/python/$PythonVersion/$installerName"
@@ -144,9 +193,7 @@ Write-Host "No usable 64-bit Python 3.10/3.11 installation was found."
 Write-Host "The Windows Python launcher is stale or points to a missing executable."
 Write-Host "Installing official Python $PythonVersion on D: at $installRootFull"
 
-if (-not (Test-Path $installerPath -PathType Leaf)) {
-    Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
-}
+Download-OfficialInstaller -Uri $installerUrl -Destination $installerPath
 
 $signature = Get-AuthenticodeSignature -FilePath $installerPath
 if ($signature.Status -ne "Valid") {
@@ -156,6 +203,7 @@ $signer = if ($signature.SignerCertificate) { $signature.SignerCertificate.Subje
 if ($signer -notmatch "Python Software Foundation") {
     throw "Downloaded installer signer is unexpected: $signer"
 }
+$installerSha256 = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToLowerInvariant()
 
 $installArguments = @(
     "/quiet",
@@ -198,7 +246,10 @@ $report = [ordered]@{
     version = $verified.version
     bits = $verified.bits
     installRoot = $installRootFull
+    installerVersion = $PythonVersion
     installer = $installerPath
+    installerUrl = $installerUrl
+    installerSha256 = $installerSha256
     signer = $signer
     workspace = $workspaceFull
     systemDriveDataTarget = $false
