@@ -29,6 +29,10 @@ int main() {
     settings.minimumShotSeconds = 2.0;
     settings.maximumShotSeconds = 6.0;
     settings.baseSeed = 4242;
+    settings.continuity.subjectId = "kam-dridi-live";
+    settings.continuity.styleId = "echoes-brasil-cinematic";
+    settings.continuity.referenceAsset = "assets/reference/kam-live.png";
+    settings.continuity.identityStrength = 0.92f;
 
     const auto plan = ShotPlanner::build(sections, settings);
     const auto manifest = RenderManifestBuilder::build(plan, "cinema-smoke-001", "rendered/clips");
@@ -43,8 +47,16 @@ int main() {
     require(manifest.tasks.front().outputFile.find("rendered/clips/") == 0, "output directory must be preserved");
     require(manifest.tasks.front().outputFile.ends_with(".mp4"), "render task output must be mp4");
     require(!manifest.tasks.front().prompt.empty(), "render task prompt must not be empty");
+    require(manifest.tasks.front().continuity.subjectId == "kam-dridi-live", "continuity subject must propagate");
+    require(manifest.tasks.front().continuity.styleId == "echoes-brasil-cinematic", "continuity style must propagate");
+    require(std::fabs(manifest.tasks.front().continuity.identityStrength - 0.92f) < 0.001f,
+            "continuity strength must propagate");
     require(json.find("\"schema\": \"echoes.render-manifest.v1\"") != std::string::npos,
             "serialized manifest must contain schema");
+    require(json.find("\"continuity\"") != std::string::npos,
+            "serialized manifest must contain continuity metadata");
+    require(json.find("kam-dridi-live") != std::string::npos,
+            "serialized manifest must contain continuity subject");
     require(json.find("\"outputFile\"") != std::string::npos,
             "serialized manifest must contain output files");
 
