@@ -53,6 +53,12 @@ std::string ShotPlanJson::serialize(const ShotPlan& plan) {
         out << ",\"sceneId\":"; write_string(out, shot.scene.id);
         out << ",\"sceneConfidence\":" << shot.scene.confidence;
         out << ",\"prompt\":"; write_string(out, shot.prompt);
+        out << ",\"continuity\":{";
+        out << "\"subjectId\":"; write_string(out, shot.continuity.subjectId);
+        out << ",\"styleId\":"; write_string(out, shot.continuity.styleId);
+        out << ",\"referenceAsset\":"; write_string(out, shot.continuity.referenceAsset);
+        out << ",\"strength\":" << shot.continuity.identityStrength;
+        out << '}';
         out << '}';
     }
 
