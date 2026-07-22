@@ -16,6 +16,7 @@ jobs:
     env:
       ECHOES_RENDER_TOKEN: ci-token
       ECHOES_RENDER_ENDPOINT: http://127.0.0.1:18081/v1/render
+      ECHOES_RENDER_HEALTH_URL: http://127.0.0.1:18081/health
       ECHOES_RENDER_HOST_ALLOWLIST: 127.0.0.1,localhost
 
     steps:
@@ -74,7 +75,9 @@ jobs:
                   with urllib.request.urlopen(url, timeout=1) as response:
                       payload = json.loads(response.read().decode("utf-8"))
                   if payload.get("status") == "PASS":
-                      print("Provider health PASS")
+                      assert payload.get("schema") == "echoes.render-provider-health.v1"
+                      assert payload.get("realModelLoaded") is False
+                      print("Provider health PASS; real model correctly reported as absent")
                       break
               except Exception:
                   time.sleep(0.25)
@@ -82,7 +85,30 @@ jobs:
               raise SystemExit("mock render provider did not become healthy")
           PY
 
-      - name: Execute manifest through HTTP provider
+      - name: Prove real-model gate rejects the mock provider
+        shell: bash
+        run: |
+          if python3 tools/http_render_worker.py \
+            build-http-contract/render-manifest.json \
+            build-http-contract/real-model-gate-output \
+            --state build-http-contract/real-model-gate-state.json \
+            --timeout 30 \
+            --require-real-model; then
+            echo "real-model gate unexpectedly accepted the mock provider" >&2
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          import pathlib
+
+          state = json.loads(pathlib.Path("build-http-contract/real-model-gate-state.json").read_text(encoding="utf-8"))
+          assert state["status"] == "FAILED"
+          assert "no verified real model loaded" in state["error"]
+          assert state["tasks"] == []
+          print("Real-model gate correctly blocked rendering")
+          PY
+
+      - name: Execute manifest through HTTP provider contract
         shell: bash
         run: |
           python3 tools/http_render_worker.py \
@@ -118,6 +144,10 @@ jobs:
           assert state["backend"] == "http-provider"
           assert state["providerProtocol"] == "echoes.render-request.v1"
           assert state["providerEndpoint"] == "http://127.0.0.1:18081/v1/render"
+          assert state["providerHealthUrl"] == "http://127.0.0.1:18081/health"
+          assert state["providerHealth"]["status"] == "PASS"
+          assert state["providerHealth"]["realModelLoaded"] is False
+          assert state["realModelRequired"] is False
           assert len(state["tasks"]) == len(manifest["tasks"])
           assert all(task["status"] == "PASS" for task in state["tasks"])
           assert all(task["providerMode"] == "direct-mp4" for task in state["tasks"])
@@ -148,6 +178,7 @@ jobs:
           path: |
             build-http-contract/render-manifest.json
             build-http-contract/render-state.json
+            build-http-contract/real-model-gate-state.json
             build-http-contract/video-qc.json
             build-http-contract/echoes-cinema-http-contract.mp4
             build-http-contract/render-output/clips/*.mp4
