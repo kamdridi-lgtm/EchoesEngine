@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify that the Cinema job service rejects jobs when no real model is loaded."""
+"""Verify that the Cinema job service rejects jobs without a real capable model."""
 
 from __future__ import annotations
 
@@ -45,6 +45,12 @@ class ProviderHandler(BaseHTTPRequestHandler):
                 "realModelLoaded": False,
                 "modelId": None,
                 "loadError": "model not configured",
+                "commercialUseAllowed": False,
+                "capabilities": {
+                    "textToVideo": True,
+                    "referenceImage": False,
+                    "subjectIdentity": False,
+                },
             }
         ).encode("utf-8")
         self.send_response(200)
@@ -95,8 +101,6 @@ def main() -> int:
         sections_root.mkdir()
         output_root.mkdir()
         (sections_root / "song.csv").write_text("intro,0,2,0.2,0.4,0.2,0.3,80,false\n", encoding="utf-8")
-        manifest_cli = temp / "RenderManifestCli"
-        manifest_cli.write_text("contract placeholder\n", encoding="utf-8")
 
         env = os.environ.copy()
         env["ECHOES_RENDER_TOKEN"] = PROVIDER_TOKEN
@@ -112,8 +116,6 @@ def main() -> int:
                 str(SERVICE_PORT),
                 "--token",
                 SERVICE_TOKEN,
-                "--manifest-cli",
-                str(manifest_cli),
                 "--sections-root",
                 str(sections_root),
                 "--output-root",
@@ -133,6 +135,8 @@ def main() -> int:
             assert health["status"] == "PASS"
             assert health["realModelLoaded"] is False
             assert health["acceptingRealJobs"] is False
+            assert health["acceptingCommercialJobs"] is False
+            assert health["manifestGenerator"] == "python-render-manifest-v1"
 
             unauthorized_status, _ = http_json(
                 f"http://127.0.0.1:{SERVICE_PORT}/health",
@@ -156,6 +160,20 @@ def main() -> int:
             assert "no verified real model loaded" in payload["error"]
             assert not (output_root / "blocked-real-job").exists()
 
+            commercial_request = {
+                "schema": "echoes.cinema-job-request.v1",
+                "jobId": "blocked-commercial-job",
+                "sectionsCsv": "song.csv",
+                "commercialUseRequired": True,
+            }
+            commercial_status, commercial = http_json(
+                f"http://127.0.0.1:{SERVICE_PORT}/v1/cinema/jobs",
+                token=SERVICE_TOKEN,
+                body=commercial_request,
+            )
+            assert commercial_status == 503
+            assert commercial["status"] == "FAILED"
+
             traversal_request = {
                 "schema": "echoes.cinema-job-request.v1",
                 "jobId": "traversal-job",
@@ -168,6 +186,20 @@ def main() -> int:
             )
             assert traversal_status == 400
             assert "safe relative path" in traversal["error"]
+
+            invalid_bool_request = {
+                "schema": "echoes.cinema-job-request.v1",
+                "jobId": "invalid-commercial-flag",
+                "sectionsCsv": "song.csv",
+                "commercialUseRequired": "yes",
+            }
+            invalid_status, invalid = http_json(
+                f"http://127.0.0.1:{SERVICE_PORT}/v1/cinema/jobs",
+                token=SERVICE_TOKEN,
+                body=invalid_bool_request,
+            )
+            assert invalid_status == 400
+            assert "must be a boolean" in invalid["error"]
 
             print("CinemaJobServiceFailClosed PASS")
             return 0
