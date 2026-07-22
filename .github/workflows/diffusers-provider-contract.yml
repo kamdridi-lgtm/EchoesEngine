@@ -26,6 +26,7 @@ jobs:
             RUN_FIRST_REAL_AI_CLIP.cmd
             providers
             scripts/bootstrap-cinema-ai.ps1
+            scripts/ensure-python-on-d.ps1
             scripts/run-first-real-ai-clip.ps1
             tools/cinema_job_service.py
             tools/cinema_job_runner.py
@@ -56,6 +57,7 @@ jobs:
         run: |
           foreach ($path in @(
             "scripts/bootstrap-cinema-ai.ps1",
+            "scripts/ensure-python-on-d.ps1",
             "scripts/run-first-real-ai-clip.ps1"
           )) {
             $content = Get-Content $path -Raw
@@ -63,7 +65,7 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive-only storage contract
+      - name: Verify D-drive-only storage and stale-py recovery contract
         shell: python
         run: |
           from pathlib import Path
@@ -71,10 +73,13 @@ jobs:
           launcher = Path("RUN_FIRST_REAL_AI_CLIP.cmd").read_text(encoding="utf-8")
           runner = Path("scripts/run-first-real-ai-clip.ps1").read_text(encoding="utf-8")
           bootstrap = Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8")
+          ensure_python = Path("scripts/ensure-python-on-d.ps1").read_text(encoding="utf-8")
 
           assert r"D:\A.I\EchoesCinema" in launcher
           assert r"D:\A.I\EchoesCinema" in runner
           assert r"D:\A.I\EchoesCinema\.venv-cinema" in bootstrap
+          assert r"D:\A.I\Python310" in bootstrap
+          assert r"D:\A.I\Python310" in ensure_python
 
           required = (
               "HF_HOME",
@@ -94,7 +99,16 @@ jobs:
           assert "Join-Path $env:USERPROFILE" not in bootstrap
           assert "systemDriveWritesAllowed = $false" in runner
           assert '"systemDriveWritesAllowed": False' in bootstrap
-          print("D-drive-only storage contract PASS")
+
+          assert "ensure-python-on-d.ps1" in bootstrap
+          assert 'if ($PythonLauncher -and $PythonLauncher -ne "py"' in bootstrap
+          assert "https://www.python.org/ftp/python/" in ensure_python
+          assert "Get-AuthenticodeSignature" in ensure_python
+          assert "Python Software Foundation" in ensure_python
+          assert "TargetDir=$installRootFull" in ensure_python
+          assert "Include_launcher=0" in ensure_python
+          assert "Test-PythonCandidate" in ensure_python
+          print("D-drive-only storage and stale-py recovery contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
