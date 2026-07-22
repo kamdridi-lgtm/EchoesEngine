@@ -34,7 +34,6 @@ $pycacheRoot = Join-Path $cacheRoot "python-bytecode"
 $tempRoot = Join-Path $workspace "temp"
 $venvRoot = Join-Path $workspace ".venv-cinema"
 $outputRoot = Join-Path $workspace "proofs\first-real-ai-clip"
-$buildDir = Join-Path $workspace "build-first-real-cli"
 
 $bootstrap = Join-Path $repoRoot "scripts\bootstrap-cinema-ai.ps1"
 $provider = Join-Path $repoRoot "providers\modelscope_proof_provider.py"
@@ -122,66 +121,40 @@ function Configure-NonSystemStorage {
     $env:HF_HUB_DISABLE_SYMLINKS_WARNING = "1"
     $env:PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True"
 
-    Write-Host "All model, Python, Torch, pip, CUDA, temp, build and proof files are redirected to: $workspace"
-}
-
-function Find-ManifestCli {
-    $candidates = @(
-        (Join-Path $buildDir "Release\RenderManifestCli.exe"),
-        (Join-Path $buildDir "bin\Release\RenderManifestCli.exe"),
-        (Join-Path $buildDir "RenderManifestCli.exe")
-    )
-    foreach ($candidate in $candidates) {
-        if (Test-Path $candidate) { return (Resolve-Path $candidate).Path }
-    }
-    $found = Get-ChildItem $buildDir -Recurse -Filter RenderManifestCli.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($found) { return $found.FullName }
-    throw "RenderManifestCli.exe was not produced"
+    Write-Host "All model, Python, Torch, pip, CUDA, temp and proof files are redirected to: $workspace"
 }
 
 try {
-    Assert-Command "cmake"
     Assert-Command "ffmpeg"
     Assert-Command "ffprobe"
-    Assert-Command "py"
     Assert-WorkspaceCapacity
     Configure-NonSystemStorage
 
     $bootstrapArgs = @(
         "-ExecutionPolicy", "Bypass",
         "-File", $bootstrap,
-        "-PythonLauncher", "py",
-        "-PythonVersion", "3.10",
         "-VenvPath", $venvRoot,
         "-TorchIndexUrl", $TorchIndexUrl
     )
     if ($RecreateEnvironment) { $bootstrapArgs += "-Recreate" }
 
-    Write-Host "[1/7] Preparing the CUDA Diffusers environment on $workspace"
+    Write-Host "[1/6] Preparing the CUDA Diffusers environment on $workspace"
     & powershell @bootstrapArgs
     if ($LASTEXITCODE -ne 0) { throw "Cinema bootstrap failed" }
     if (-not (Test-Path $venvPython)) { throw "Cinema Python not found: $venvPython" }
 
-    Write-Host "[2/7] Recording GPU evidence"
+    Write-Host "[2/6] Recording GPU evidence"
     $gpuReport = & $venvPython -c "import json, torch; assert torch.cuda.is_available(), 'CUDA unavailable'; p=torch.cuda.get_device_properties(0); print(json.dumps({'available':True,'name':torch.cuda.get_device_name(0),'vramBytes':p.total_memory,'vramGiB':round(p.total_memory/1024**3,2),'torch':torch.__version__,'cuda':torch.version.cuda}, indent=2))"
     if ($LASTEXITCODE -ne 0) { throw "GPU diagnostic failed" }
     $gpuReport | Set-Content -Path (Join-Path $outputRoot "gpu-report.json") -Encoding utf8
     Write-Host $gpuReport
 
-    Write-Host "[3/7] Building RenderManifestCli on $workspaceDrive"
-    if (Test-Path $buildDir) { Remove-Item $buildDir -Recurse -Force }
-    & cmake -S (Join-Path $repoRoot "cmake\prompt_director") -B $buildDir -G "Visual Studio 17 2022" -A x64
-    if ($LASTEXITCODE -ne 0) { throw "RenderManifestCli configure failed" }
-    & cmake --build $buildDir --config Release --target RenderManifestCli -- /m:1
-    if ($LASTEXITCODE -ne 0) { throw "RenderManifestCli build failed" }
-    $manifestCli = Find-ManifestCli
-    Write-Host "Manifest CLI: $manifestCli"
-
-    Write-Host "[4/7] Creating a four-second proof audio bed on D:"
+    Write-Host "[3/6] Creating a four-second proof audio bed on D:"
     & ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=110:sample_rate=44100" -t 4 -ac 2 -c:a pcm_s16le $audioPath
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $audioPath)) { throw "Proof audio generation failed" }
 
-    Write-Host "[5/7] Loading the real video model. The first download is large and remains in $cacheRoot"
+    Write-Host "[4/6] Loading the real video model. The first download is large and remains in $cacheRoot"
+    Write-Host "Low-VRAM profile: 448x256, 6 fps, 24 frames, 20 inference steps"
     $env:ECHOES_RENDER_TOKEN = $token
     $providerArgs = @(
         $provider,
@@ -190,11 +163,11 @@ try {
         "--token", $token,
         "--model-id", $ModelId,
         "--device", "cuda",
-        "--width", "576",
-        "--height", "320",
-        "--fps", "8",
-        "--inference-steps", "25",
-        "--max-frames", "32"
+        "--width", "448",
+        "--height", "256",
+        "--fps", "6",
+        "--inference-steps", "20",
+        "--max-frames", "24"
     )
     $providerProcess = Start-Process -FilePath $venvPython -ArgumentList $providerArgs -WorkingDirectory $workspace -RedirectStandardOutput $providerLog -RedirectStandardError $providerErrorLog -PassThru
 
@@ -223,7 +196,7 @@ try {
     if ($health.commercialUseAllowed -ne $false) { throw "Proof provider license classification is missing" }
     Write-Host "Real model loaded: $($health.modelId) on $($health.gpu.name)"
 
-    Write-Host "[6/7] Rendering the first real AI clip through the canonical Cinema runner"
+    Write-Host "[5/6] Rendering through the compiler-free Python manifest path"
     $env:ECHOES_RENDER_ENDPOINT = "http://127.0.0.1:$Port/v1/render"
     $env:ECHOES_RENDER_HEALTH_URL = $healthUrl
     $env:ECHOES_RENDER_HOST_ALLOWLIST = "127.0.0.1,localhost"
@@ -232,7 +205,6 @@ try {
     & $venvPython $runner `
         $fixture `
         $outputRoot `
-        --manifest-cli $manifestCli `
         --job-id $jobId `
         --seed 7331 `
         --backend http `
@@ -240,12 +212,13 @@ try {
         --provider-timeout 1800
     if ($LASTEXITCODE -ne 0) { throw "Real Cinema job failed" }
 
-    Write-Host "[7/7] Verifying truth status and final media"
+    Write-Host "[6/6] Verifying truth status and final media"
     $resultPath = Join-Path $outputRoot "job-result.json"
     if (-not (Test-Path $resultPath)) { throw "job-result.json is missing" }
     $result = Get-Content $resultPath -Raw | ConvertFrom-Json
     if ($result.status -ne "PASS") { throw "Cinema job did not PASS: $($result.error)" }
     if ($result.backendStatus -ne "REAL") { throw "Cinema job was not classified REAL: $($result.backendStatus)" }
+    if ($result.manifestGenerator -ne "python-render-manifest-v1") { throw "Compiler-free manifest generator was not used" }
     $finalMp4 = Join-Path $outputRoot "$jobId.mp4"
     if (-not (Test-Path $finalMp4) -or (Get-Item $finalMp4).Length -le 0) { throw "Final MP4 is missing or empty" }
 
@@ -256,7 +229,7 @@ try {
     Write-Host "Provider health: $(Join-Path $outputRoot 'provider-health.json')"
     Write-Host "GPU report: $(Join-Path $outputRoot 'gpu-report.json')"
     Write-Host "Storage report: $(Join-Path $workspace 'storage-report.json')"
-    Write-Host "C: was not selected for model caches, virtual environment, temp, build or output."
+    Write-Host "Visual Studio was not required for this proof."
     Write-Host "License note: this proof model is non-commercial and must be replaced before paid production."
 }
 finally {
