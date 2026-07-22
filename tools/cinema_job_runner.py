@@ -58,7 +58,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("sections_csv", type=Path)
     parser.add_argument("output_root", type=Path)
-    parser.add_argument("--manifest-cli", type=Path, required=True)
+    parser.add_argument(
+        "--manifest-cli",
+        type=Path,
+        default=None,
+        help="Optional native RenderManifestCli. When omitted, the compiler-free Python generator is used.",
+    )
     parser.add_argument("--job-id", required=True)
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--backend", choices=("synthetic", "http"), required=True)
@@ -111,20 +116,37 @@ def main() -> int:
             raise ValueError("provider timeout must be positive")
         if not args.sections_csv.is_file():
             raise FileNotFoundError(f"sections CSV not found: {args.sections_csv}")
-        if not args.manifest_cli.is_file():
+        if args.manifest_cli is not None and not args.manifest_cli.is_file():
             raise FileNotFoundError(f"RenderManifestCli not found: {args.manifest_cli}")
         if args.audio is not None and (not args.audio.is_file() or args.audio.stat().st_size <= 0):
             raise FileNotFoundError(f"source audio not found or empty: {args.audio}")
 
         root.mkdir(parents=True, exist_ok=True)
-        manifest_command = [
-            str(args.manifest_cli.resolve()),
-            str(args.sections_csv.resolve()),
-            str(manifest_path),
-            args.job_id,
-            str(args.seed),
-            "clips",
-        ]
+        if args.manifest_cli is not None:
+            manifest_command = [
+                str(args.manifest_cli.resolve()),
+                str(args.sections_csv.resolve()),
+                str(manifest_path),
+                args.job_id,
+                str(args.seed),
+                "clips",
+            ]
+            result["manifestGenerator"] = "native-render-manifest-cli"
+        else:
+            python_generator = script_root / "python_render_manifest.py"
+            if not python_generator.is_file():
+                raise FileNotFoundError(f"Python manifest generator not found: {python_generator}")
+            manifest_command = [
+                sys.executable,
+                str(python_generator),
+                str(args.sections_csv.resolve()),
+                str(manifest_path),
+                args.job_id,
+                str(args.seed),
+                "clips",
+            ]
+            result["manifestGenerator"] = "python-render-manifest-v1"
+
         manifest_stage = run_stage("manifest", manifest_command, root / "manifest.log")
         result["stages"].append(manifest_stage)
         require_pass(manifest_stage)
