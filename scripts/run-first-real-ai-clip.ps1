@@ -4,7 +4,7 @@ param(
     [string]$WorkspaceRoot = "D:\A.I\EchoesCinema",
     [int]$MinimumFreeGiB = 35,
     [int]$Port = 8081,
-    [int]$TimeoutSeconds = 3600,
+    [int]$TimeoutSeconds = 7200,
     [switch]$RecreateEnvironment
 )
 
@@ -36,7 +36,7 @@ $venvRoot = Join-Path $workspace ".venv-cinema"
 $outputRoot = Join-Path $workspace "proofs\first-real-ai-clip"
 
 $bootstrap = Join-Path $repoRoot "scripts\bootstrap-cinema-ai.ps1"
-$provider = Join-Path $repoRoot "providers\modelscope_proof_provider.py"
+$provider = Join-Path $repoRoot "providers\modelscope_low_vram_provider.py"
 $runner = Join-Path $repoRoot "tools\cinema_job_runner.py"
 $fixture = Join-Path $repoRoot "tests\fixtures\first_real_clip_sections.csv"
 $venvPython = Join-Path $venvRoot "Scripts\python.exe"
@@ -153,8 +153,9 @@ try {
     & ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=110:sample_rate=44100" -t 4 -ac 2 -c:a pcm_s16le $audioPath
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $audioPath)) { throw "Proof audio generation failed" }
 
-    Write-Host "[4/6] Loading the real video model. The first download is large and remains in $cacheRoot"
-    Write-Host "Low-VRAM profile: 448x256, 6 fps, 24 frames, 20 inference steps"
+    Write-Host "[4/6] Loading the real video model. The first download remains in $cacheRoot"
+    Write-Host "RTX 2060 profile: 384x216, 4 fps, 16 frames, 15 inference steps"
+    Write-Host "Memory strategy: sequential CPU offload with one smaller OOM retry"
     $env:ECHOES_RENDER_TOKEN = $token
     $providerArgs = @(
         $provider,
@@ -163,11 +164,11 @@ try {
         "--token", $token,
         "--model-id", $ModelId,
         "--device", "cuda",
-        "--width", "448",
-        "--height", "256",
-        "--fps", "6",
-        "--inference-steps", "20",
-        "--max-frames", "24"
+        "--width", "384",
+        "--height", "216",
+        "--fps", "4",
+        "--inference-steps", "15",
+        "--max-frames", "16"
     )
     $providerProcess = Start-Process -FilePath $venvPython -ArgumentList $providerArgs -WorkingDirectory $workspace -RedirectStandardOutput $providerLog -RedirectStandardError $providerErrorLog -PassThru
 
@@ -194,7 +195,11 @@ try {
     }
     $health | ConvertTo-Json -Depth 12 | Set-Content -Path (Join-Path $outputRoot "provider-health.json") -Encoding utf8
     if ($health.commercialUseAllowed -ne $false) { throw "Proof provider license classification is missing" }
+    if ([double]$health.gpu.vramGiB -le 6.5 -and $health.offloadStrategy -ne "sequential-cpu-offload") {
+        throw "Low-VRAM GPU did not activate sequential CPU offload"
+    }
     Write-Host "Real model loaded: $($health.modelId) on $($health.gpu.name)"
+    Write-Host "Offload strategy: $($health.offloadStrategy)"
 
     Write-Host "[5/6] Rendering through the compiler-free Python manifest path"
     $env:ECHOES_RENDER_ENDPOINT = "http://127.0.0.1:$Port/v1/render"
@@ -209,7 +214,7 @@ try {
         --seed 7331 `
         --backend http `
         --audio $audioPath `
-        --provider-timeout 1800
+        --provider-timeout 3600
     if ($LASTEXITCODE -ne 0) { throw "Real Cinema job failed" }
 
     Write-Host "[6/6] Verifying truth status and final media"
