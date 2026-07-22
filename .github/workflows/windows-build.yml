@@ -60,7 +60,9 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Continue"
-          cmake --build build --config Release --target EchoesStandaloneCI -- /m 2>&1 | Tee-Object -FilePath build.log
+          # Use one MSBuild worker. CoreAudioPipeline is a large translation unit and
+          # parallel CL.exe instances made the hosted runner less deterministic.
+          cmake --build build --config Release --target EchoesStandaloneCI -- /m:1 /v:minimal 2>&1 | Tee-Object -FilePath build.log
           $exitCode = $LASTEXITCODE
           Get-Content build.log
           if ($exitCode -ne 0) {
