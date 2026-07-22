@@ -34,7 +34,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cmake --build build-prompt --config Release --target PromptDirectorSmoke ShotPlannerSmoke ShotPlanCli 2>&1 | tee prompt-build.log
+          cmake --build build-prompt --config Release --target PromptDirectorSmoke ShotPlannerSmoke RenderManifestSmoke ShotPlanCli RenderManifestCli 2>&1 | tee prompt-build.log
 
       - name: Run smoke tests
         shell: bash
@@ -42,21 +42,24 @@ jobs:
           set -o pipefail
           ctest --test-dir build-prompt -C Release --output-on-failure -V 2>&1 | tee prompt-test.log
 
-      - name: Verify generated shot plan
+      - name: Verify generated pipeline manifests
         shell: python
         run: |
           import json
           import pathlib
           import shutil
 
-          source = pathlib.Path("build-prompt/shot-plan.json")
-          if not source.is_file():
-              raise SystemExit(f"missing generated shot plan: {source.resolve()}")
+          shot_source = pathlib.Path("build-prompt/shot-plan.json")
+          render_source = pathlib.Path("build-prompt/render-manifest.json")
+          if not shot_source.is_file():
+              raise SystemExit(f"missing generated shot plan: {shot_source.resolve()}")
+          if not render_source.is_file():
+              raise SystemExit(f"missing generated render manifest: {render_source.resolve()}")
 
-          payload = json.loads(source.read_text(encoding="utf-8"))
-          if payload.get("schema") != "echoes.shot-plan.v1":
+          shot_payload = json.loads(shot_source.read_text(encoding="utf-8"))
+          if shot_payload.get("schema") != "echoes.shot-plan.v1":
               raise SystemExit("invalid shot plan schema")
-          shots = payload.get("shots")
+          shots = shot_payload.get("shots")
           if not isinstance(shots, list) or not shots:
               raise SystemExit("shot plan contains no shots")
           for index, shot in enumerate(shots):
@@ -65,9 +68,24 @@ jobs:
               if not shot.get("prompt"):
                   raise SystemExit(f"shot {index} has no prompt")
 
-          destination = pathlib.Path("shot-plan-${{ matrix.os }}.json")
-          shutil.copyfile(source, destination)
-          print(f"Verified {len(shots)} shots in {source}")
+          render_payload = json.loads(render_source.read_text(encoding="utf-8"))
+          if render_payload.get("schema") != "echoes.render-manifest.v1":
+              raise SystemExit("invalid render manifest schema")
+          tasks = render_payload.get("tasks")
+          if not isinstance(tasks, list) or len(tasks) != len(shots):
+              raise SystemExit("render task count does not match shot count")
+          for index, task in enumerate(tasks):
+              if not task.get("prompt"):
+                  raise SystemExit(f"render task {index} has no prompt")
+              output_file = task.get("outputFile", "")
+              if not output_file.endswith(".mp4"):
+                  raise SystemExit(f"render task {index} has invalid outputFile")
+
+          shot_destination = pathlib.Path("shot-plan-${{ matrix.os }}.json")
+          render_destination = pathlib.Path("render-manifest-${{ matrix.os }}.json")
+          shutil.copyfile(shot_source, shot_destination)
+          shutil.copyfile(render_source, render_destination)
+          print(f"Verified {len(shots)} shots and {len(tasks)} render tasks")
 
       - name: Upload smoke diagnostics
         if: always()
@@ -79,5 +97,6 @@ jobs:
             prompt-build.log
             prompt-test.log
             shot-plan-${{ matrix.os }}.json
+            render-manifest-${{ matrix.os }}.json
           if-no-files-found: ignore
           retention-days: 14
