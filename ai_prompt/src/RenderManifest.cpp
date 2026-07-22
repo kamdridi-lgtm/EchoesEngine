@@ -63,6 +63,7 @@ RenderManifest RenderManifestBuilder::build(const ShotPlan& plan, const std::str
         task.camera = ShotPlanner::camera_move_name(shot.camera);
         task.transition = shot.transition;
         task.outputFile = directory + "/" + shot.id + ".mp4";
+        task.continuity = shot.continuity;
         manifest.tasks.push_back(std::move(task));
     }
 
@@ -88,6 +89,12 @@ std::string RenderManifestBuilder::to_json(const RenderManifest& manifest) {
         out << "      \"camera\": \"" << escape_json(task.camera) << "\",\n";
         out << "      \"transition\": \"" << escape_json(task.transition) << "\",\n";
         out << "      \"prompt\": \"" << escape_json(task.prompt) << "\",\n";
+        out << "      \"continuity\": {\n";
+        out << "        \"subjectId\": \"" << escape_json(task.continuity.subjectId) << "\",\n";
+        out << "        \"styleId\": \"" << escape_json(task.continuity.styleId) << "\",\n";
+        out << "        \"referenceAsset\": \"" << escape_json(task.continuity.referenceAsset) << "\",\n";
+        out << "        \"strength\": " << task.continuity.identityStrength << "\n";
+        out << "      },\n";
         out << "      \"outputFile\": \"" << escape_json(task.outputFile) << "\"\n";
         out << "    }" << (index + 1 < manifest.tasks.size() ? "," : "") << "\n";
     }
