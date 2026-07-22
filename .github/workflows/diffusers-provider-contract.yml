@@ -1,0 +1,37 @@
+name: Echoes Diffusers Provider Contract
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fail-closed-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout provider contract sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            providers
+            tests/test_diffusers_provider_fail_closed.py
+          sparse-checkout-cone-mode: false
+
+      - name: Compile provider modules
+        run: |
+          python3 -m py_compile \
+            providers/diffusers_video_provider.py \
+            tests/test_diffusers_provider_fail_closed.py
+
+      - name: Verify missing model is never reported as real
+        run: python3 tests/test_diffusers_provider_fail_closed.py
