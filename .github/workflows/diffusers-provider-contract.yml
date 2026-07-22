@@ -33,13 +33,15 @@ jobs:
             tools/cinema_job_service.py
             tools/cinema_job_runner.py
             tools/http_render_worker.py
+            tools/provider_selector.py
             tools/python_render_manifest.py
             tools/render_capabilities.py
+            tools/render_resume.py
             tests/test_diffusers_provider_fail_closed.py
             tests/test_cinema_job_service_fail_closed.py
           sparse-checkout-cone-mode: false
 
-      - name: Compile provider, capability, QC, manifest, and service modules
+      - name: Compile provider, selection, resume, QC, manifest, and service modules
         run: |
           python3 -m py_compile \
             providers/cogvideox_commercial_provider.py \
@@ -50,8 +52,10 @@ jobs:
             tools/cinema_job_service.py \
             tools/cinema_job_runner.py \
             tools/http_render_worker.py \
+            tools/provider_selector.py \
             tools/python_render_manifest.py \
             tools/render_capabilities.py \
+            tools/render_resume.py \
             tests/test_diffusers_provider_fail_closed.py \
             tests/test_cinema_job_service_fail_closed.py
 
@@ -60,6 +64,12 @@ jobs:
 
       - name: Verify fail-closed render capability contract
         run: python3 tools/render_capabilities.py
+
+      - name: Verify hardware-aware provider selection
+        run: python3 tools/provider_selector.py --self-test
+
+      - name: Verify render resume evidence planner
+        run: python3 tools/render_resume.py --self-test
 
       - name: Verify RTX 2060 low-VRAM provider profile
         run: python3 providers/modelscope_low_vram_provider.py --self-test
@@ -89,7 +99,7 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive, compiler-free, low-VRAM, cleanup, capability, and proof contract
+      - name: Verify D-drive, provider choice, resume, low-VRAM, cleanup, capability, and proof contract
         shell: python
         run: |
           from pathlib import Path
@@ -104,6 +114,8 @@ jobs:
           http_worker = Path("tools/http_render_worker.py").read_text(encoding="utf-8")
           assemble = Path("tools/assemble_render.py").read_text(encoding="utf-8")
           capabilities = Path("tools/render_capabilities.py").read_text(encoding="utf-8")
+          selector = Path("tools/provider_selector.py").read_text(encoding="utf-8")
+          resume = Path("tools/render_resume.py").read_text(encoding="utf-8")
           manifest_py = Path("tools/python_render_manifest.py").read_text(encoding="utf-8")
           low_vram = Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8")
           commercial = Path("providers/cogvideox_commercial_provider.py").read_text(encoding="utf-8")
@@ -205,7 +217,23 @@ jobs:
           assert "MINIMUM_RECOMMENDED_VRAM_GIB = 12.0" in commercial
           assert "CogVideoX-5b" in commercial
           assert "currentLocalGpuSupported" in commercial
-          print("D-drive, compiler-free, low-VRAM proof, cleanup, capability, SHA-256, A/V drift, and commercial allowlist contract PASS")
+
+          assert '"classification": "CANDIDATE_ONLY"' in selector
+          assert '"realModelLoaded": False' in selector
+          assert '"decision": "LOCAL_PROOF_CANDIDATE"' in selector
+          assert '"decision": "REMOTE_COMMERCIAL_REQUIRED"' in selector
+          assert '"decision": "LOCAL_COMMERCIAL_CANDIDATE"' in selector
+          assert "COMMERCIAL_MODEL_REVISION" in selector
+
+          assert 'echoes.render-resume-plan.v1' in resume
+          assert '"classification": "EVIDENCE_VALIDATED"' in resume
+          assert "sha256_file" in resume
+          assert "probe_mp4" in resume
+          assert 'codec is not H.264' in resume
+          assert 'pixel format is not yuv420p' in resume
+          assert 'SHA-256 evidence missing or changed' in resume
+          assert 'complete' in resume
+          print("D-drive, compiler-free, provider selection, resumability, low-VRAM proof, cleanup, capability, SHA-256, A/V drift, and commercial allowlist contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
