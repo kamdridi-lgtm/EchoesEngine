@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 """Execute an Echoes render manifest against an authenticated HTTP provider.
 
-The worker supports two provider response modes:
-- direct ``video/mp4`` response;
-- JSON response containing ``status=PASS`` and an ``outputUrl`` to download.
-
-It never executes provider-supplied commands. Output paths are constrained to the
-selected output root, provider hosts are allowlisted, and every clip is verified
-with ffprobe before the render state can become PASS.
+The worker supports direct MP4 and JSON output-URL responses. It constrains all
+paths and hosts, validates provider capabilities against the actual manifest,
+verifies H.264/yuv420p output, and records SHA-256 evidence for every clip.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -23,6 +20,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+from render_capabilities import validate_provider_health
 
 
 MAX_RESPONSE_BYTES = 250 * 1024 * 1024
@@ -37,6 +36,14 @@ def require_tool(name: str) -> str:
     if not resolved:
         raise RuntimeError(f"required executable not found in PATH: {name}")
     return resolved
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def safe_relative_path(raw: str) -> Path:
@@ -95,7 +102,7 @@ def request(
     validate_url(url, allowed_hosts)
     headers = {
         "Accept": "video/mp4, application/json",
-        "User-Agent": "EchoesEngine-HttpRenderWorker/1.1",
+        "User-Agent": "EchoesEngine-HttpRenderWorker/1.2",
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -112,13 +119,12 @@ def request(
         raise RuntimeError(f"provider connection failed: {error.reason}") from error
 
 
-def provider_health(
+def fetch_provider_health(
     health_url: str,
     *,
     token: str,
     allowed_hosts: set[str],
     timeout_seconds: float,
-    require_real_model: bool,
 ) -> dict[str, Any]:
     content_type, body = request(
         health_url,
@@ -133,13 +139,8 @@ def provider_health(
         payload = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RuntimeError("provider health returned invalid JSON") from error
-    if payload.get("schema") != "echoes.render-provider-health.v1":
-        raise RuntimeError("provider health schema is unsupported")
-    if payload.get("status") != "PASS":
-        raise RuntimeError(f"provider health is not PASS: {payload}")
-    real_model_loaded = payload.get("realModelLoaded") is True
-    if require_real_model and not real_model_loaded:
-        raise RuntimeError("provider has no verified real model loaded")
+    if not isinstance(payload, dict):
+        raise RuntimeError("provider health must be a JSON object")
     return payload
 
 
@@ -253,6 +254,7 @@ def render_task(
         "providerMode": provider_mode,
         "outputFile": relative_output.as_posix(),
         "seed": task.get("seed"),
+        "sha256": sha256_file(output_path),
         "qc": qc,
     }
 
@@ -267,6 +269,7 @@ def main() -> int:
     parser.add_argument("--allow-hosts", default=os.getenv("ECHOES_RENDER_HOST_ALLOWLIST", "127.0.0.1,localhost"))
     parser.add_argument("--timeout", type=float, default=180.0)
     parser.add_argument("--require-real-model", action="store_true")
+    parser.add_argument("--require-commercial-use", action="store_true")
     parser.add_argument("--state", type=Path, default=None)
     args = parser.parse_args()
 
@@ -283,18 +286,8 @@ def main() -> int:
             raise ValueError("render provider endpoint is required")
         if args.timeout <= 0:
             raise ValueError("timeout must be positive")
-        allowed_hosts = parse_allowlist(args.allow_hosts)
-        validate_url(args.endpoint, allowed_hosts)
-        health_url = args.health_url or default_health_url(args.endpoint)
-        validate_url(health_url, allowed_hosts)
-        token = os.getenv(args.token_env, "")
-        health = provider_health(
-            health_url,
-            token=token,
-            allowed_hosts=allowed_hosts,
-            timeout_seconds=args.timeout,
-            require_real_model=args.require_real_model,
-        )
+        if not args.manifest.is_file():
+            raise FileNotFoundError(f"render manifest not found: {args.manifest}")
 
         manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
         if manifest.get("schema") != "echoes.render-manifest.v1":
@@ -302,6 +295,26 @@ def main() -> int:
         tasks = manifest.get("tasks")
         if not isinstance(tasks, list) or not tasks:
             raise ValueError("render manifest contains no tasks")
+        if not all(isinstance(task, dict) for task in tasks):
+            raise ValueError("render manifest task must be an object")
+
+        allowed_hosts = parse_allowlist(args.allow_hosts)
+        validate_url(args.endpoint, allowed_hosts)
+        health_url = args.health_url or default_health_url(args.endpoint)
+        validate_url(health_url, allowed_hosts)
+        token = os.getenv(args.token_env, "")
+        health = fetch_provider_health(
+            health_url,
+            token=token,
+            allowed_hosts=allowed_hosts,
+            timeout_seconds=args.timeout,
+        )
+        required_capabilities = validate_provider_health(
+            health,
+            tasks=tasks,
+            require_real_model=args.require_real_model,
+            require_commercial_use=args.require_commercial_use,
+        )
 
         ffprobe = require_tool("ffprobe")
         args.output_root.mkdir(parents=True, exist_ok=True)
@@ -311,9 +324,10 @@ def main() -> int:
         state["providerHealth"] = health
         state["providerProtocol"] = "echoes.render-request.v1"
         state["realModelRequired"] = args.require_real_model
+        state["commercialUseRequired"] = args.require_commercial_use
+        state["requiredCapabilities"] = sorted(required_capabilities)
+
         for task in tasks:
-            if not isinstance(task, dict):
-                raise ValueError("render manifest task must be an object")
             state["tasks"].append(
                 render_task(
                     manifest=manifest,
@@ -330,7 +344,10 @@ def main() -> int:
         state["status"] = "PASS"
         state["taskCount"] = len(state["tasks"])
         state["durationSeconds"] = manifest.get("durationSeconds")
-        print(f"HttpRenderWorker PASS tasks={len(state['tasks'])} endpoint={args.endpoint}")
+        print(
+            f"HttpRenderWorker PASS tasks={len(state['tasks'])} "
+            f"capabilities={','.join(sorted(required_capabilities))} endpoint={args.endpoint}"
+        )
         return_code = 0
     except Exception as error:  # noqa: BLE001 - exact failure belongs in state
         state["status"] = "FAILED"
