@@ -100,6 +100,25 @@ function Resolve-BasePython {
     return (Resolve-Path -LiteralPath $resolved).Path
 }
 
+function Test-PythonModuleImport {
+    param(
+        [string]$PythonPath,
+        [string]$ModuleName
+    )
+
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "SilentlyContinue"
+        & $PythonPath -c "import $ModuleName; print(getattr($ModuleName, '__version__', 'present'))" *> $null
+        $exitCode = $LASTEXITCODE
+    } catch {
+        $exitCode = 1
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    return $exitCode -eq 0
+}
+
 if (-not (Test-Path $requirements)) {
     throw "Requirements file not found: $requirements"
 }
@@ -139,10 +158,11 @@ if ($LASTEXITCODE -ne 0) {
     throw "pip bootstrap failed"
 }
 
-$torchPresent = $false
-& $python -c "import torch; print(torch.__version__)" 2>$null
-if ($LASTEXITCODE -eq 0) {
-    $torchPresent = $true
+$torchPresent = Test-PythonModuleImport -PythonPath $python -ModuleName "torch"
+if ($torchPresent) {
+    Write-Host "PyTorch is already installed in the Cinema virtual environment."
+} else {
+    Write-Host "PyTorch is not installed yet; continuing with the selected official CUDA wheel index."
 }
 
 if (-not $torchPresent) {
