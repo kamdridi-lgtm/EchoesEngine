@@ -24,8 +24,15 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout
+      - name: Checkout prompt pipeline sources
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cmake/prompt_director
+            ai_prompt
+            tests
+            tools
+          sparse-checkout-cone-mode: true
 
       - name: Configure
         shell: bash
