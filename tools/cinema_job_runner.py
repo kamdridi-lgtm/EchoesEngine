@@ -2,9 +2,9 @@
 """Run one complete Echoes Cinema job with machine-readable stage evidence.
 
 The runner creates a render manifest, invokes an explicit backend, assembles the
-returned clips, validates QC, and writes ``echoes.cinema-job-result.v1``. It does
-not use a shell, does not place provider tokens in command arguments, and defaults
-HTTP jobs to the real-model gate.
+returned clips, optionally muxes source audio, validates QC, and writes
+``echoes.cinema-job-result.v1``. It does not use a shell, does not place provider
+tokens in command arguments, and defaults HTTP jobs to the real-model gate.
 """
 
 from __future__ import annotations
@@ -62,6 +62,7 @@ def main() -> int:
     parser.add_argument("--job-id", required=True)
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--backend", choices=("synthetic", "http"), required=True)
+    parser.add_argument("--audio", type=Path, default=None)
     parser.add_argument("--width", type=int, default=640)
     parser.add_argument("--height", type=int, default=360)
     parser.add_argument("--fps", type=int, default=24)
@@ -88,12 +89,14 @@ def main() -> int:
         "status": "RUNNING",
         "backendRequested": args.backend,
         "backendStatus": "MISSING",
+        "audioStatus": "MISSING" if args.audio is None else "PENDING",
         "stages": [],
         "artifacts": {
             "manifest": str(manifest_path),
             "renderState": str(render_state_path),
             "videoQc": str(qc_path),
             "finalMp4": str(final_mp4),
+            "sourceAudio": str(args.audio.resolve()) if args.audio is not None else None,
         },
     }
 
@@ -110,6 +113,8 @@ def main() -> int:
             raise FileNotFoundError(f"sections CSV not found: {args.sections_csv}")
         if not args.manifest_cli.is_file():
             raise FileNotFoundError(f"RenderManifestCli not found: {args.manifest_cli}")
+        if args.audio is not None and (not args.audio.is_file() or args.audio.stat().st_size <= 0):
+            raise FileNotFoundError(f"source audio not found or empty: {args.audio}")
 
         root.mkdir(parents=True, exist_ok=True)
         manifest_command = [
@@ -166,6 +171,8 @@ def main() -> int:
             "--qc",
             str(qc_path),
         ]
+        if args.audio is not None:
+            assemble_command.extend(["--audio", str(args.audio.resolve())])
         assemble_stage = run_stage("assemble", assemble_command, root / "assemble.log")
         result["stages"].append(assemble_stage)
         require_pass(assemble_stage)
@@ -179,18 +186,26 @@ def main() -> int:
         if not final_mp4.is_file() or final_mp4.stat().st_size <= 0:
             raise RuntimeError("final MP4 is missing or empty")
 
+        probe = qc.get("probe") or {}
+        audio_probe = probe.get("audio")
+        if args.audio is not None and not isinstance(audio_probe, dict):
+            raise RuntimeError("source audio was requested but final QC contains no audio stream")
+        if args.audio is None and audio_probe is not None:
+            raise RuntimeError("final QC unexpectedly contains audio without a source audio request")
+
         backend_name = str(render_state.get("backend") or "")
         real_model_loaded = bool((render_state.get("providerHealth") or {}).get("realModelLoaded"))
         result["backendUsed"] = backend_name
         result["backendStatus"] = "REAL" if backend_name == "http-provider" and real_model_loaded else "MOCK"
+        result["audioStatus"] = "REAL" if audio_probe is not None else "MISSING"
         result["status"] = "PASS"
         result["taskCount"] = int(render_state.get("taskCount") or len(render_state.get("tasks") or []))
-        result["durationSeconds"] = qc.get("probe", {}).get("durationSeconds")
-        result["qc"] = qc.get("probe")
+        result["durationSeconds"] = probe.get("durationSeconds")
+        result["qc"] = probe
         result["sizeBytes"] = final_mp4.stat().st_size
         print(
             f"CinemaJobRunner PASS job={args.job_id} backend={backend_name} "
-            f"classification={result['backendStatus']} output={final_mp4}"
+            f"classification={result['backendStatus']} audio={result['audioStatus']} output={final_mp4}"
         )
         return_code = 0
     except Exception as error:  # noqa: BLE001 - the result must retain the exact blocker
