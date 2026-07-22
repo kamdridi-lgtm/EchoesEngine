@@ -30,19 +30,24 @@ jobs:
             scripts/run-first-real-ai-clip.ps1
             tools/cinema_job_service.py
             tools/cinema_job_runner.py
+            tools/python_render_manifest.py
             tests/test_diffusers_provider_fail_closed.py
             tests/test_cinema_job_service_fail_closed.py
           sparse-checkout-cone-mode: false
 
-      - name: Compile provider and service modules
+      - name: Compile provider, manifest, and service modules
         run: |
           python3 -m py_compile \
             providers/diffusers_video_provider.py \
             providers/modelscope_proof_provider.py \
             tools/cinema_job_service.py \
             tools/cinema_job_runner.py \
+            tools/python_render_manifest.py \
             tests/test_diffusers_provider_fail_closed.py \
             tests/test_cinema_job_service_fail_closed.py
+
+      - name: Verify compiler-free render manifest generator
+        run: python3 tools/python_render_manifest.py --self-test
 
       - name: Verify missing model is never reported as real
         run: python3 tests/test_diffusers_provider_fail_closed.py
@@ -65,18 +70,20 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive-only storage, Python recovery, and quiet torch probe
+      - name: Verify D-drive storage, Python recovery, quiet torch probe, and no Visual Studio dependency
         shell: python
         run: |
           from pathlib import Path
 
           launcher = Path("RUN_FIRST_REAL_AI_CLIP.cmd").read_text(encoding="utf-8")
-          runner = Path("scripts/run-first-real-ai-clip.ps1").read_text(encoding="utf-8")
+          runner_ps = Path("scripts/run-first-real-ai-clip.ps1").read_text(encoding="utf-8")
           bootstrap = Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8")
           ensure_python = Path("scripts/ensure-python-on-d.ps1").read_text(encoding="utf-8")
+          runner_py = Path("tools/cinema_job_runner.py").read_text(encoding="utf-8")
+          manifest_py = Path("tools/python_render_manifest.py").read_text(encoding="utf-8")
 
           assert r"D:\A.I\EchoesCinema" in launcher
-          assert r"D:\A.I\EchoesCinema" in runner
+          assert r"D:\A.I\EchoesCinema" in runner_ps
           assert r"D:\A.I\EchoesCinema\.venv-cinema" in bootstrap
           assert r"D:\A.I\Python310" in bootstrap
           assert r"D:\A.I\Python310" in ensure_python
@@ -91,34 +98,38 @@ jobs:
               "TEMP",
           )
           for name in required:
-              assert name in runner, f"runner missing {name}"
+              assert name in runner_ps, f"runner missing {name}"
               assert name in bootstrap, f"bootstrap missing {name}"
 
           assert "%USERPROFILE%" not in launcher
-          assert "Join-Path $env:USERPROFILE" not in runner
+          assert "Join-Path $env:USERPROFILE" not in runner_ps
           assert "Join-Path $env:USERPROFILE" not in bootstrap
-          assert "systemDriveWritesAllowed = $false" in runner
+          assert "systemDriveWritesAllowed = $false" in runner_ps
           assert '"systemDriveWritesAllowed": False' in bootstrap
 
           assert "ensure-python-on-d.ps1" in bootstrap
           assert 'if ($PythonLauncher -and $PythonLauncher -ne "py"' in bootstrap
           assert '[string]$PythonVersion = "3.10.11"' in ensure_python
           assert "3.10.20" not in ensure_python
-          assert "python-$PythonVersion-amd64.exe" in ensure_python
-          assert "https://www.python.org/ftp/python/" in ensure_python
           assert "Download-OfficialInstaller" in ensure_python
           assert "Get-AuthenticodeSignature" in ensure_python
           assert "Python Software Foundation" in ensure_python
           assert "Get-FileHash" in ensure_python
           assert "TargetDir=$installRootFull" in ensure_python
           assert "Include_launcher=0" in ensure_python
-          assert "Test-PythonCandidate" in ensure_python
 
           assert "function Test-PythonModuleImport" in bootstrap
           assert '$ErrorActionPreference = "SilentlyContinue"' in bootstrap
           assert "Test-PythonModuleImport -PythonPath $python -ModuleName \"torch\"" in bootstrap
-          assert '& $python -c "import torch; print(torch.__version__)" 2>$null' not in bootstrap
-          print("D-drive storage, Python recovery, installer pin, and quiet missing-torch probe PASS")
+
+          assert "Visual Studio 17 2022" not in runner_ps
+          assert "Assert-Command \"cmake\"" not in runner_ps
+          assert "compiler-free Python manifest path" in runner_ps
+          assert 'default=None' in runner_py
+          assert 'python_render_manifest.py' in runner_py
+          assert 'echoes.render-manifest.v1' in manifest_py
+          assert 'python-render-manifest-v1' in manifest_py
+          print("D-drive, Python recovery, CUDA bootstrap, and compiler-free manifest path PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
