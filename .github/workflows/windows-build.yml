@@ -94,13 +94,15 @@ jobs:
           Write-Host "Verified file: $exe"
           $stdoutPath = Join-Path $PWD "runtime-stdout.log"
           $stderrPath = Join-Path $PWD "runtime-stderr.log"
-          $process = Start-Process \
-            -FilePath (Resolve-Path $exe) \
-            -NoNewWindow \
-            -Wait \
-            -PassThru \
-            -RedirectStandardOutput $stdoutPath \
-            -RedirectStandardError $stderrPath
+          $startProcessArgs = @{
+            FilePath = (Resolve-Path $exe).Path
+            NoNewWindow = $true
+            Wait = $true
+            PassThru = $true
+            RedirectStandardOutput = $stdoutPath
+            RedirectStandardError = $stderrPath
+          }
+          $process = Start-Process @startProcessArgs
 
           $runtimeExit = $process.ExitCode
           $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { "" }
