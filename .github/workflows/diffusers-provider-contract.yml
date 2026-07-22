@@ -23,7 +23,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
+            RUN_FIRST_REAL_AI_CLIP.cmd
             providers
+            scripts/bootstrap-cinema-ai.ps1
             scripts/run-first-real-ai-clip.ps1
             tools/cinema_job_service.py
             tools/cinema_job_runner.py
@@ -49,12 +51,50 @@ jobs:
           ECHOES_RENDER_TOKEN: contract-token
         run: python3 providers/modelscope_proof_provider.py --self-test
 
-      - name: Parse the Windows one-command launcher
+      - name: Parse Windows PowerShell launchers
         shell: pwsh
         run: |
-          $content = Get-Content scripts/run-first-real-ai-clip.ps1 -Raw
-          [void][scriptblock]::Create($content)
-          Write-Host "PowerShell launcher syntax PASS"
+          foreach ($path in @(
+            "scripts/bootstrap-cinema-ai.ps1",
+            "scripts/run-first-real-ai-clip.ps1"
+          )) {
+            $content = Get-Content $path -Raw
+            [void][scriptblock]::Create($content)
+            Write-Host "PowerShell syntax PASS: $path"
+          }
+
+      - name: Verify D-drive-only storage contract
+        shell: pwsh
+        run: |
+          $launcher = Get-Content RUN_FIRST_REAL_AI_CLIP.cmd -Raw
+          $runner = Get-Content scripts/run-first-real-ai-clip.ps1 -Raw
+          $bootstrap = Get-Content scripts/bootstrap-cinema-ai.ps1 -Raw
+
+          if ($launcher -notmatch [regex]::Escape("D:\A.I\EchoesCinema")) {
+            throw "CMD launcher does not pin the Cinema workspace to D:"
+          }
+          if ($runner -notmatch [regex]::Escape("D:\A.I\EchoesCinema")) {
+            throw "Real proof runner does not default to D:"
+          }
+          if ($bootstrap -notmatch [regex]::Escape("D:\A.I\EchoesCinema\.venv-cinema")) {
+            throw "Bootstrap virtual environment does not default to D:"
+          }
+          foreach ($required in @(
+            "HF_HOME",
+            "HF_HUB_CACHE",
+            "TORCH_HOME",
+            "PIP_CACHE_DIR",
+            "CUDA_CACHE_PATH",
+            "PYTHONPYCACHEPREFIX",
+            "TEMP"
+          )) {
+            if ($runner -notmatch $required) { throw "Runner is missing D-drive redirection for $required" }
+            if ($bootstrap -notmatch $required) { throw "Bootstrap is missing D-drive redirection for $required" }
+          }
+          if ($runner -match "Join-Path\s+\$env:USERPROFILE" -or $launcher -match "%USERPROFILE%") {
+            throw "A forbidden C-drive user-profile fallback remains"
+          }
+          Write-Host "D-drive-only storage contract PASS"
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
