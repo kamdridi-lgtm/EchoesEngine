@@ -42,6 +42,7 @@ jobs:
       - name: Compile provider, capability, QC, manifest, and service modules
         run: |
           python3 -m py_compile \
+            providers/cogvideox_commercial_provider.py \
             providers/diffusers_video_provider.py \
             providers/modelscope_proof_provider.py \
             providers/modelscope_low_vram_provider.py \
@@ -62,6 +63,9 @@ jobs:
 
       - name: Verify RTX 2060 low-VRAM provider profile
         run: python3 providers/modelscope_low_vram_provider.py --self-test
+
+      - name: Verify exact-revision commercial provider allowlist
+        run: python3 providers/cogvideox_commercial_provider.py --self-test
 
       - name: Verify missing model is never reported as real
         run: python3 tests/test_diffusers_provider_fail_closed.py
@@ -102,6 +106,7 @@ jobs:
           capabilities = Path("tools/render_capabilities.py").read_text(encoding="utf-8")
           manifest_py = Path("tools/python_render_manifest.py").read_text(encoding="utf-8")
           low_vram = Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8")
+          commercial = Path("providers/cogvideox_commercial_provider.py").read_text(encoding="utf-8")
 
           assert r"D:\A.I\EchoesCinema" in launcher
           assert r"D:\A.I\EchoesCinema" in runner_ps
@@ -191,7 +196,16 @@ jobs:
           assert "sha256_file" in assemble
           assert "artifactEvidence" in runner_py
           assert "--require-commercial-use" in runner_py
-          print("D-drive, compiler-free, fail-closed, low-VRAM, cleanup, capability, SHA-256, and A/V drift contract PASS")
+
+          assert 'COMMERCIAL_MODEL_ID = "zai-org/CogVideoX-2b"' in commercial
+          assert 'COMMERCIAL_MODEL_REVISION = "102080da924c0ab684abeeca4b061ec7dfb7d40c"' in commercial
+          assert 'COMMERCIAL_LICENSE = "Apache-2.0"' in commercial
+          assert "is_allowlisted" in commercial
+          assert '"commercialUseAllowed": is_allowlisted' in commercial
+          assert "MINIMUM_RECOMMENDED_VRAM_GIB = 12.0" in commercial
+          assert "CogVideoX-5b" in commercial
+          assert "currentLocalGpuSupported" in commercial
+          print("D-drive, compiler-free, low-VRAM proof, cleanup, capability, SHA-256, A/V drift, and commercial allowlist contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
