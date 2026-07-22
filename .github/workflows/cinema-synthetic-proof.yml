@@ -40,6 +40,11 @@ jobs:
 
       - name: Generate render manifest
         shell: bash
+        env:
+          ECHOES_CONTINUITY_SUBJECT_ID: cinema-proof-subject
+          ECHOES_CONTINUITY_STYLE_ID: echoes-cinema-proof-style
+          ECHOES_CONTINUITY_REFERENCE_ASSET: assets/reference/cinema-proof.png
+          ECHOES_CONTINUITY_STRENGTH: "0.90"
         run: |
           ./build-cinema-proof/RenderManifestCli \
             tests/fixtures/cinema_proof_sections.csv \
@@ -91,6 +96,14 @@ jobs:
           assert qc["probe"]["durationSeconds"] >= 4.0
           assert final_mp4.is_file() and final_mp4.stat().st_size > 0
           assert len(state["tasks"]) == len(manifest["tasks"])
+
+          for index, task in enumerate(manifest["tasks"]):
+              continuity = task.get("continuity") or {}
+              assert continuity.get("subjectId") == "cinema-proof-subject", index
+              assert continuity.get("styleId") == "echoes-cinema-proof-style", index
+              assert continuity.get("referenceAsset") == "assets/reference/cinema-proof.png", index
+              assert abs(float(continuity.get("strength", 0.0)) - 0.90) < 0.001, index
+
           print(
               f"Verified real synthetic MP4: clips={qc['clipCount']} "
               f"duration={qc['probe']['durationSeconds']} size={final_mp4.stat().st_size}"
