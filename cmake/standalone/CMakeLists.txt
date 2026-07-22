@@ -7,9 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 get_filename_component(ECHOES_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+set(ECHOES_CORE_PIPELINE_SOURCE "${ECHOES_ROOT}/engine/src/CoreAudioPipeline.cpp")
 
 add_library(EchoesEngineCore STATIC
-  "${ECHOES_ROOT}/engine/src/CoreAudioPipeline.cpp"
+  "${ECHOES_CORE_PIPELINE_SOURCE}"
   "${ECHOES_ROOT}/engine/src/Engine.cpp"
   "${ECHOES_ROOT}/engine/opencl/opencl_context.cpp"
   "${ECHOES_ROOT}/engine/opencl/kernel_loader.cpp"
@@ -30,8 +31,17 @@ target_compile_definitions(EchoesEngineCore
 )
 
 if(MSVC)
-  target_compile_options(EchoesEngineCore PRIVATE /W4 /WX- /arch:AVX2 /fp:fast)
+  target_compile_options(EchoesEngineCore PRIVATE /W4 /WX- /arch:AVX2 /fp:fast /FS /bigobj)
   target_compile_definitions(EchoesEngineCore PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+
+  # CoreAudioPipeline includes several large header-only neural/DSP implementations.
+  # MSVC 19.44 crashed internally while optimizing this translation unit in CI
+  # (CL.exe exit -529706956). Keep the rest of Release optimized, but compile this
+  # one source without inlining/optimization for a deterministic standalone proof.
+  set_source_files_properties(
+    "${ECHOES_CORE_PIPELINE_SOURCE}"
+    PROPERTIES COMPILE_OPTIONS "/Od;/Ob0;/bigobj;/FS"
+  )
 else()
   target_compile_options(EchoesEngineCore PRIVATE -Wall -Wextra)
 endif()
@@ -44,7 +54,7 @@ target_link_libraries(EchoesStandaloneCI PRIVATE EchoesEngineCore)
 set_target_properties(EchoesStandaloneCI PROPERTIES OUTPUT_NAME "EchoesEngine")
 
 if(MSVC)
-  target_compile_options(EchoesStandaloneCI PRIVATE /W3)
+  target_compile_options(EchoesStandaloneCI PRIVATE /W3 /FS)
 endif()
 
 message(STATUS "EchoesEngine minimal standalone CI build configured")
