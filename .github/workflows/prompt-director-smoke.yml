@@ -1,0 +1,38 @@
+name: PromptDirector Smoke
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        shell: bash
+        run: |
+          rm -rf build-prompt
+          cmake -S cmake/prompt_director -B build-prompt
+
+      - name: Build
+        shell: bash
+        run: cmake --build build-prompt --config Release --target PromptDirectorSmoke
+
+      - name: Run smoke test
+        shell: bash
+        run: ctest --test-dir build-prompt -C Release --output-on-failure
