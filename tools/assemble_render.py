@@ -4,11 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import subprocess
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+
+MAX_AV_DRIFT_SECONDS = 0.35
 
 
 def run(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -22,6 +26,14 @@ def require_tool(name: str) -> str:
     return resolved
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def safe_relative_path(raw: str) -> Path:
     candidate = PurePosixPath(raw.replace("\\", "/"))
     if candidate.is_absolute() or ".." in candidate.parts:
@@ -31,6 +43,14 @@ def safe_relative_path(raw: str) -> Path:
     return Path(*candidate.parts)
 
 
+def parse_duration(raw: Any, fallback: float) -> float:
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return fallback
+    return value if value > 0.0 else fallback
+
+
 def probe(ffprobe: str, path: Path, require_audio: bool) -> dict[str, Any]:
     result = run(
         [
@@ -38,7 +58,7 @@ def probe(ffprobe: str, path: Path, require_audio: bool) -> dict[str, Any]:
             "-v",
             "error",
             "-show_entries",
-            "stream=codec_type,codec_name,width,height,pix_fmt,avg_frame_rate,sample_rate,channels:format=duration,size",
+            "stream=codec_type,codec_name,width,height,pix_fmt,avg_frame_rate,sample_rate,channels,duration:format=duration,size",
             "-of",
             "json",
             str(path),
@@ -61,17 +81,26 @@ def probe(ffprobe: str, path: Path, require_audio: bool) -> dict[str, Any]:
     if require_audio and audio_stream is None:
         raise RuntimeError("final MP4 is missing the required audio stream")
 
+    video_duration = parse_duration(video_stream.get("duration"), duration)
     audio = None
+    av_drift = None
     if audio_stream is not None:
+        audio_duration = parse_duration(audio_stream.get("duration"), duration)
         audio = {
             "codec": audio_stream.get("codec_name"),
             "sampleRate": int(audio_stream.get("sample_rate", 0)),
             "channels": int(audio_stream.get("channels", 0)),
+            "durationSeconds": audio_duration,
         }
         if audio["codec"] != "aac":
             raise RuntimeError(f"unexpected final audio codec: {audio['codec']}")
         if audio["sampleRate"] <= 0 or audio["channels"] <= 0:
             raise RuntimeError("final audio stream has invalid sample rate or channel count")
+        av_drift = abs(video_duration - audio_duration)
+        if require_audio and av_drift > MAX_AV_DRIFT_SECONDS:
+            raise RuntimeError(
+                f"audio/video drift exceeds {MAX_AV_DRIFT_SECONDS:.2f}s: {av_drift:.3f}s"
+            )
 
     return {
         "codec": video_stream.get("codec_name"),
@@ -80,8 +109,12 @@ def probe(ffprobe: str, path: Path, require_audio: bool) -> dict[str, Any]:
         "pixelFormat": video_stream.get("pix_fmt"),
         "averageFrameRate": video_stream.get("avg_frame_rate"),
         "durationSeconds": duration,
+        "videoDurationSeconds": video_duration,
         "sizeBytes": int(format_info.get("size", path.stat().st_size)),
+        "sha256": sha256_file(path),
         "audio": audio,
+        "avDriftSeconds": av_drift,
+        "maxAllowedAvDriftSeconds": MAX_AV_DRIFT_SECONDS if audio is not None else None,
     }
 
 
@@ -120,6 +153,9 @@ def main() -> int:
         clip = args.output_root / relative
         if not clip.is_file() or clip.stat().st_size <= 0:
             raise SystemExit(f"missing rendered clip: {clip}")
+        expected_sha = str(task.get("sha256") or "")
+        if expected_sha and sha256_file(clip) != expected_sha:
+            raise SystemExit(f"rendered clip SHA-256 mismatch: {clip}")
         clips.append(clip)
 
     args.final_mp4.parent.mkdir(parents=True, exist_ok=True)
@@ -162,8 +198,12 @@ def main() -> int:
             ]
         )
     command.extend(["-movflags", "+faststart", str(args.final_mp4)])
-    run(command)
+    try:
+        run(command)
+    finally:
+        concat_path.unlink(missing_ok=True)
 
+    final_probe = probe(ffprobe, args.final_mp4, require_audio=args.audio is not None)
     qc = {
         "schema": "echoes.video-qc.v1",
         "status": "PASS",
@@ -172,14 +212,15 @@ def main() -> int:
         "clipCount": len(clips),
         "outputFile": str(args.final_mp4),
         "audioSource": str(args.audio) if args.audio is not None else None,
-        "probe": probe(ffprobe, args.final_mp4, require_audio=args.audio is not None),
+        "probe": final_probe,
     }
     qc_path = args.qc or args.final_mp4.with_suffix(".qc.json")
     qc_path.write_text(json.dumps(qc, indent=2) + "\n", encoding="utf-8")
-    audio_label = qc["probe"]["audio"]["codec"] if qc["probe"]["audio"] else "none"
+    audio_label = final_probe["audio"]["codec"] if final_probe["audio"] else "none"
+    drift_label = f"{final_probe['avDriftSeconds']:.3f}s" if final_probe["avDriftSeconds"] is not None else "n/a"
     print(
-        f"AssembleRender PASS clips={len(clips)} duration={qc['probe']['durationSeconds']:.3f} "
-        f"audio={audio_label} output={args.final_mp4}"
+        f"AssembleRender PASS clips={len(clips)} duration={final_probe['durationSeconds']:.3f} "
+        f"audio={audio_label} avDrift={drift_label} sha256={final_probe['sha256']} output={args.final_mp4}"
     )
     return 0
 
