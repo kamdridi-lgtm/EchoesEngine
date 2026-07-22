@@ -43,6 +43,9 @@ ShotPlan ShotPlanner::build(const std::vector<SongSection>& sections, Settings s
     if (settings.minimumShotSeconds <= 0.0 || settings.maximumShotSeconds < settings.minimumShotSeconds) {
         throw std::invalid_argument("invalid shot duration settings");
     }
+    if (settings.continuity.identityStrength < 0.0f || settings.continuity.identityStrength > 1.0f) {
+        throw std::invalid_argument("continuity strength must be between 0 and 1");
+    }
 
     ShotPlan plan;
     std::size_t globalShotIndex = 0;
@@ -71,7 +74,8 @@ ShotPlan ShotPlanner::build(const std::vector<SongSection>& sections, Settings s
             shot.seed = deterministic_seed(section.id, localIndex, settings.baseSeed);
             shot.transition = choose_transition(globalShotIndex, section.features);
             shot.scene = promptResult.scene;
-            shot.prompt = promptResult.prompt + " Camera: " + camera_move_name(shot.camera) + ". Preserve subject identity and visual continuity.";
+            shot.continuity = settings.continuity;
+            shot.prompt = promptResult.prompt + " Camera: " + camera_move_name(shot.camera) + ". Maintain visual continuity.";
             plan.shots.push_back(std::move(shot));
         }
 
