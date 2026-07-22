@@ -31,16 +31,14 @@ def safe_relative_path(raw: str) -> Path:
     return Path(*candidate.parts)
 
 
-def probe(ffprobe: str, path: Path) -> dict[str, Any]:
+def probe(ffprobe: str, path: Path, require_audio: bool) -> dict[str, Any]:
     result = run(
         [
             ffprobe,
             "-v",
             "error",
-            "-select_streams",
-            "v:0",
             "-show_entries",
-            "stream=codec_name,width,height,pix_fmt,avg_frame_rate:format=duration,size",
+            "stream=codec_type,codec_name,width,height,pix_fmt,avg_frame_rate,sample_rate,channels:format=duration,size",
             "-of",
             "json",
             str(path),
@@ -48,23 +46,42 @@ def probe(ffprobe: str, path: Path) -> dict[str, Any]:
     )
     payload = json.loads(result.stdout)
     streams = payload.get("streams") or []
-    if not streams:
+    video_stream = next((stream for stream in streams if stream.get("codec_type") == "video"), None)
+    audio_stream = next((stream for stream in streams if stream.get("codec_type") == "audio"), None)
+    if video_stream is None:
         raise RuntimeError(f"ffprobe found no video stream: {path}")
-    stream = streams[0]
     format_info = payload.get("format") or {}
     duration = float(format_info.get("duration", 0.0))
-    if stream.get("codec_name") != "h264":
-        raise RuntimeError(f"unexpected final codec: {stream.get('codec_name')}")
+    if video_stream.get("codec_name") != "h264":
+        raise RuntimeError(f"unexpected final codec: {video_stream.get('codec_name')}")
+    if video_stream.get("pix_fmt") != "yuv420p":
+        raise RuntimeError(f"unexpected final pixel format: {video_stream.get('pix_fmt')}")
     if duration <= 0.0:
         raise RuntimeError(f"invalid final duration: {duration}")
+    if require_audio and audio_stream is None:
+        raise RuntimeError("final MP4 is missing the required audio stream")
+
+    audio = None
+    if audio_stream is not None:
+        audio = {
+            "codec": audio_stream.get("codec_name"),
+            "sampleRate": int(audio_stream.get("sample_rate", 0)),
+            "channels": int(audio_stream.get("channels", 0)),
+        }
+        if audio["codec"] != "aac":
+            raise RuntimeError(f"unexpected final audio codec: {audio['codec']}")
+        if audio["sampleRate"] <= 0 or audio["channels"] <= 0:
+            raise RuntimeError("final audio stream has invalid sample rate or channel count")
+
     return {
-        "codec": stream.get("codec_name"),
-        "width": int(stream.get("width", 0)),
-        "height": int(stream.get("height", 0)),
-        "pixelFormat": stream.get("pix_fmt"),
-        "averageFrameRate": stream.get("avg_frame_rate"),
+        "codec": video_stream.get("codec_name"),
+        "width": int(video_stream.get("width", 0)),
+        "height": int(video_stream.get("height", 0)),
+        "pixelFormat": video_stream.get("pix_fmt"),
+        "averageFrameRate": video_stream.get("avg_frame_rate"),
         "durationSeconds": duration,
         "sizeBytes": int(format_info.get("size", path.stat().st_size)),
+        "audio": audio,
     }
 
 
@@ -77,6 +94,8 @@ def main() -> int:
     parser.add_argument("render_state", type=Path)
     parser.add_argument("output_root", type=Path)
     parser.add_argument("final_mp4", type=Path)
+    parser.add_argument("--audio", type=Path, default=None)
+    parser.add_argument("--audio-bitrate", default="192k")
     parser.add_argument("--qc", type=Path, default=None)
     args = parser.parse_args()
 
@@ -88,6 +107,8 @@ def main() -> int:
     tasks = payload.get("tasks")
     if not isinstance(tasks, list) or not tasks:
         raise SystemExit("render state contains no completed tasks")
+    if args.audio is not None and (not args.audio.is_file() or args.audio.stat().st_size <= 0):
+        raise SystemExit(f"audio source is missing or empty: {args.audio}")
 
     ffmpeg = require_tool("ffmpeg")
     ffprobe = require_tool("ffprobe")
@@ -107,27 +128,41 @@ def main() -> int:
     concat_lines.extend(f"file '{ffconcat_escape(clip)}'" for clip in clips)
     concat_path.write_text("\n".join(concat_lines) + "\n", encoding="utf-8")
 
-    run(
-        [
-            ffmpeg,
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-y",
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            str(concat_path),
-            "-an",
-            "-c",
-            "copy",
-            "-movflags",
-            "+faststart",
-            str(args.final_mp4),
-        ]
-    )
+    command = [
+        ffmpeg,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(concat_path),
+    ]
+    if args.audio is None:
+        command.extend(["-an", "-c:v", "copy"])
+    else:
+        command.extend(
+            [
+                "-i",
+                str(args.audio),
+                "-map",
+                "0:v:0",
+                "-map",
+                "1:a:0",
+                "-c:v",
+                "copy",
+                "-c:a",
+                "aac",
+                "-b:a",
+                args.audio_bitrate,
+                "-shortest",
+            ]
+        )
+    command.extend(["-movflags", "+faststart", str(args.final_mp4)])
+    run(command)
 
     qc = {
         "schema": "echoes.video-qc.v1",
@@ -136,13 +171,15 @@ def main() -> int:
         "jobId": payload.get("jobId"),
         "clipCount": len(clips),
         "outputFile": str(args.final_mp4),
-        "probe": probe(ffprobe, args.final_mp4),
+        "audioSource": str(args.audio) if args.audio is not None else None,
+        "probe": probe(ffprobe, args.final_mp4, require_audio=args.audio is not None),
     }
     qc_path = args.qc or args.final_mp4.with_suffix(".qc.json")
     qc_path.write_text(json.dumps(qc, indent=2) + "\n", encoding="utf-8")
+    audio_label = qc["probe"]["audio"]["codec"] if qc["probe"]["audio"] else "none"
     print(
         f"AssembleRender PASS clips={len(clips)} duration={qc['probe']['durationSeconds']:.3f} "
-        f"output={args.final_mp4}"
+        f"audio={audio_label} output={args.final_mp4}"
     )
     return 0
 
