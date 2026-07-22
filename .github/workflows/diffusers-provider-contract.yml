@@ -26,6 +26,7 @@ jobs:
             RUN_FIRST_REAL_AI_CLIP.cmd
             providers
             scripts/bootstrap-cinema-ai.ps1
+            scripts/cleanup-cinema-storage.ps1
             scripts/ensure-python-on-d.ps1
             scripts/run-first-real-ai-clip.ps1
             tools/cinema_job_service.py
@@ -66,6 +67,7 @@ jobs:
         run: |
           foreach ($path in @(
             "scripts/bootstrap-cinema-ai.ps1",
+            "scripts/cleanup-cinema-storage.ps1",
             "scripts/ensure-python-on-d.ps1",
             "scripts/run-first-real-ai-clip.ps1"
           )) {
@@ -74,13 +76,14 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive, compiler-free, and RTX 2060 memory contract
+      - name: Verify D-drive, compiler-free, low-VRAM, and cleanup contract
         shell: python
         run: |
           from pathlib import Path
 
           launcher = Path("RUN_FIRST_REAL_AI_CLIP.cmd").read_text(encoding="utf-8")
           runner_ps = Path("scripts/run-first-real-ai-clip.ps1").read_text(encoding="utf-8")
+          cleanup = Path("scripts/cleanup-cinema-storage.ps1").read_text(encoding="utf-8")
           bootstrap = Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8")
           ensure_python = Path("scripts/ensure-python-on-d.ps1").read_text(encoding="utf-8")
           runner_py = Path("tools/cinema_job_runner.py").read_text(encoding="utf-8")
@@ -148,7 +151,17 @@ jobs:
           assert '"width": 320' in low_vram
           assert '"height": 184' in low_vram
           assert '"commercialUseAllowed": False' in low_vram
-          print("D-drive, compiler-free, fail-closed, RTX 2060 sequential-offload contract PASS")
+
+          assert launcher.count("cleanup-cinema-storage.ps1") == 2
+          assert "-AfterRun" in launcher
+          assert "cache\\pip" in cleanup
+          assert "cache\\huggingface" in cleanup
+          assert '".venv-cinema"' in cleanup
+          assert '"proofs\\first-real-ai-clip"' in cleanup
+          assert "KeepProofArchives = 2" in cleanup
+          assert "build-first-real-cli" in cleanup
+          assert "systemDriveWritesAllowed" not in cleanup or 'Current path: $workspace' in cleanup
+          print("D-drive, compiler-free, fail-closed, RTX 2060, and safe cleanup contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
