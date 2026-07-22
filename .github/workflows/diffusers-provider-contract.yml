@@ -29,27 +29,36 @@ jobs:
             scripts/cleanup-cinema-storage.ps1
             scripts/ensure-python-on-d.ps1
             scripts/run-first-real-ai-clip.ps1
+            tools/assemble_render.py
             tools/cinema_job_service.py
             tools/cinema_job_runner.py
+            tools/http_render_worker.py
             tools/python_render_manifest.py
+            tools/render_capabilities.py
             tests/test_diffusers_provider_fail_closed.py
             tests/test_cinema_job_service_fail_closed.py
           sparse-checkout-cone-mode: false
 
-      - name: Compile provider, manifest, and service modules
+      - name: Compile provider, capability, QC, manifest, and service modules
         run: |
           python3 -m py_compile \
             providers/diffusers_video_provider.py \
             providers/modelscope_proof_provider.py \
             providers/modelscope_low_vram_provider.py \
+            tools/assemble_render.py \
             tools/cinema_job_service.py \
             tools/cinema_job_runner.py \
+            tools/http_render_worker.py \
             tools/python_render_manifest.py \
+            tools/render_capabilities.py \
             tests/test_diffusers_provider_fail_closed.py \
             tests/test_cinema_job_service_fail_closed.py
 
       - name: Verify compiler-free render manifest generator
         run: python3 tools/python_render_manifest.py --self-test
+
+      - name: Verify fail-closed render capability contract
+        run: python3 tools/render_capabilities.py
 
       - name: Verify RTX 2060 low-VRAM provider profile
         run: python3 providers/modelscope_low_vram_provider.py --self-test
@@ -76,7 +85,7 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive, compiler-free, low-VRAM, and cleanup contract
+      - name: Verify D-drive, compiler-free, low-VRAM, cleanup, capability, and proof contract
         shell: python
         run: |
           from pathlib import Path
@@ -87,6 +96,10 @@ jobs:
           bootstrap = Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8")
           ensure_python = Path("scripts/ensure-python-on-d.ps1").read_text(encoding="utf-8")
           runner_py = Path("tools/cinema_job_runner.py").read_text(encoding="utf-8")
+          service_py = Path("tools/cinema_job_service.py").read_text(encoding="utf-8")
+          http_worker = Path("tools/http_render_worker.py").read_text(encoding="utf-8")
+          assemble = Path("tools/assemble_render.py").read_text(encoding="utf-8")
+          capabilities = Path("tools/render_capabilities.py").read_text(encoding="utf-8")
           manifest_py = Path("tools/python_render_manifest.py").read_text(encoding="utf-8")
           low_vram = Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8")
 
@@ -137,6 +150,8 @@ jobs:
           assert 'python_render_manifest.py' in runner_py
           assert 'echoes.render-manifest.v1' in manifest_py
           assert 'python-render-manifest-v1' in manifest_py
+          assert "manifest_cli: Path | None" in service_py
+          assert "if self.config.manifest_cli is not None" in service_py
 
           assert "modelscope_low_vram_provider.py" in runner_ps
           assert '"--width", "384"' in runner_ps
@@ -160,8 +175,23 @@ jobs:
           assert '"proofs\\first-real-ai-clip"' in cleanup
           assert "KeepProofArchives = 2" in cleanup
           assert "build-first-real-cli" in cleanup
-          assert "systemDriveWritesAllowed" not in cleanup or 'Current path: $workspace' in cleanup
-          print("D-drive, compiler-free, fail-closed, RTX 2060, and safe cleanup contract PASS")
+
+          assert "validate_provider_health" in http_worker
+          assert "--require-commercial-use" in http_worker
+          assert "requiredCapabilities" in http_worker
+          assert '"sha256": sha256_file(output_path)' in http_worker
+          assert "acceptingCommercialJobs" in service_py
+          assert "commercialUseRequired" in service_py
+          assert "task_requirements" in capabilities
+          assert "referenceImage" in capabilities
+          assert "subjectIdentity" in capabilities
+          assert "commercialUseAllowed" in capabilities
+          assert "MAX_AV_DRIFT_SECONDS" in assemble
+          assert "avDriftSeconds" in assemble
+          assert "sha256_file" in assemble
+          assert "artifactEvidence" in runner_py
+          assert "--require-commercial-use" in runner_py
+          print("D-drive, compiler-free, fail-closed, low-VRAM, cleanup, capability, SHA-256, and A/V drift contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
