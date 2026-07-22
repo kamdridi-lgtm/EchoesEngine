@@ -42,10 +42,26 @@ echo ============================================================
 echo  ECHOES CINEMA - FIRST REAL AI CLIP
 echo  STORAGE ROOT: D:\A.I\EchoesCinema
 echo  DRIVE C: STORAGE: DISABLED
+echo  SAFE CLEANUP: BEFORE AND AFTER EVERY RUN
 echo ============================================================
 echo.
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\cleanup-cinema-storage.ps1" -WorkspaceRoot "%ECHOES_CINEMA_WORKSPACE%"
+if errorlevel 1 (
+  echo Safe pre-run cleanup failed. Cinema will not continue.
+  pause
+  exit /b 1
+)
+
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\run-first-real-ai-clip.ps1" -WorkspaceRoot "%ECHOES_CINEMA_WORKSPACE%"
 set "EXIT_CODE=%ERRORLEVEL%"
+
+echo.
+echo Cleaning disposable files from D: ...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\cleanup-cinema-storage.ps1" -WorkspaceRoot "%ECHOES_CINEMA_WORKSPACE%" -AfterRun
+set "CLEANUP_EXIT=%ERRORLEVEL%"
+if not "%CLEANUP_EXIT%"=="0" echo WARNING: post-run cleanup reported an error.
+
 echo.
 if not "%EXIT_CODE%"=="0" (
   echo ECHOES CINEMA FAILED - read the exact blocker above.
