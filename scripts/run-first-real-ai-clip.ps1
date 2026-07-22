@@ -33,7 +33,9 @@ $numbaCache = Join-Path $cacheRoot "numba"
 $pycacheRoot = Join-Path $cacheRoot "python-bytecode"
 $tempRoot = Join-Path $workspace "temp"
 $venvRoot = Join-Path $workspace ".venv-cinema"
-$outputRoot = Join-Path $workspace "proofs\first-real-ai-clip"
+$proofsRoot = Join-Path $workspace "proofs"
+$outputRoot = Join-Path $proofsRoot "first-real-ai-clip"
+$archiveRoot = Join-Path $proofsRoot "archive"
 
 $bootstrap = Join-Path $repoRoot "scripts\bootstrap-cinema-ai.ps1"
 $provider = Join-Path $repoRoot "providers\modelscope_low_vram_provider.py"
@@ -99,7 +101,8 @@ function Configure-NonSystemStorage {
         $numbaCache,
         $pycacheRoot,
         $tempRoot,
-        $outputRoot
+        $proofsRoot,
+        $archiveRoot
     )
     foreach ($directory in $directories) {
         New-Item -ItemType Directory -Path $directory -Force | Out-Null
@@ -124,11 +127,43 @@ function Configure-NonSystemStorage {
     Write-Host "All model, Python, Torch, pip, CUDA, temp and proof files are redirected to: $workspace"
 }
 
+function Prepare-FreshProofDirectory {
+    if (Test-Path $outputRoot) {
+        $existing = Get-ChildItem -LiteralPath $outputRoot -Force -ErrorAction SilentlyContinue
+        if ($existing) {
+            $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+            $destination = Join-Path $archiveRoot "first-real-ai-clip-$stamp"
+            Move-Item -LiteralPath $outputRoot -Destination $destination
+            Write-Host "Previous proof archived: $destination"
+        } else {
+            Remove-Item -LiteralPath $outputRoot -Recurse -Force
+        }
+    }
+    New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
+}
+
+function Show-ModelLoadProgress {
+    $downloadedBytes = 0
+    if (Test-Path $hubCache) {
+        $measurement = Get-ChildItem -LiteralPath $hubCache -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum
+        if ($measurement.Sum) { $downloadedBytes = [double]$measurement.Sum }
+    }
+    $downloadedGiB = [math]::Round($downloadedBytes / 1GB, 2)
+    Write-Host "Model still loading/downloaded cache: $downloadedGiB GiB on D:"
+    if (Test-Path $providerErrorLog) {
+        $tail = Get-Content -LiteralPath $providerErrorLog -Tail 2 -ErrorAction SilentlyContinue
+        foreach ($line in $tail) {
+            if ($line) { Write-Host "  provider: $line" }
+        }
+    }
+}
+
 try {
     Assert-Command "ffmpeg"
     Assert-Command "ffprobe"
     Assert-WorkspaceCapacity
     Configure-NonSystemStorage
+    Prepare-FreshProofDirectory
 
     $bootstrapArgs = @(
         "-ExecutionPolicy", "Bypass",
@@ -143,11 +178,13 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Cinema bootstrap failed" }
     if (-not (Test-Path $venvPython)) { throw "Cinema Python not found: $venvPython" }
 
-    Write-Host "[2/6] Recording GPU evidence"
+    Write-Host "[2/6] Recording GPU evidence and validating the low-VRAM provider"
     $gpuReport = & $venvPython -c "import json, torch; assert torch.cuda.is_available(), 'CUDA unavailable'; p=torch.cuda.get_device_properties(0); print(json.dumps({'available':True,'name':torch.cuda.get_device_name(0),'vramBytes':p.total_memory,'vramGiB':round(p.total_memory/1024**3,2),'torch':torch.__version__,'cuda':torch.version.cuda}, indent=2))"
     if ($LASTEXITCODE -ne 0) { throw "GPU diagnostic failed" }
     $gpuReport | Set-Content -Path (Join-Path $outputRoot "gpu-report.json") -Encoding utf8
     Write-Host $gpuReport
+    & $venvPython $provider --self-test
+    if ($LASTEXITCODE -ne 0) { throw "Low-VRAM provider self-test failed" }
 
     Write-Host "[3/6] Creating a four-second proof audio bed on D:"
     & ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=110:sample_rate=44100" -t 4 -ac 2 -c:a pcm_s16le $audioPath
@@ -174,6 +211,7 @@ try {
 
     $healthUrl = "http://127.0.0.1:$Port/health"
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $lastProgress = (Get-Date).AddSeconds(-31)
     $health = $null
     while ((Get-Date) -lt $deadline) {
         if ($providerProcess.HasExited) {
@@ -187,6 +225,10 @@ try {
             if ($health.loadError) { throw "Model load failed: $($health.loadError)" }
         } catch {
             if ($_.Exception.Message -like "Model load failed:*") { throw }
+        }
+        if (((Get-Date) - $lastProgress).TotalSeconds -ge 30) {
+            Show-ModelLoadProgress
+            $lastProgress = Get-Date
         }
         Start-Sleep -Seconds 5
     }
