@@ -21,6 +21,7 @@ bool require(bool condition, const std::string& message) {
 
 int main() {
     bool ok = true;
+    const PromptDirector::Settings settings{};
 
     const AudioFeatures industrial{
         .bass = 0.86f,
@@ -31,7 +32,7 @@ int main() {
         .beat = true,
     };
 
-    const auto industrialResult = PromptDirector::generate_prompt_from_audio(industrial);
+    const auto industrialResult = PromptDirector::generate_prompt_from_audio(industrial, settings);
     ok &= require(industrialResult.scene.id == "industrial_hellscape",
                   "industrial audio selects industrial_hellscape");
     ok &= require(industrialResult.style == "Industrial Grind" || industrialResult.style == "HyperPulse",
@@ -49,7 +50,7 @@ int main() {
         .beat = false,
     };
 
-    const auto cathedralResult = PromptDirector::generate_prompt_from_audio(cathedral);
+    const auto cathedralResult = PromptDirector::generate_prompt_from_audio(cathedral, settings);
     ok &= require(cathedralResult.scene.id == "dark_cathedral",
                   "slow solemn audio selects dark_cathedral");
     ok &= require(!cathedralResult.keywords.empty(), "cathedral prompt has keywords");
@@ -63,7 +64,7 @@ int main() {
         .beat = false,
     };
 
-    const auto cosmicResult = PromptDirector::generate_prompt_from_audio(cosmic);
+    const auto cosmicResult = PromptDirector::generate_prompt_from_audio(cosmic, settings);
     ok &= require(cosmicResult.scene.id == "cosmic_blackhole",
                   "ethereal audio selects cosmic_blackhole");
 
