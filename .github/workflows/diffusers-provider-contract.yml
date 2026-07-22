@@ -24,14 +24,23 @@ jobs:
         with:
           sparse-checkout: |
             providers
+            tools/cinema_job_service.py
+            tools/cinema_job_runner.py
             tests/test_diffusers_provider_fail_closed.py
+            tests/test_cinema_job_service_fail_closed.py
           sparse-checkout-cone-mode: false
 
-      - name: Compile provider modules
+      - name: Compile provider and service modules
         run: |
           python3 -m py_compile \
             providers/diffusers_video_provider.py \
-            tests/test_diffusers_provider_fail_closed.py
+            tools/cinema_job_service.py \
+            tools/cinema_job_runner.py \
+            tests/test_diffusers_provider_fail_closed.py \
+            tests/test_cinema_job_service_fail_closed.py
 
       - name: Verify missing model is never reported as real
         run: python3 tests/test_diffusers_provider_fail_closed.py
+
+      - name: Verify Cinema service rejects unverified providers
+        run: python3 tests/test_cinema_job_service_fail_closed.py
