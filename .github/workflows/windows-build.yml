@@ -92,14 +92,26 @@ jobs:
           }
 
           Write-Host "Verified file: $exe"
-          $runtimeOutput = & $exe 2>&1
-          $runtimeExit = $LASTEXITCODE
-          $runtimeOutput | Tee-Object -FilePath runtime.log
+          $stdoutPath = Join-Path $PWD "runtime-stdout.log"
+          $stderrPath = Join-Path $PWD "runtime-stderr.log"
+          $process = Start-Process \
+            -FilePath (Resolve-Path $exe) \
+            -NoNewWindow \
+            -Wait \
+            -PassThru \
+            -RedirectStandardOutput $stdoutPath \
+            -RedirectStandardError $stderrPath
+
+          $runtimeExit = $process.ExitCode
+          $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { "" }
+          $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { "" }
+          $runtimeText = ($stdout + "`n" + $stderr)
+          $runtimeText | Set-Content -Path runtime.log
+          Write-Host $runtimeText
 
           # The current standalone CLI prints usage and intentionally returns 1 when
           # launched without input/output WAV arguments. That still proves the PE
           # executable starts and reaches its own argument parser.
-          $runtimeText = $runtimeOutput -join "`n"
           if ($runtimeExit -ne 1) {
             throw "Unexpected no-argument exit code: $runtimeExit"
           }
@@ -117,6 +129,8 @@ jobs:
             configure.log
             build.log
             runtime.log
+            runtime-stdout.log
+            runtime-stderr.log
           if-no-files-found: ignore
           retention-days: 14
 
