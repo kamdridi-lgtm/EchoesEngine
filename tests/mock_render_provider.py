@@ -62,7 +62,7 @@ def render_mp4(task: dict[str, Any]) -> bytes:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "EchoesMockRenderProvider/1.0"
+    server_version = "EchoesMockRenderProvider/1.1"
 
     def log_message(self, format_string: str, *args: object) -> None:
         print(f"provider {self.address_string()} {format_string % args}", flush=True)
@@ -86,6 +86,15 @@ class Handler(BaseHTTPRequestHandler):
                     "schema": "echoes.render-provider-health.v1",
                     "status": "PASS",
                     "backend": "mock-contract-provider",
+                    "realModelLoaded": False,
+                    "modelId": None,
+                    "capabilities": {
+                        "textToVideo": False,
+                        "imageToVideo": False,
+                        "referenceImage": False,
+                        "identityContinuity": False,
+                        "directMp4": True,
+                    },
                 },
             )
             return
