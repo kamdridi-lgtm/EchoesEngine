@@ -30,17 +30,26 @@ jobs:
           set -o pipefail
           cmake -S cmake/prompt_director -B build-prompt 2>&1 | tee prompt-configure.log
 
-      - name: Build all smoke targets
+      - name: Build prompt pipeline tools
         shell: bash
         run: |
           set -o pipefail
-          cmake --build build-prompt --config Release --target PromptDirectorSmoke ShotPlannerSmoke 2>&1 | tee prompt-build.log
+          cmake --build build-prompt --config Release --target PromptDirectorSmoke ShotPlannerSmoke ShotPlanCli 2>&1 | tee prompt-build.log
 
       - name: Run smoke tests
         shell: bash
         run: |
           set -o pipefail
           ctest --test-dir build-prompt -C Release --output-on-failure -V 2>&1 | tee prompt-test.log
+
+      - name: Verify generated shot plan
+        shell: bash
+        run: |
+          test -f build-prompt/shot-plan.json
+          grep -q '"schema": "echoes.shot-plan.v1"' build-prompt/shot-plan.json
+          grep -q '"camera"' build-prompt/shot-plan.json
+          grep -q '"prompt"' build-prompt/shot-plan.json
+          cp build-prompt/shot-plan.json shot-plan-${{ matrix.os }}.json
 
       - name: Upload smoke diagnostics
         if: always()
@@ -51,5 +60,6 @@ jobs:
             prompt-configure.log
             prompt-build.log
             prompt-test.log
+            shot-plan-${{ matrix.os }}.json
           if-no-files-found: ignore
           retention-days: 14
