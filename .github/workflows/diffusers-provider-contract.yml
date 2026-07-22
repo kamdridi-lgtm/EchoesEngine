@@ -64,37 +64,37 @@ jobs:
           }
 
       - name: Verify D-drive-only storage contract
-        shell: pwsh
+        shell: python
         run: |
-          $launcher = Get-Content RUN_FIRST_REAL_AI_CLIP.cmd -Raw
-          $runner = Get-Content scripts/run-first-real-ai-clip.ps1 -Raw
-          $bootstrap = Get-Content scripts/bootstrap-cinema-ai.ps1 -Raw
+          from pathlib import Path
 
-          if ($launcher -notmatch [regex]::Escape("D:\A.I\EchoesCinema")) {
-            throw "CMD launcher does not pin the Cinema workspace to D:"
-          }
-          if ($runner -notmatch [regex]::Escape("D:\A.I\EchoesCinema")) {
-            throw "Real proof runner does not default to D:"
-          }
-          if ($bootstrap -notmatch [regex]::Escape("D:\A.I\EchoesCinema\.venv-cinema")) {
-            throw "Bootstrap virtual environment does not default to D:"
-          }
-          foreach ($required in @(
-            "HF_HOME",
-            "HF_HUB_CACHE",
-            "TORCH_HOME",
-            "PIP_CACHE_DIR",
-            "CUDA_CACHE_PATH",
-            "PYTHONPYCACHEPREFIX",
-            "TEMP"
-          )) {
-            if ($runner -notmatch $required) { throw "Runner is missing D-drive redirection for $required" }
-            if ($bootstrap -notmatch $required) { throw "Bootstrap is missing D-drive redirection for $required" }
-          }
-          if ($runner -match "Join-Path\s+\$env:USERPROFILE" -or $launcher -match "%USERPROFILE%") {
-            throw "A forbidden C-drive user-profile fallback remains"
-          }
-          Write-Host "D-drive-only storage contract PASS"
+          launcher = Path("RUN_FIRST_REAL_AI_CLIP.cmd").read_text(encoding="utf-8")
+          runner = Path("scripts/run-first-real-ai-clip.ps1").read_text(encoding="utf-8")
+          bootstrap = Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8")
+
+          assert r"D:\A.I\EchoesCinema" in launcher
+          assert r"D:\A.I\EchoesCinema" in runner
+          assert r"D:\A.I\EchoesCinema\.venv-cinema" in bootstrap
+
+          required = (
+              "HF_HOME",
+              "HF_HUB_CACHE",
+              "TORCH_HOME",
+              "PIP_CACHE_DIR",
+              "CUDA_CACHE_PATH",
+              "PYTHONPYCACHEPREFIX",
+              "TEMP",
+          )
+          for name in required:
+              assert name in runner, f"runner missing {name}"
+              assert name in bootstrap, f"bootstrap missing {name}"
+
+          assert "%USERPROFILE%" not in launcher
+          assert "Join-Path $env:USERPROFILE" not in runner
+          assert "Join-Path $env:USERPROFILE" not in bootstrap
+          assert "systemDriveWritesAllowed = $false" in runner
+          assert '"systemDriveWritesAllowed": False' in bootstrap
+          print("D-drive-only storage contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
