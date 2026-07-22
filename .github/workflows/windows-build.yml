@@ -69,7 +69,7 @@ jobs:
             throw "Build failed with exit code $exitCode"
           }
 
-      - name: Verify executable
+      - name: Verify executable launch
         shell: pwsh
         run: |
           $exe = "build\Release\EchoesEngine.exe"
@@ -80,8 +80,23 @@ jobs:
             Get-ChildItem build -Recurse -Filter EchoesEngine.exe | Format-Table FullName
             throw "EchoesEngine.exe was not produced"
           }
-          Write-Host "Verified: $exe"
-          & $exe --help
+
+          Write-Host "Verified file: $exe"
+          $runtimeOutput = & $exe 2>&1
+          $runtimeExit = $LASTEXITCODE
+          $runtimeOutput | Tee-Object -FilePath runtime.log
+
+          # The current standalone CLI prints usage and intentionally returns 1 when
+          # launched without input/output WAV arguments. That still proves the PE
+          # executable starts and reaches its own argument parser.
+          $runtimeText = $runtimeOutput -join "`n"
+          if ($runtimeExit -ne 1) {
+            throw "Unexpected no-argument exit code: $runtimeExit"
+          }
+          if ($runtimeText -notmatch "Usage: EchoesEngine") {
+            throw "Executable launched but did not print the expected usage contract"
+          }
+          Write-Host "Executable launch contract PASS"
 
       - name: Upload diagnostic logs
         if: always()
@@ -91,6 +106,7 @@ jobs:
           path: |
             configure.log
             build.log
+            runtime.log
           if-no-files-found: ignore
           retention-days: 14
 
