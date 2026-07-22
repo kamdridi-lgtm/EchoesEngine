@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""Run one complete Echoes Cinema job with machine-readable stage evidence.
-
-The runner creates a render manifest, invokes an explicit backend, assembles the
-returned clips, optionally muxes source audio, validates QC, and writes
-``echoes.cinema-job-result.v1``. It does not use a shell, does not place provider
-tokens in command arguments, and defaults HTTP jobs to the real-model gate.
-"""
+"""Run one complete Echoes Cinema job with machine-readable stage evidence."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -25,6 +20,24 @@ JOB_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def artifact_record(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        raise FileNotFoundError(f"artifact is missing: {path}")
+    return {
+        "path": str(path),
+        "sizeBytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+    }
 
 
 def run_stage(name: str, command: list[str], log_path: Path) -> dict[str, Any]:
@@ -77,6 +90,11 @@ def main() -> int:
         action="store_true",
         help="HTTP contract/testing only: skip the real-model requirement.",
     )
+    parser.add_argument(
+        "--require-commercial-use",
+        action="store_true",
+        help="Reject providers that do not explicitly allow commercial rendering.",
+    )
     args = parser.parse_args()
 
     root = args.output_root.resolve()
@@ -95,6 +113,7 @@ def main() -> int:
         "backendRequested": args.backend,
         "backendStatus": "MISSING",
         "audioStatus": "MISSING" if args.audio is None else "PENDING",
+        "commercialUseRequired": args.require_commercial_use,
         "stages": [],
         "artifacts": {
             "manifest": str(manifest_path),
@@ -114,6 +133,8 @@ def main() -> int:
             raise ValueError("width, height, and fps must be positive")
         if args.provider_timeout <= 0:
             raise ValueError("provider timeout must be positive")
+        if args.require_commercial_use and args.backend != "http":
+            raise ValueError("commercial-use verification is available only for HTTP providers")
         if not args.sections_csv.is_file():
             raise FileNotFoundError(f"sections CSV not found: {args.sections_csv}")
         if args.manifest_cli is not None and not args.manifest_cli.is_file():
@@ -179,6 +200,8 @@ def main() -> int:
             ]
             if not args.allow_unverified_provider:
                 render_command.append("--require-real-model")
+            if args.require_commercial_use:
+                render_command.append("--require-commercial-use")
 
         render_stage = run_stage("render", render_command, root / "render.log")
         result["stages"].append(render_stage)
@@ -216,18 +239,37 @@ def main() -> int:
             raise RuntimeError("final QC unexpectedly contains audio without a source audio request")
 
         backend_name = str(render_state.get("backend") or "")
-        real_model_loaded = bool((render_state.get("providerHealth") or {}).get("realModelLoaded"))
+        provider_health = render_state.get("providerHealth") or {}
+        real_model_loaded = bool(provider_health.get("realModelLoaded"))
+        commercial_allowed = provider_health.get("commercialUseAllowed") is True
+        if args.require_commercial_use and not commercial_allowed:
+            raise RuntimeError("commercial-use requirement was not preserved in the render state")
+
         result["backendUsed"] = backend_name
         result["backendStatus"] = "REAL" if backend_name == "http-provider" and real_model_loaded else "MOCK"
         result["audioStatus"] = "REAL" if audio_probe is not None else "MISSING"
+        result["commercialUseAllowed"] = commercial_allowed if backend_name == "http-provider" else False
+        result["requiredCapabilities"] = render_state.get("requiredCapabilities") or []
         result["status"] = "PASS"
         result["taskCount"] = int(render_state.get("taskCount") or len(render_state.get("tasks") or []))
         result["durationSeconds"] = probe.get("durationSeconds")
+        result["avDriftSeconds"] = probe.get("avDriftSeconds")
         result["qc"] = probe
         result["sizeBytes"] = final_mp4.stat().st_size
+        result["artifactEvidence"] = {
+            "manifest": artifact_record(manifest_path),
+            "renderState": artifact_record(render_state_path),
+            "videoQc": artifact_record(qc_path),
+            "finalMp4": artifact_record(final_mp4),
+        }
+        if args.audio is not None:
+            result["artifactEvidence"]["sourceAudio"] = artifact_record(args.audio.resolve())
+
         print(
             f"CinemaJobRunner PASS job={args.job_id} backend={backend_name} "
-            f"classification={result['backendStatus']} audio={result['audioStatus']} output={final_mp4}"
+            f"classification={result['backendStatus']} audio={result['audioStatus']} "
+            f"avDrift={result['avDriftSeconds']} sha256={result['artifactEvidence']['finalMp4']['sha256']} "
+            f"output={final_mp4}"
         )
         return_code = 0
     except Exception as error:  # noqa: BLE001 - the result must retain the exact blocker
