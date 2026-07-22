@@ -1,5 +1,6 @@
 param(
-    [string]$PythonLauncher = "py",
+    [string]$PythonExecutable = "",
+    [string]$PythonLauncher = "",
     [string]$PythonVersion = "3.10",
     [string]$VenvPath = "D:\A.I\EchoesCinema\.venv-cinema",
     [string]$TorchIndexUrl = "",
@@ -8,18 +9,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-
-function Invoke-PythonLauncher {
-    param([string[]]$Arguments)
-    if ($PythonLauncher -eq "py") {
-        & py "-$PythonVersion" @Arguments
-    } else {
-        & $PythonLauncher @Arguments
-    }
-    if ($LASTEXITCODE -ne 0) {
-        throw "Python command failed with exit code $LASTEXITCODE"
-    }
-}
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $venv = if ([System.IO.Path]::IsPathRooted($VenvPath)) { [System.IO.Path]::GetFullPath($VenvPath) } else { [System.IO.Path]::GetFullPath((Join-Path $repoRoot $VenvPath)) }
@@ -36,6 +25,7 @@ $provider = Join-Path $repoRoot "providers\diffusers_video_provider.py"
 $proofProvider = Join-Path $repoRoot "providers\modelscope_proof_provider.py"
 $service = Join-Path $repoRoot "tools\cinema_job_service.py"
 $runner = Join-Path $repoRoot "tools\cinema_job_runner.py"
+$ensurePython = Join-Path $repoRoot "scripts\ensure-python-on-d.ps1"
 $reportPath = Join-Path $workspaceRoot "cinema-bootstrap-report.json"
 
 $storageDirectories = @(
@@ -72,6 +62,44 @@ $env:TMPDIR = $tempRoot
 $env:HF_HUB_DISABLE_SYMLINKS_WARNING = "1"
 $env:PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True"
 
+function Test-BasePython {
+    param([string]$Path)
+    if (-not $Path -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+    try {
+        & $Path -c "import struct, sys; assert sys.version_info[:2] in ((3,10),(3,11)); assert struct.calcsize('P')*8 == 64" *> $null
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    }
+}
+
+function Resolve-BasePython {
+    if (Test-BasePython -Path $PythonExecutable) {
+        return (Resolve-Path -LiteralPath $PythonExecutable).Path
+    }
+
+    if ($PythonLauncher -and $PythonLauncher -ne "py" -and (Test-BasePython -Path $PythonLauncher)) {
+        return (Resolve-Path -LiteralPath $PythonLauncher).Path
+    }
+
+    if (-not (Test-Path $ensurePython -PathType Leaf)) {
+        throw "Python resolver script not found: $ensurePython"
+    }
+
+    Write-Host "Resolving a real 64-bit Python 3.10/3.11 executable without trusting the stale py launcher."
+    $resolvedOutput = & $ensurePython `
+        -InstallRoot "D:\A.I\Python310" `
+        -WorkspaceRoot $workspaceRoot
+    if ($LASTEXITCODE -ne 0) {
+        throw "Python discovery/installation failed"
+    }
+    $resolved = [string]($resolvedOutput | Select-Object -Last 1)
+    if (-not (Test-BasePython -Path $resolved)) {
+        throw "Python resolver returned an unusable executable: $resolved"
+    }
+    return (Resolve-Path -LiteralPath $resolved).Path
+}
+
 if (-not (Test-Path $requirements)) {
     throw "Requirements file not found: $requirements"
 }
@@ -82,7 +110,9 @@ if (-not (Get-Command ffprobe -ErrorAction SilentlyContinue)) {
     throw "FFprobe is not available in PATH"
 }
 
+$basePython = Resolve-BasePython
 Write-Host "Cinema workspace: $workspaceRoot"
+Write-Host "Base Python: $basePython"
 Write-Host "Virtual environment: $venv"
 Write-Host "Package/model cache: $cacheRoot"
 Write-Host "Temporary files: $tempRoot"
@@ -93,7 +123,10 @@ if ($Recreate -and (Test-Path $venv)) {
 }
 if (-not (Test-Path $venv)) {
     Write-Host "Creating Cinema virtual environment: $venv"
-    Invoke-PythonLauncher -Arguments @("-m", "venv", $venv)
+    & $basePython -m venv $venv
+    if ($LASTEXITCODE -ne 0) {
+        throw "Python venv creation failed with exit code $LASTEXITCODE using $basePython"
+    }
 }
 
 $python = Join-Path $venv "Scripts\python.exe"
