@@ -19,8 +19,15 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Checkout
+      - name: Checkout Cinema proof sources
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cmake/prompt_director
+            ai_prompt
+            tests
+            tools
+          sparse-checkout-cone-mode: true
 
       - name: Ensure FFmpeg tools
         shell: bash
