@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Authenticated HTTP service for submitting real Echoes Cinema jobs.
+"""Authenticated HTTP service for submitting verified Echoes Cinema jobs.
 
-The service exposes a narrow, allowlisted control surface around
-``cinema_job_runner.py``. It never accepts executable paths, shell commands, or
-absolute user paths from requests. HTTP jobs are accepted only when the render
-provider health contract reports ``realModelLoaded=true``.
+The service accepts only safe relative inputs, requires a real text-to-video
+provider, exposes separate real/commercial readiness, and uses the compiler-free
+manifest path unless an optional native manifest CLI is explicitly configured.
 """
 
 from __future__ import annotations
@@ -24,6 +23,12 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+from render_capabilities import (
+    accepting_commercial_jobs,
+    accepting_real_jobs,
+    validate_provider_health,
+)
 
 
 MAX_REQUEST_BYTES = 256 * 1024
@@ -62,6 +67,13 @@ def validate_job_id(raw: Any) -> str:
     return raw
 
 
+def request_bool(request: dict[str, Any], field: str, default: bool = False) -> bool:
+    value = request.get(field, default)
+    if not isinstance(value, bool):
+        raise ValueError(f"{field} must be a boolean")
+    return value
+
+
 def provider_health_url(endpoint: str) -> str:
     explicit = os.getenv("ECHOES_RENDER_HEALTH_URL", "")
     if explicit:
@@ -78,7 +90,7 @@ def fetch_provider_health(endpoint: str, token: str, timeout: float) -> dict[str
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
-            "User-Agent": "EchoesCinemaJobService/1.0",
+            "User-Agent": "EchoesCinemaJobService/1.1",
         },
     )
     try:
@@ -98,10 +110,8 @@ def fetch_provider_health(endpoint: str, token: str, timeout: float) -> dict[str
         payload = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RuntimeError("provider health returned invalid JSON") from error
-    if payload.get("schema") != "echoes.render-provider-health.v1":
-        raise RuntimeError("provider health schema is unsupported")
-    if payload.get("status") != "PASS":
-        raise RuntimeError("provider health is not PASS")
+    if not isinstance(payload, dict):
+        raise RuntimeError("provider health must be a JSON object")
     return payload
 
 
@@ -110,7 +120,7 @@ class ServiceConfig:
     token: str
     host: str
     port: int
-    manifest_cli: Path
+    manifest_cli: Path | None
     runner: Path
     sections_root: Path
     audio_root: Path
@@ -134,13 +144,13 @@ class ServiceConfig:
         if args.provider_timeout <= 0 or args.max_workers <= 0:
             raise ValueError("provider timeout and max workers must be positive")
 
-        manifest_cli = Path(args.manifest_cli).resolve()
+        manifest_cli = Path(args.manifest_cli).resolve() if args.manifest_cli else None
         runner = Path(args.runner).resolve()
         sections_root = Path(args.sections_root).resolve()
         audio_root = Path(args.audio_root or args.sections_root).resolve()
         output_root = Path(args.output_root).resolve()
 
-        if not manifest_cli.is_file():
+        if manifest_cli is not None and not manifest_cli.is_file():
             raise FileNotFoundError(f"RenderManifestCli not found: {manifest_cli}")
         if not runner.is_file():
             raise FileNotFoundError(f"cinema job runner not found: {runner}")
@@ -220,14 +230,19 @@ class JobRegistry:
         seed = int(request.get("seed", 1337))
         if seed < 0 or seed > 0xFFFFFFFF:
             raise ValueError("seed must fit in an unsigned 32-bit integer")
+        commercial_use_required = request_bool(request, "commercialUseRequired")
 
         health = fetch_provider_health(
             self.config.provider_endpoint,
             self.config.provider_token,
             self.config.provider_timeout,
         )
-        if health.get("realModelLoaded") is not True:
-            raise RuntimeError("Cinema provider has no verified real model loaded")
+        required_capabilities = validate_provider_health(
+            health,
+            explicit_requirements={"textToVideo"},
+            require_real_model=True,
+            require_commercial_use=commercial_use_required,
+        )
 
         accepted = {
             "schema": "echoes.cinema-service-job.v1",
@@ -236,16 +251,34 @@ class JobRegistry:
             "backend": "http-provider",
             "realModelLoaded": True,
             "modelId": health.get("modelId"),
+            "commercialUseRequired": commercial_use_required,
+            "commercialUseAllowed": health.get("commercialUseAllowed") is True,
+            "requiredCapabilities": sorted(required_capabilities),
+            "manifestGenerator": "native-render-manifest-cli" if self.config.manifest_cli else "python-render-manifest-v1",
         }
         with self.lock:
             if job_id in self.jobs:
                 return 202, dict(self.jobs[job_id])
             self.jobs[job_id] = accepted
 
-        self.executor.submit(self._run_job, job_id, sections_csv, audio_file, seed)
+        self.executor.submit(
+            self._run_job,
+            job_id,
+            sections_csv,
+            audio_file,
+            seed,
+            commercial_use_required,
+        )
         return 202, accepted
 
-    def _run_job(self, job_id: str, sections_csv: Path, audio_file: Path | None, seed: int) -> None:
+    def _run_job(
+        self,
+        job_id: str,
+        sections_csv: Path,
+        audio_file: Path | None,
+        seed: int,
+        commercial_use_required: bool,
+    ) -> None:
         job_dir = self._job_dir(job_id)
         job_dir.mkdir(parents=True, exist_ok=True)
         with self.lock:
@@ -253,6 +286,7 @@ class JobRegistry:
                 "schema": "echoes.cinema-service-job.v1",
                 "jobId": job_id,
                 "status": "RUNNING",
+                "commercialUseRequired": commercial_use_required,
             }
 
         command = [
@@ -260,8 +294,6 @@ class JobRegistry:
             str(self.config.runner),
             str(sections_csv),
             str(job_dir),
-            "--manifest-cli",
-            str(self.config.manifest_cli),
             "--job-id",
             job_id,
             "--seed",
@@ -271,8 +303,12 @@ class JobRegistry:
             "--provider-timeout",
             str(self.config.provider_timeout),
         ]
+        if self.config.manifest_cli is not None:
+            command.extend(["--manifest-cli", str(self.config.manifest_cli)])
         if audio_file is not None:
             command.extend(["--audio", str(audio_file)])
+        if commercial_use_required:
+            command.append("--require-commercial-use")
 
         completed = subprocess.run(command, text=True, capture_output=True, check=False, shell=False)
         (job_dir / "service-run.log").write_text(
@@ -298,7 +334,7 @@ class CinemaServer(ThreadingHTTPServer):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "EchoesCinemaJobService/1.0"
+    server_version = "EchoesCinemaJobService/1.1"
 
     @property
     def cinema(self) -> CinemaServer:
@@ -324,7 +360,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(401, {"status": "FAILED", "error": "unauthorized"})
         return False
 
-    def do_GET(self) -> None:  # noqa: N802 - stdlib handler API
+    def do_GET(self) -> None:  # noqa: N802
         if not self.require_authorized():
             return
         if self.path == "/health":
@@ -334,20 +370,25 @@ class Handler(BaseHTTPRequestHandler):
                     self.cinema.config.provider_token,
                     self.cinema.config.provider_timeout,
                 )
-                real_model_loaded = provider.get("realModelLoaded") is True
+                real_ready = accepting_real_jobs(provider)
+                commercial_ready = accepting_commercial_jobs(provider)
                 self.send_json(
                     200,
                     {
                         "schema": "echoes.cinema-service-health.v1",
                         "status": "PASS",
                         "backend": "cinema-job-service",
-                        "realModelLoaded": real_model_loaded,
-                        "acceptingRealJobs": real_model_loaded,
+                        "realModelLoaded": provider.get("realModelLoaded") is True,
+                        "acceptingRealJobs": real_ready,
+                        "acceptingCommercialJobs": commercial_ready,
                         "provider": provider,
                         "maxWorkers": self.cinema.config.max_workers,
+                        "manifestGenerator": "native-render-manifest-cli"
+                        if self.cinema.config.manifest_cli
+                        else "python-render-manifest-v1",
                     },
                 )
-            except Exception as error:  # noqa: BLE001 - health must expose the exact blocker
+            except Exception as error:  # noqa: BLE001
                 self.send_json(
                     200,
                     {
@@ -356,6 +397,7 @@ class Handler(BaseHTTPRequestHandler):
                         "backend": "cinema-job-service",
                         "realModelLoaded": False,
                         "acceptingRealJobs": False,
+                        "acceptingCommercialJobs": False,
                         "error": str(error),
                     },
                 )
@@ -376,7 +418,7 @@ class Handler(BaseHTTPRequestHandler):
 
         self.send_json(404, {"status": "FAILED", "error": "not found"})
 
-    def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
+    def do_POST(self) -> None:  # noqa: N802
         if self.path != "/v1/cinema/jobs":
             self.send_json(404, {"status": "FAILED", "error": "not found"})
             return
@@ -393,7 +435,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(status_code, result)
         except (ValueError, FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError) as error:
             self.send_json(400, {"status": "FAILED", "error": str(error)})
-        except Exception as error:  # noqa: BLE001 - submission must retain the exact blocker
+        except Exception as error:  # noqa: BLE001
             self.send_json(503, {"status": "FAILED", "error": str(error)})
 
 
@@ -420,7 +462,8 @@ def main() -> int:
     server.registry = JobRegistry(config)
     print(
         f"EchoesCinemaJobService READY http://{config.host}:{config.port} "
-        f"sectionsRoot={config.sections_root} outputRoot={config.output_root}",
+        f"sectionsRoot={config.sections_root} outputRoot={config.output_root} "
+        f"manifestGenerator={'native' if config.manifest_cli else 'python'}",
         flush=True,
     )
     try:
