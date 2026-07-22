@@ -1,8 +1,8 @@
 param(
     [string]$TorchIndexUrl = "https://download.pytorch.org/whl/cu128",
     [string]$ModelId = "ali-vilab/text-to-video-ms-1.7b",
-    [string]$Prompt = "A cinematic industrial rock performance in a rain-soaked megacity at night, dramatic amber and deep red lighting, realistic camera motion, detailed, coherent movement",
-    [string]$OutputDirectory = "proofs\first-real-ai-clip",
+    [string]$WorkspaceRoot = "D:\A.I\EchoesCinema",
+    [int]$MinimumFreeGiB = 35,
     [int]$Port = 8081,
     [int]$TimeoutSeconds = 3600,
     [switch]$RecreateEnvironment
@@ -10,24 +10,56 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+if (-not (Test-Path ([System.IO.Path]::GetPathRoot($WorkspaceRoot)))) {
+    $WorkspaceRoot = Join-Path $repoRoot "_cinema-workspace"
+}
+$workspace = [System.IO.Path]::GetFullPath($WorkspaceRoot)
+$cacheRoot = Join-Path $workspace "cache"
+$venvRoot = Join-Path $workspace ".venv-cinema"
+$outputRoot = Join-Path $workspace "proofs\first-real-ai-clip"
 $bootstrap = Join-Path $repoRoot "scripts\bootstrap-cinema-ai.ps1"
 $provider = Join-Path $repoRoot "providers\modelscope_proof_provider.py"
 $runner = Join-Path $repoRoot "tools\cinema_job_runner.py"
 $fixture = Join-Path $repoRoot "tests\fixtures\first_real_clip_sections.csv"
-$buildDir = Join-Path $repoRoot "build-first-real-cli"
-$outputRoot = if ([System.IO.Path]::IsPathRooted($OutputDirectory)) { $OutputDirectory } else { Join-Path $repoRoot $OutputDirectory }
-$venvPython = Join-Path $repoRoot ".venv-cinema\Scripts\python.exe"
+$buildDir = Join-Path $workspace "build-first-real-cli"
+$venvPython = Join-Path $venvRoot "Scripts\python.exe"
 $providerLog = Join-Path $outputRoot "provider.log"
 $providerErrorLog = Join-Path $outputRoot "provider-error.log"
 $audioPath = Join-Path $outputRoot "proof-audio.wav"
 $jobId = "echoes-first-real-ai-clip"
-$token = [Convert]::ToHexString([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant()
+$tokenBytes = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($tokenBytes)
+$rng.Dispose()
+$token = -join ($tokenBytes | ForEach-Object { $_.ToString("x2") })
 $providerProcess = $null
 
 function Assert-Command {
     param([string]$Name)
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "$Name is not available in PATH"
+    }
+}
+
+function Assert-WorkspaceCapacity {
+    $root = [System.IO.Path]::GetPathRoot($workspace)
+    if (-not $root) { throw "Cannot determine workspace drive: $workspace" }
+    $driveName = $root.TrimEnd("\").TrimEnd(":")
+    $drive = Get-PSDrive -Name $driveName -ErrorAction Stop
+    $freeGiB = [math]::Round($drive.Free / 1GB, 2)
+    $report = [ordered]@{
+        schema = "echoes.cinema-storage-report.v1"
+        workspace = $workspace
+        drive = $root
+        freeGiB = $freeGiB
+        minimumRequiredGiB = $MinimumFreeGiB
+        status = if ($freeGiB -ge $MinimumFreeGiB) { "PASS" } else { "FAILED" }
+    }
+    New-Item -ItemType Directory -Path $workspace -Force | Out-Null
+    $report | ConvertTo-Json | Set-Content -Path (Join-Path $workspace "storage-report.json") -Encoding utf8
+    Write-Host "Workspace drive free space: $freeGiB GiB"
+    if ($freeGiB -lt $MinimumFreeGiB) {
+        throw "The real-model proof needs at least $MinimumFreeGiB GiB free on $root. Available: $freeGiB GiB"
     }
 }
 
@@ -50,26 +82,37 @@ try {
     Assert-Command "ffmpeg"
     Assert-Command "ffprobe"
     Assert-Command "py"
+    Assert-WorkspaceCapacity
 
+    New-Item -ItemType Directory -Path $cacheRoot -Force | Out-Null
     New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
+
+    # Keep model checkpoints, Torch downloads, and temporary assets off C:.
+    $env:HF_HOME = $cacheRoot
+    $env:HF_HUB_CACHE = Join-Path $cacheRoot "hub"
+    $env:TRANSFORMERS_CACHE = Join-Path $cacheRoot "transformers"
+    $env:TORCH_HOME = Join-Path $cacheRoot "torch"
+    $env:TEMP = Join-Path $workspace "temp"
+    $env:TMP = $env:TEMP
+    New-Item -ItemType Directory -Path $env:TEMP -Force | Out-Null
 
     $bootstrapArgs = @(
         "-ExecutionPolicy", "Bypass",
         "-File", $bootstrap,
         "-PythonLauncher", "py",
         "-PythonVersion", "3.10",
-        "-VenvPath", ".venv-cinema",
+        "-VenvPath", $venvRoot,
         "-TorchIndexUrl", $TorchIndexUrl
     )
     if ($RecreateEnvironment) { $bootstrapArgs += "-Recreate" }
 
-    Write-Host "[1/7] Preparing the CUDA Diffusers environment"
+    Write-Host "[1/7] Preparing the CUDA Diffusers environment on $workspace"
     & powershell @bootstrapArgs
     if ($LASTEXITCODE -ne 0) { throw "Cinema bootstrap failed" }
     if (-not (Test-Path $venvPython)) { throw "Cinema Python not found: $venvPython" }
 
     Write-Host "[2/7] Recording GPU evidence"
-    $gpuReport = & $venvPython -c "import json, torch; p=torch.cuda.get_device_properties(0); print(json.dumps({'available':torch.cuda.is_available(),'name':torch.cuda.get_device_name(0),'vramBytes':p.total_memory,'vramGiB':round(p.total_memory/1024**3,2),'torch':torch.__version__,'cuda':torch.version.cuda}, indent=2))"
+    $gpuReport = & $venvPython -c "import json, torch; assert torch.cuda.is_available(), 'CUDA unavailable'; p=torch.cuda.get_device_properties(0); print(json.dumps({'available':True,'name':torch.cuda.get_device_name(0),'vramBytes':p.total_memory,'vramGiB':round(p.total_memory/1024**3,2),'torch':torch.__version__,'cuda':torch.version.cuda}, indent=2))"
     if ($LASTEXITCODE -ne 0) { throw "GPU diagnostic failed" }
     $gpuReport | Set-Content -Path (Join-Path $outputRoot "gpu-report.json") -Encoding utf8
     Write-Host $gpuReport
@@ -87,7 +130,7 @@ try {
     & ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=110:sample_rate=44100" -t 4 -ac 2 -c:a pcm_s16le $audioPath
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $audioPath)) { throw "Proof audio generation failed" }
 
-    Write-Host "[5/7] Loading the real video model. The first download can be several gigabytes."
+    Write-Host "[5/7] Loading the real video model. The first download is large and remains in $cacheRoot"
     $env:ECHOES_RENDER_TOKEN = $token
     $providerArgs = @(
         $provider,
@@ -161,14 +204,17 @@ try {
     Write-Host "Result: $resultPath"
     Write-Host "Provider health: $(Join-Path $outputRoot 'provider-health.json')"
     Write-Host "GPU report: $(Join-Path $outputRoot 'gpu-report.json')"
+    Write-Host "Storage report: $(Join-Path $workspace 'storage-report.json')"
     Write-Host "License note: this proof model is non-commercial and must be replaced before paid production."
 }
 finally {
     if ($providerProcess -and -not $providerProcess.HasExited) {
         Stop-Process -Id $providerProcess.Id -Force -ErrorAction SilentlyContinue
     }
-    Remove-Item Env:ECHOES_RENDER_TOKEN -ErrorAction SilentlyContinue
-    Remove-Item Env:ECHOES_RENDER_ENDPOINT -ErrorAction SilentlyContinue
-    Remove-Item Env:ECHOES_RENDER_HEALTH_URL -ErrorAction SilentlyContinue
-    Remove-Item Env:ECHOES_RENDER_HOST_ALLOWLIST -ErrorAction SilentlyContinue
+    @(
+        "ECHOES_RENDER_TOKEN",
+        "ECHOES_RENDER_ENDPOINT",
+        "ECHOES_RENDER_HEALTH_URL",
+        "ECHOES_RENDER_HOST_ALLOWLIST"
+    ) | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 }
