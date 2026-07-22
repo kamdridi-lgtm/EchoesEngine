@@ -40,6 +40,7 @@ jobs:
           python3 -m py_compile \
             providers/diffusers_video_provider.py \
             providers/modelscope_proof_provider.py \
+            providers/modelscope_low_vram_provider.py \
             tools/cinema_job_service.py \
             tools/cinema_job_runner.py \
             tools/python_render_manifest.py \
@@ -48,6 +49,9 @@ jobs:
 
       - name: Verify compiler-free render manifest generator
         run: python3 tools/python_render_manifest.py --self-test
+
+      - name: Verify RTX 2060 low-VRAM provider profile
+        run: python3 providers/modelscope_low_vram_provider.py --self-test
 
       - name: Verify missing model is never reported as real
         run: python3 tests/test_diffusers_provider_fail_closed.py
@@ -70,7 +74,7 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive storage, Python recovery, quiet torch probe, and no Visual Studio dependency
+      - name: Verify D-drive, compiler-free, and RTX 2060 memory contract
         shell: python
         run: |
           from pathlib import Path
@@ -81,6 +85,7 @@ jobs:
           ensure_python = Path("scripts/ensure-python-on-d.ps1").read_text(encoding="utf-8")
           runner_py = Path("tools/cinema_job_runner.py").read_text(encoding="utf-8")
           manifest_py = Path("tools/python_render_manifest.py").read_text(encoding="utf-8")
+          low_vram = Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8")
 
           assert r"D:\A.I\EchoesCinema" in launcher
           assert r"D:\A.I\EchoesCinema" in runner_ps
@@ -129,7 +134,21 @@ jobs:
           assert 'python_render_manifest.py' in runner_py
           assert 'echoes.render-manifest.v1' in manifest_py
           assert 'python-render-manifest-v1' in manifest_py
-          print("D-drive, Python recovery, CUDA bootstrap, and compiler-free manifest path PASS")
+
+          assert "modelscope_low_vram_provider.py" in runner_ps
+          assert '"--width", "384"' in runner_ps
+          assert '"--height", "216"' in runner_ps
+          assert '"--fps", "4"' in runner_ps
+          assert '"--max-frames", "16"' in runner_ps
+          assert "enable_sequential_cpu_offload" in low_vram
+          assert "enable_attention_slicing" in low_vram
+          assert "enable_vae_slicing" in low_vram
+          assert "enable_forward_chunking" in low_vram
+          assert "OutOfMemoryError" in low_vram
+          assert '"width": 320' in low_vram
+          assert '"height": 184' in low_vram
+          assert '"commercialUseAllowed": False' in low_vram
+          print("D-drive, compiler-free, fail-closed, RTX 2060 sequential-offload contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
