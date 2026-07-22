@@ -149,15 +149,17 @@ jobs:
         shell: pwsh
         run: |
           $exe = (Resolve-Path "build\Release\EchoesEngine.exe").Path
-          $output = & $exe \
-            "audio-input.wav" \
-            "audio-output.wav" \
-            --input-gain 3 \
-            --output-gain -1 \
-            --no-gate \
-            --no-comp \
-            --no-eq \
-            --verbose 2>&1
+          $engineArgs = @(
+            "audio-input.wav",
+            "audio-output.wav",
+            "--input-gain", "3",
+            "--output-gain", "-1",
+            "--no-gate",
+            "--no-comp",
+            "--no-eq",
+            "--verbose"
+          )
+          $output = & $exe @engineArgs 2>&1
           $exitCode = $LASTEXITCODE
           $output | Tee-Object -FilePath audio-runtime.log
           if ($exitCode -ne 0) {
