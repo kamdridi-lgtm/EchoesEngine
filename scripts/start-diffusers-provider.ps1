@@ -42,20 +42,23 @@ $env:ECHOES_DIFFUSERS_FPS = "$Fps"
 $env:ECHOES_DIFFUSERS_STEPS = "$InferenceSteps"
 $env:ECHOES_DIFFUSERS_MAX_FRAMES = "$MaxFrames"
 
+$arguments = @(
+    $provider,
+    "--host", $HostAddress,
+    "--port", "$Port",
+    "--model-id", $ModelId,
+    "--device", $Device,
+    "--width", "$Width",
+    "--height", "$Height",
+    "--fps", "$Fps",
+    "--inference-steps", "$InferenceSteps",
+    "--max-frames", "$MaxFrames"
+)
+
 Write-Host "Starting Echoes Diffusers provider on http://${HostAddress}:$Port"
 Write-Host "Model: $ModelId"
 Write-Host "Device: $Device | ${Width}x${Height} | ${Fps} fps | max ${MaxFrames} frames"
 Write-Host "The token is stored only in this process environment and is not printed."
 
-& python $provider \
-    --host $HostAddress \
-    --port $Port \
-    --model-id $ModelId \
-    --device $Device \
-    --width $Width \
-    --height $Height \
-    --fps $Fps \
-    --inference-steps $InferenceSteps \
-    --max-frames $MaxFrames
-
+& python @arguments
 exit $LASTEXITCODE
