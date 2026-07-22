@@ -1,0 +1,111 @@
+name: Echoes Cinema Synthetic MP4 Proof
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  synthetic-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure FFmpeg tools
+        shell: bash
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
+      - name: Configure render manifest tools
+        shell: bash
+        run: |
+          rm -rf build-cinema-proof
+          cmake -S cmake/prompt_director -B build-cinema-proof
+
+      - name: Build render manifest CLI
+        shell: bash
+        run: cmake --build build-cinema-proof --config Release --target RenderManifestCli
+
+      - name: Generate render manifest
+        shell: bash
+        run: |
+          ./build-cinema-proof/RenderManifestCli \
+            tests/fixtures/cinema_proof_sections.csv \
+            build-cinema-proof/render-manifest.json \
+            echoes-cinema-synthetic-proof \
+            4242 \
+            clips
+
+      - name: Render real synthetic H264 clips
+        shell: bash
+        run: |
+          python3 tools/synthetic_render_worker.py \
+            build-cinema-proof/render-manifest.json \
+            build-cinema-proof/render-output \
+            --state build-cinema-proof/render-state.json \
+            --width 320 \
+            --height 180 \
+            --fps 12
+
+      - name: Assemble final MP4 and QC
+        shell: bash
+        run: |
+          python3 tools/assemble_render.py \
+            build-cinema-proof/render-state.json \
+            build-cinema-proof/render-output \
+            build-cinema-proof/echoes-cinema-synthetic-proof.mp4 \
+            --qc build-cinema-proof/video-qc.json
+
+      - name: Verify proof artifacts
+        shell: python
+        run: |
+          import json
+          import pathlib
+
+          root = pathlib.Path("build-cinema-proof")
+          manifest = json.loads((root / "render-manifest.json").read_text(encoding="utf-8"))
+          state = json.loads((root / "render-state.json").read_text(encoding="utf-8"))
+          qc = json.loads((root / "video-qc.json").read_text(encoding="utf-8"))
+          final_mp4 = root / "echoes-cinema-synthetic-proof.mp4"
+
+          assert manifest["schema"] == "echoes.render-manifest.v1"
+          assert state["schema"] == "echoes.render-state.v1"
+          assert state["status"] == "PASS"
+          assert state["backend"] == "synthetic-ci"
+          assert qc["schema"] == "echoes.video-qc.v1"
+          assert qc["status"] == "PASS"
+          assert qc["probe"]["codec"] == "h264"
+          assert qc["probe"]["pixelFormat"] == "yuv420p"
+          assert qc["probe"]["durationSeconds"] >= 4.0
+          assert final_mp4.is_file() and final_mp4.stat().st_size > 0
+          assert len(state["tasks"]) == len(manifest["tasks"])
+          print(
+              f"Verified real synthetic MP4: clips={qc['clipCount']} "
+              f"duration={qc['probe']['durationSeconds']} size={final_mp4.stat().st_size}"
+          )
+
+      - name: Upload Cinema proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-cinema-synthetic-mp4-proof
+          path: |
+            build-cinema-proof/render-manifest.json
+            build-cinema-proof/render-state.json
+            build-cinema-proof/video-qc.json
+            build-cinema-proof/echoes-cinema-synthetic-proof.mp4
+            build-cinema-proof/render-output/clips/*.mp4
+          if-no-files-found: warn
+          retention-days: 14
