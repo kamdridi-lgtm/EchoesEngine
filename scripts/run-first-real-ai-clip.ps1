@@ -9,19 +9,37 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-if (-not (Test-Path ([System.IO.Path]::GetPathRoot($WorkspaceRoot)))) {
-    $WorkspaceRoot = Join-Path $repoRoot "_cinema-workspace"
+if (-not (Test-Path "D:\")) {
+    throw "Drive D: is required for this proof because drive C: must not be used."
 }
+
 $workspace = [System.IO.Path]::GetFullPath($WorkspaceRoot)
+$workspaceDrive = [System.IO.Path]::GetPathRoot($workspace)
+if (-not $workspaceDrive -or $workspaceDrive.TrimEnd("\").ToUpperInvariant() -eq "C:") {
+    throw "WorkspaceRoot must be on drive D: or another non-C: drive. Current value: $workspace"
+}
+
 $cacheRoot = Join-Path $workspace "cache"
+$hubCache = Join-Path $cacheRoot "huggingface\hub"
+$transformersCache = Join-Path $cacheRoot "huggingface\transformers"
+$torchCache = Join-Path $cacheRoot "torch"
+$pipCache = Join-Path $cacheRoot "pip"
+$xdgCache = Join-Path $cacheRoot "xdg"
+$cudaCache = Join-Path $cacheRoot "cuda"
+$numbaCache = Join-Path $cacheRoot "numba"
+$pycacheRoot = Join-Path $cacheRoot "python-bytecode"
+$tempRoot = Join-Path $workspace "temp"
 $venvRoot = Join-Path $workspace ".venv-cinema"
 $outputRoot = Join-Path $workspace "proofs\first-real-ai-clip"
+$buildDir = Join-Path $workspace "build-first-real-cli"
+
 $bootstrap = Join-Path $repoRoot "scripts\bootstrap-cinema-ai.ps1"
 $provider = Join-Path $repoRoot "providers\modelscope_proof_provider.py"
 $runner = Join-Path $repoRoot "tools\cinema_job_runner.py"
 $fixture = Join-Path $repoRoot "tests\fixtures\first_real_clip_sections.csv"
-$buildDir = Join-Path $workspace "build-first-real-cli"
 $venvPython = Join-Path $venvRoot "Scripts\python.exe"
 $providerLog = Join-Path $outputRoot "provider.log"
 $providerErrorLog = Join-Path $outputRoot "provider-error.log"
@@ -47,20 +65,64 @@ function Assert-WorkspaceCapacity {
     $driveName = $root.TrimEnd("\").TrimEnd(":")
     $drive = Get-PSDrive -Name $driveName -ErrorAction Stop
     $freeGiB = [math]::Round($drive.Free / 1GB, 2)
+    $systemDrive = Get-PSDrive -Name "C" -ErrorAction SilentlyContinue
+    $systemFreeGiB = if ($systemDrive) { [math]::Round($systemDrive.Free / 1GB, 2) } else { $null }
     $report = [ordered]@{
         schema = "echoes.cinema-storage-report.v1"
         workspace = $workspace
-        drive = $root
-        freeGiB = $freeGiB
+        workspaceDrive = $root
+        workspaceFreeGiB = $freeGiB
         minimumRequiredGiB = $MinimumFreeGiB
+        systemDrive = "C:\"
+        systemDriveFreeGiB = $systemFreeGiB
+        systemDriveWritesAllowed = $false
         status = if ($freeGiB -ge $MinimumFreeGiB) { "PASS" } else { "FAILED" }
     }
     New-Item -ItemType Directory -Path $workspace -Force | Out-Null
     $report | ConvertTo-Json | Set-Content -Path (Join-Path $workspace "storage-report.json") -Encoding utf8
     Write-Host "Workspace drive free space: $freeGiB GiB"
+    Write-Host "System drive C: writes allowed: false"
     if ($freeGiB -lt $MinimumFreeGiB) {
         throw "The real-model proof needs at least $MinimumFreeGiB GiB free on $root. Available: $freeGiB GiB"
     }
+}
+
+function Configure-NonSystemStorage {
+    $directories = @(
+        $workspace,
+        $cacheRoot,
+        $hubCache,
+        $transformersCache,
+        $torchCache,
+        $pipCache,
+        $xdgCache,
+        $cudaCache,
+        $numbaCache,
+        $pycacheRoot,
+        $tempRoot,
+        $outputRoot
+    )
+    foreach ($directory in $directories) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+
+    $env:HF_HOME = Join-Path $cacheRoot "huggingface"
+    $env:HF_HUB_CACHE = $hubCache
+    $env:HUGGINGFACE_HUB_CACHE = $hubCache
+    $env:TRANSFORMERS_CACHE = $transformersCache
+    $env:TORCH_HOME = $torchCache
+    $env:PIP_CACHE_DIR = $pipCache
+    $env:XDG_CACHE_HOME = $xdgCache
+    $env:CUDA_CACHE_PATH = $cudaCache
+    $env:NUMBA_CACHE_DIR = $numbaCache
+    $env:PYTHONPYCACHEPREFIX = $pycacheRoot
+    $env:TEMP = $tempRoot
+    $env:TMP = $tempRoot
+    $env:TMPDIR = $tempRoot
+    $env:HF_HUB_DISABLE_SYMLINKS_WARNING = "1"
+    $env:PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True"
+
+    Write-Host "All model, Python, Torch, pip, CUDA, temp, build and proof files are redirected to: $workspace"
 }
 
 function Find-ManifestCli {
@@ -83,18 +145,7 @@ try {
     Assert-Command "ffprobe"
     Assert-Command "py"
     Assert-WorkspaceCapacity
-
-    New-Item -ItemType Directory -Path $cacheRoot -Force | Out-Null
-    New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
-
-    # Keep model checkpoints, Torch downloads, and temporary assets off C:.
-    $env:HF_HOME = $cacheRoot
-    $env:HF_HUB_CACHE = Join-Path $cacheRoot "hub"
-    $env:TRANSFORMERS_CACHE = Join-Path $cacheRoot "transformers"
-    $env:TORCH_HOME = Join-Path $cacheRoot "torch"
-    $env:TEMP = Join-Path $workspace "temp"
-    $env:TMP = $env:TEMP
-    New-Item -ItemType Directory -Path $env:TEMP -Force | Out-Null
+    Configure-NonSystemStorage
 
     $bootstrapArgs = @(
         "-ExecutionPolicy", "Bypass",
@@ -117,7 +168,7 @@ try {
     $gpuReport | Set-Content -Path (Join-Path $outputRoot "gpu-report.json") -Encoding utf8
     Write-Host $gpuReport
 
-    Write-Host "[3/7] Building RenderManifestCli"
+    Write-Host "[3/7] Building RenderManifestCli on $workspaceDrive"
     if (Test-Path $buildDir) { Remove-Item $buildDir -Recurse -Force }
     & cmake -S (Join-Path $repoRoot "cmake\prompt_director") -B $buildDir -G "Visual Studio 17 2022" -A x64
     if ($LASTEXITCODE -ne 0) { throw "RenderManifestCli configure failed" }
@@ -126,7 +177,7 @@ try {
     $manifestCli = Find-ManifestCli
     Write-Host "Manifest CLI: $manifestCli"
 
-    Write-Host "[4/7] Creating a four-second proof audio bed"
+    Write-Host "[4/7] Creating a four-second proof audio bed on D:"
     & ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=110:sample_rate=44100" -t 4 -ac 2 -c:a pcm_s16le $audioPath
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $audioPath)) { throw "Proof audio generation failed" }
 
@@ -145,7 +196,7 @@ try {
         "--inference-steps", "25",
         "--max-frames", "32"
     )
-    $providerProcess = Start-Process -FilePath $venvPython -ArgumentList $providerArgs -WorkingDirectory $repoRoot -RedirectStandardOutput $providerLog -RedirectStandardError $providerErrorLog -PassThru
+    $providerProcess = Start-Process -FilePath $venvPython -ArgumentList $providerArgs -WorkingDirectory $workspace -RedirectStandardOutput $providerLog -RedirectStandardError $providerErrorLog -PassThru
 
     $healthUrl = "http://127.0.0.1:$Port/health"
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
@@ -205,6 +256,7 @@ try {
     Write-Host "Provider health: $(Join-Path $outputRoot 'provider-health.json')"
     Write-Host "GPU report: $(Join-Path $outputRoot 'gpu-report.json')"
     Write-Host "Storage report: $(Join-Path $workspace 'storage-report.json')"
+    Write-Host "C: was not selected for model caches, virtual environment, temp, build or output."
     Write-Host "License note: this proof model is non-commercial and must be replaced before paid production."
 }
 finally {
