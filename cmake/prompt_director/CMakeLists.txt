@@ -30,23 +30,35 @@ endif()
 add_executable(PromptDirectorSmoke
     "${ECHOES_ROOT}/tests/prompt_director_smoke.cpp"
 )
-
 target_link_libraries(PromptDirectorSmoke PRIVATE EchoesPromptDirector)
 
 add_executable(ShotPlannerSmoke
     "${ECHOES_ROOT}/tests/shot_planner_smoke.cpp"
 )
-
 target_link_libraries(ShotPlannerSmoke PRIVATE EchoesPromptDirector)
+
+add_executable(ShotPlanCli
+    "${ECHOES_ROOT}/tools/shot_plan_cli.cpp"
+)
+target_link_libraries(ShotPlanCli PRIVATE EchoesPromptDirector)
 
 if(MSVC)
     target_compile_options(PromptDirectorSmoke PRIVATE /W4 /WX-)
     target_compile_options(ShotPlannerSmoke PRIVATE /W4 /WX-)
+    target_compile_options(ShotPlanCli PRIVATE /W4 /WX-)
 else()
     target_compile_options(PromptDirectorSmoke PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(ShotPlannerSmoke PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(ShotPlanCli PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 enable_testing()
 add_test(NAME PromptDirectorSmoke COMMAND PromptDirectorSmoke)
 add_test(NAME ShotPlannerSmoke COMMAND ShotPlannerSmoke)
+add_test(
+    NAME ShotPlanCliSmoke
+    COMMAND ShotPlanCli
+        "${ECHOES_ROOT}/tests/fixtures/song_sections.csv"
+        "${CMAKE_CURRENT_BINARY_DIR}/shot-plan.json"
+        4242
+)
