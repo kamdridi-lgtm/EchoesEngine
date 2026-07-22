@@ -24,6 +24,7 @@ jobs:
         with:
           sparse-checkout: |
             providers
+            scripts/run-first-real-ai-clip.ps1
             tools/cinema_job_service.py
             tools/cinema_job_runner.py
             tests/test_diffusers_provider_fail_closed.py
@@ -34,6 +35,7 @@ jobs:
         run: |
           python3 -m py_compile \
             providers/diffusers_video_provider.py \
+            providers/modelscope_proof_provider.py \
             tools/cinema_job_service.py \
             tools/cinema_job_runner.py \
             tests/test_diffusers_provider_fail_closed.py \
@@ -41,6 +43,18 @@ jobs:
 
       - name: Verify missing model is never reported as real
         run: python3 tests/test_diffusers_provider_fail_closed.py
+
+      - name: Verify proof provider is fail-closed and non-commercial
+        env:
+          ECHOES_RENDER_TOKEN: contract-token
+        run: python3 providers/modelscope_proof_provider.py --self-test
+
+      - name: Parse the Windows one-command launcher
+        shell: pwsh
+        run: |
+          $content = Get-Content scripts/run-first-real-ai-clip.ps1 -Raw
+          [void][scriptblock]::Create($content)
+          Write-Host "PowerShell launcher syntax PASS"
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
