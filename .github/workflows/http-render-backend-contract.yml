@@ -1,0 +1,156 @@
+name: Echoes Cinema HTTP Backend Contract
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  http-provider-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ECHOES_RENDER_TOKEN: ci-token
+      ECHOES_RENDER_ENDPOINT: http://127.0.0.1:18081/v1/render
+      ECHOES_RENDER_HOST_ALLOWLIST: 127.0.0.1,localhost
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure FFmpeg tools
+        shell: bash
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
+      - name: Configure render manifest tools
+        shell: bash
+        run: |
+          rm -rf build-http-contract
+          cmake -S cmake/prompt_director -B build-http-contract
+
+      - name: Build render manifest CLI
+        shell: bash
+        run: cmake --build build-http-contract --config Release --target RenderManifestCli
+
+      - name: Generate render manifest
+        shell: bash
+        run: |
+          ./build-http-contract/RenderManifestCli \
+            tests/fixtures/cinema_proof_sections.csv \
+            build-http-contract/render-manifest.json \
+            echoes-cinema-http-contract \
+            4242 \
+            clips
+
+      - name: Start local provider fixture
+        shell: bash
+        run: |
+          python3 tests/mock_render_provider.py \
+            --port 18081 \
+            --token "$ECHOES_RENDER_TOKEN" \
+            --width 320 \
+            --height 180 \
+            --fps 12 \
+            > build-http-contract/provider.log 2>&1 &
+          echo $! > build-http-contract/provider.pid
+          python3 - <<'PY'
+          import json
+          import time
+          import urllib.request
+
+          url = "http://127.0.0.1:18081/health"
+          for attempt in range(60):
+              try:
+                  with urllib.request.urlopen(url, timeout=1) as response:
+                      payload = json.loads(response.read().decode("utf-8"))
+                  if payload.get("status") == "PASS":
+                      print("Provider health PASS")
+                      break
+              except Exception:
+                  time.sleep(0.25)
+          else:
+              raise SystemExit("mock render provider did not become healthy")
+          PY
+
+      - name: Execute manifest through HTTP provider
+        shell: bash
+        run: |
+          python3 tools/http_render_worker.py \
+            build-http-contract/render-manifest.json \
+            build-http-contract/render-output \
+            --state build-http-contract/render-state.json \
+            --timeout 30
+
+      - name: Assemble provider clips and QC
+        shell: bash
+        run: |
+          python3 tools/assemble_render.py \
+            build-http-contract/render-state.json \
+            build-http-contract/render-output \
+            build-http-contract/echoes-cinema-http-contract.mp4 \
+            --qc build-http-contract/video-qc.json
+
+      - name: Verify provider contract proof
+        shell: python
+        run: |
+          import json
+          import pathlib
+
+          root = pathlib.Path("build-http-contract")
+          manifest = json.loads((root / "render-manifest.json").read_text(encoding="utf-8"))
+          state = json.loads((root / "render-state.json").read_text(encoding="utf-8"))
+          qc = json.loads((root / "video-qc.json").read_text(encoding="utf-8"))
+          output = root / "echoes-cinema-http-contract.mp4"
+
+          assert manifest["schema"] == "echoes.render-manifest.v1"
+          assert state["schema"] == "echoes.render-state.v1"
+          assert state["status"] == "PASS"
+          assert state["backend"] == "http-provider"
+          assert state["providerProtocol"] == "echoes.render-request.v1"
+          assert state["providerEndpoint"] == "http://127.0.0.1:18081/v1/render"
+          assert len(state["tasks"]) == len(manifest["tasks"])
+          assert all(task["status"] == "PASS" for task in state["tasks"])
+          assert all(task["providerMode"] == "direct-mp4" for task in state["tasks"])
+          assert qc["status"] == "PASS"
+          assert qc["backend"] == "http-provider"
+          assert qc["probe"]["codec"] == "h264"
+          assert qc["probe"]["pixelFormat"] == "yuv420p"
+          assert qc["probe"]["durationSeconds"] >= 4.0
+          assert output.is_file() and output.stat().st_size > 0
+          print(
+              f"HTTP backend contract PASS tasks={len(state['tasks'])} "
+              f"duration={qc['probe']['durationSeconds']} size={output.stat().st_size}"
+          )
+
+      - name: Stop provider fixture
+        if: always()
+        shell: bash
+        run: |
+          if [ -f build-http-contract/provider.pid ]; then
+            kill "$(cat build-http-contract/provider.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload HTTP backend proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-cinema-http-backend-contract
+          path: |
+            build-http-contract/render-manifest.json
+            build-http-contract/render-state.json
+            build-http-contract/video-qc.json
+            build-http-contract/echoes-cinema-http-contract.mp4
+            build-http-contract/render-output/clips/*.mp4
+            build-http-contract/provider.log
+          if-no-files-found: warn
+          retention-days: 14
