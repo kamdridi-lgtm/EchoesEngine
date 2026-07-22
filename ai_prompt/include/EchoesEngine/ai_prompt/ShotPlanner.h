@@ -25,6 +25,13 @@ struct SongSection {
     AudioFeatures features;
 };
 
+struct ContinuityProfile {
+    std::string subjectId;
+    std::string styleId;
+    std::string referenceAsset;
+    float identityStrength = 0.85f;
+};
+
 struct ShotPlanEntry {
     std::string id;
     std::string sectionId;
@@ -35,6 +42,7 @@ struct ShotPlanEntry {
     std::string prompt;
     std::string transition;
     SceneSuggestion scene;
+    ContinuityProfile continuity;
 };
 
 struct ShotPlan {
@@ -49,6 +57,7 @@ public:
         double maximumShotSeconds = 6.0;
         std::uint32_t baseSeed = 1337;
         PromptDirector::Settings promptSettings{};
+        ContinuityProfile continuity{};
     };
 
     static ShotPlan build(const std::vector<SongSection>& sections, Settings settings);
