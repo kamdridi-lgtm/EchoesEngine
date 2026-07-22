@@ -67,6 +67,11 @@ def validate_url(raw: str, allowed_hosts: set[str]) -> urllib.parse.ParseResult:
     return parsed
 
 
+def default_health_url(endpoint: str) -> str:
+    parsed = urllib.parse.urlparse(endpoint)
+    return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, "/health", "", "", ""))
+
+
 def read_limited(response: Any) -> bytes:
     content_length = response.headers.get("Content-Length")
     if content_length and int(content_length) > MAX_RESPONSE_BYTES:
@@ -90,7 +95,7 @@ def request(
     validate_url(url, allowed_hosts)
     headers = {
         "Accept": "video/mp4, application/json",
-        "User-Agent": "EchoesEngine-HttpRenderWorker/1.0",
+        "User-Agent": "EchoesEngine-HttpRenderWorker/1.1",
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -105,6 +110,37 @@ def request(
         raise RuntimeError(f"provider HTTP {error.code}: {detail}") from error
     except urllib.error.URLError as error:
         raise RuntimeError(f"provider connection failed: {error.reason}") from error
+
+
+def provider_health(
+    health_url: str,
+    *,
+    token: str,
+    allowed_hosts: set[str],
+    timeout_seconds: float,
+    require_real_model: bool,
+) -> dict[str, Any]:
+    content_type, body = request(
+        health_url,
+        method="GET",
+        token=token,
+        allowed_hosts=allowed_hosts,
+        timeout_seconds=timeout_seconds,
+    )
+    if content_type != "application/json":
+        raise RuntimeError(f"provider health did not return JSON: {content_type}")
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("provider health returned invalid JSON") from error
+    if payload.get("schema") != "echoes.render-provider-health.v1":
+        raise RuntimeError("provider health schema is unsupported")
+    if payload.get("status") != "PASS":
+        raise RuntimeError(f"provider health is not PASS: {payload}")
+    real_model_loaded = payload.get("realModelLoaded") is True
+    if require_real_model and not real_model_loaded:
+        raise RuntimeError("provider has no verified real model loaded")
+    return payload
 
 
 def probe_clip(ffprobe: str, path: Path) -> dict[str, Any]:
@@ -226,9 +262,11 @@ def main() -> int:
     parser.add_argument("manifest", type=Path)
     parser.add_argument("output_root", type=Path)
     parser.add_argument("--endpoint", default=os.getenv("ECHOES_RENDER_ENDPOINT", ""))
+    parser.add_argument("--health-url", default=os.getenv("ECHOES_RENDER_HEALTH_URL", ""))
     parser.add_argument("--token-env", default="ECHOES_RENDER_TOKEN")
     parser.add_argument("--allow-hosts", default=os.getenv("ECHOES_RENDER_HOST_ALLOWLIST", "127.0.0.1,localhost"))
     parser.add_argument("--timeout", type=float, default=180.0)
+    parser.add_argument("--require-real-model", action="store_true")
     parser.add_argument("--state", type=Path, default=None)
     args = parser.parse_args()
 
@@ -247,7 +285,17 @@ def main() -> int:
             raise ValueError("timeout must be positive")
         allowed_hosts = parse_allowlist(args.allow_hosts)
         validate_url(args.endpoint, allowed_hosts)
+        health_url = args.health_url or default_health_url(args.endpoint)
+        validate_url(health_url, allowed_hosts)
         token = os.getenv(args.token_env, "")
+        health = provider_health(
+            health_url,
+            token=token,
+            allowed_hosts=allowed_hosts,
+            timeout_seconds=args.timeout,
+            require_real_model=args.require_real_model,
+        )
+
         manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
         if manifest.get("schema") != "echoes.render-manifest.v1":
             raise ValueError("unsupported render manifest schema")
@@ -259,7 +307,10 @@ def main() -> int:
         args.output_root.mkdir(parents=True, exist_ok=True)
         state["jobId"] = manifest.get("jobId")
         state["providerEndpoint"] = args.endpoint
+        state["providerHealthUrl"] = health_url
+        state["providerHealth"] = health
         state["providerProtocol"] = "echoes.render-request.v1"
+        state["realModelRequired"] = args.require_real_model
         for task in tasks:
             if not isinstance(task, dict):
                 raise ValueError("render manifest task must be an object")
