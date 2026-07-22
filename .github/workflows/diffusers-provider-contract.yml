@@ -102,13 +102,18 @@ jobs:
 
           assert "ensure-python-on-d.ps1" in bootstrap
           assert 'if ($PythonLauncher -and $PythonLauncher -ne "py"' in bootstrap
+          assert '[string]$PythonVersion = "3.10.11"' in ensure_python
+          assert "3.10.20" not in ensure_python
+          assert "python-$PythonVersion-amd64.exe" in ensure_python
           assert "https://www.python.org/ftp/python/" in ensure_python
+          assert "Download-OfficialInstaller" in ensure_python
           assert "Get-AuthenticodeSignature" in ensure_python
           assert "Python Software Foundation" in ensure_python
+          assert "Get-FileHash" in ensure_python
           assert "TargetDir=$installRootFull" in ensure_python
           assert "Include_launcher=0" in ensure_python
           assert "Test-PythonCandidate" in ensure_python
-          print("D-drive-only storage and stale-py recovery contract PASS")
+          print("D-drive-only storage, stale-py recovery and valid Windows installer pin PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
