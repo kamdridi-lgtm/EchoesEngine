@@ -45,9 +45,7 @@ public:
         float bassBias = 1.f;
     };
 
-    static PromptResult generate_prompt_from_audio(const AudioFeatures& features);
     static PromptResult generate_prompt_from_audio(const AudioFeatures& features, Settings settings);
-    static StyleDescriptor generate_style(const AudioFeatures& features);
     static StyleDescriptor generate_style(const AudioFeatures& features, Settings settings);
 };
 
