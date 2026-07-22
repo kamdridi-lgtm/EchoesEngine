@@ -36,6 +36,21 @@ def safe_relative_path(raw: str) -> Path:
     return Path(*candidate.parts)
 
 
+def validate_continuity(task: dict[str, Any]) -> dict[str, Any]:
+    continuity = task.get("continuity") or {}
+    if not isinstance(continuity, dict):
+        raise ValueError(f"task continuity must be an object: {task.get('id')}")
+    strength = float(continuity.get("strength", 0.85))
+    if strength < 0.0 or strength > 1.0:
+        raise ValueError(f"task continuity strength must be 0..1: {task.get('id')}")
+    return {
+        "subjectId": str(continuity.get("subjectId", "")),
+        "styleId": str(continuity.get("styleId", "")),
+        "referenceAsset": str(continuity.get("referenceAsset", "")),
+        "strength": strength,
+    }
+
+
 def probe_clip(ffprobe: str, path: Path) -> dict[str, Any]:
     result = run(
         [
@@ -85,6 +100,7 @@ def render_task(
     if duration <= 0.0:
         raise ValueError(f"task has invalid duration: {task.get('id')}")
     seed = int(task.get("seed", 0))
+    continuity = validate_continuity(task)
     relative_output = safe_relative_path(str(task.get("outputFile", "")))
     output_path = output_root / relative_output
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -130,6 +146,7 @@ def render_task(
         "backend": "synthetic-ci",
         "outputFile": relative_output.as_posix(),
         "seed": seed,
+        "continuity": continuity,
         "qc": qc,
     }
 
