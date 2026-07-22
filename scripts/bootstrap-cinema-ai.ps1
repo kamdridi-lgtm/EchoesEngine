@@ -1,12 +1,13 @@
 param(
     [string]$PythonLauncher = "py",
     [string]$PythonVersion = "3.10",
-    [string]$VenvPath = ".venv-cinema",
+    [string]$VenvPath = "D:\A.I\EchoesCinema\.venv-cinema",
     [string]$TorchIndexUrl = "",
     [switch]$Recreate
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 
 function Invoke-PythonLauncher {
     param([string[]]$Arguments)
@@ -21,12 +22,55 @@ function Invoke-PythonLauncher {
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$venv = if ([System.IO.Path]::IsPathRooted($VenvPath)) { $VenvPath } else { Join-Path $repoRoot $VenvPath }
+$venv = if ([System.IO.Path]::IsPathRooted($VenvPath)) { [System.IO.Path]::GetFullPath($VenvPath) } else { [System.IO.Path]::GetFullPath((Join-Path $repoRoot $VenvPath)) }
+$venvDrive = [System.IO.Path]::GetPathRoot($venv)
+if (-not $venvDrive -or $venvDrive.TrimEnd("\").ToUpperInvariant() -eq "C:") {
+    throw "Cinema virtual environment must be on drive D: or another non-C: drive. Current path: $venv"
+}
+
+$workspaceRoot = Split-Path -Parent $venv
+$cacheRoot = Join-Path $workspaceRoot "cache"
+$tempRoot = Join-Path $workspaceRoot "temp"
 $requirements = Join-Path $repoRoot "providers\requirements-diffusers.txt"
 $provider = Join-Path $repoRoot "providers\diffusers_video_provider.py"
+$proofProvider = Join-Path $repoRoot "providers\modelscope_proof_provider.py"
 $service = Join-Path $repoRoot "tools\cinema_job_service.py"
 $runner = Join-Path $repoRoot "tools\cinema_job_runner.py"
-$reportPath = Join-Path $repoRoot "cinema-bootstrap-report.json"
+$reportPath = Join-Path $workspaceRoot "cinema-bootstrap-report.json"
+
+$storageDirectories = @(
+    $workspaceRoot,
+    $cacheRoot,
+    (Join-Path $cacheRoot "huggingface"),
+    (Join-Path $cacheRoot "huggingface\hub"),
+    (Join-Path $cacheRoot "huggingface\transformers"),
+    (Join-Path $cacheRoot "torch"),
+    (Join-Path $cacheRoot "pip"),
+    (Join-Path $cacheRoot "xdg"),
+    (Join-Path $cacheRoot "cuda"),
+    (Join-Path $cacheRoot "numba"),
+    (Join-Path $cacheRoot "python-bytecode"),
+    $tempRoot
+)
+foreach ($directory in $storageDirectories) {
+    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+}
+
+$env:HF_HOME = Join-Path $cacheRoot "huggingface"
+$env:HF_HUB_CACHE = Join-Path $cacheRoot "huggingface\hub"
+$env:HUGGINGFACE_HUB_CACHE = $env:HF_HUB_CACHE
+$env:TRANSFORMERS_CACHE = Join-Path $cacheRoot "huggingface\transformers"
+$env:TORCH_HOME = Join-Path $cacheRoot "torch"
+$env:PIP_CACHE_DIR = Join-Path $cacheRoot "pip"
+$env:XDG_CACHE_HOME = Join-Path $cacheRoot "xdg"
+$env:CUDA_CACHE_PATH = Join-Path $cacheRoot "cuda"
+$env:NUMBA_CACHE_DIR = Join-Path $cacheRoot "numba"
+$env:PYTHONPYCACHEPREFIX = Join-Path $cacheRoot "python-bytecode"
+$env:TEMP = $tempRoot
+$env:TMP = $tempRoot
+$env:TMPDIR = $tempRoot
+$env:HF_HUB_DISABLE_SYMLINKS_WARNING = "1"
+$env:PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True"
 
 if (-not (Test-Path $requirements)) {
     throw "Requirements file not found: $requirements"
@@ -37,6 +81,12 @@ if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
 if (-not (Get-Command ffprobe -ErrorAction SilentlyContinue)) {
     throw "FFprobe is not available in PATH"
 }
+
+Write-Host "Cinema workspace: $workspaceRoot"
+Write-Host "Virtual environment: $venv"
+Write-Host "Package/model cache: $cacheRoot"
+Write-Host "Temporary files: $tempRoot"
+Write-Host "Drive C: is not selected for Cinema storage."
 
 if ($Recreate -and (Test-Path $venv)) {
     Remove-Item $venv -Recurse -Force
@@ -69,7 +119,7 @@ if (-not $torchPresent) {
     if (-not $TorchIndexUrl.StartsWith("https://download.pytorch.org/whl/")) {
         throw "TorchIndexUrl must be an official https://download.pytorch.org/whl/ index"
     }
-    Write-Host "Installing PyTorch from the selected official index."
+    Write-Host "Installing PyTorch from the selected official index into the D: virtual environment."
     & $python -m pip install torch torchvision --index-url $TorchIndexUrl
     if ($LASTEXITCODE -ne 0) {
         throw "PyTorch installation failed"
@@ -81,13 +131,14 @@ if ($LASTEXITCODE -ne 0) {
     throw "Diffusers provider dependency installation failed"
 }
 
-& $python -m py_compile $provider $service $runner
+& $python -m py_compile $provider $proofProvider $service $runner
 if ($LASTEXITCODE -ne 0) {
     throw "Cinema provider/service Python compilation failed"
 }
 
 $diagnosticScript = @'
 import json
+import os
 import platform
 import shutil
 import sys
@@ -103,6 +154,15 @@ report = {
     "tools": {
         "ffmpeg": shutil.which("ffmpeg"),
         "ffprobe": shutil.which("ffprobe"),
+    },
+    "storage": {
+        "hfHome": os.environ.get("HF_HOME"),
+        "hfHubCache": os.environ.get("HF_HUB_CACHE"),
+        "torchHome": os.environ.get("TORCH_HOME"),
+        "pipCache": os.environ.get("PIP_CACHE_DIR"),
+        "temp": os.environ.get("TEMP"),
+        "pythonBytecode": os.environ.get("PYTHONPYCACHEPREFIX"),
+        "systemDriveWritesAllowed": False,
     },
 }
 try:
@@ -126,8 +186,23 @@ try:
         "deviceName": torch.cuda.get_device_name(0) if cuda_available else None,
         "torchCudaVersion": torch.version.cuda,
     }
-    report["status"] = "PASS" if cuda_available else "PARTIAL"
-    if not cuda_available:
+    storage_paths = [
+        report["storage"]["hfHome"],
+        report["storage"]["hfHubCache"],
+        report["storage"]["torchHome"],
+        report["storage"]["pipCache"],
+        report["storage"]["temp"],
+        report["storage"]["pythonBytecode"],
+    ]
+    c_drive_used = any(str(path or "").lower().startswith("c:\\") for path in storage_paths)
+    report["storage"]["cDriveSelected"] = c_drive_used
+    if c_drive_used:
+        report["status"] = "FAILED"
+        report["blocker"] = "A Cinema cache or temporary path still targets drive C:"
+    elif cuda_available:
+        report["status"] = "PASS"
+    else:
+        report["status"] = "PARTIAL"
         report["blocker"] = "PyTorch is installed but CUDA is not available"
 except Exception as error:
     report["status"] = "FAILED"
@@ -148,6 +223,7 @@ Write-Host "Status: $($report.status)"
 Write-Host "Python: $($report.python.version)"
 Write-Host "CUDA available: $($report.cuda.available)"
 Write-Host "GPU: $($report.cuda.deviceName)"
+Write-Host "C drive selected by Cinema caches: $($report.storage.cDriveSelected)"
 
 if ($report.status -ne "PASS") {
     throw "Cinema AI bootstrap is not ready: $($report.blocker)"
