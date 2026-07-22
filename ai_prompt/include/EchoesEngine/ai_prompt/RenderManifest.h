@@ -18,6 +18,7 @@ struct RenderTask {
     std::string camera;
     std::string transition;
     std::string outputFile;
+    ContinuityProfile continuity;
 };
 
 struct RenderManifest {
