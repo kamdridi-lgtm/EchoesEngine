@@ -1,0 +1,74 @@
+name: Echoes Cinema P0 Evidence Bundle
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence-bundle-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout evidence collector sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            RUN_FIRST_REAL_AI_CLIP.cmd
+            tools/cinema_p0_evidence_bundle.py
+          sparse-checkout-cone-mode: false
+
+      - name: Compile evidence collector
+        run: python3 -m py_compile tools/cinema_p0_evidence_bundle.py
+
+      - name: Run evidence collector self-test
+        run: python3 tools/cinema_p0_evidence_bundle.py --self-test
+
+      - name: Verify automatic local integration
+        shell: python
+        run: |
+          from pathlib import Path
+
+          launcher = Path("RUN_FIRST_REAL_AI_CLIP.cmd").read_text(encoding="utf-8")
+          collector = Path("tools/cinema_p0_evidence_bundle.py").read_text(encoding="utf-8")
+
+          launcher_tokens = [
+              r"D:\A.I\EchoesCinema\proofs\evidence\latest-p0-evidence.zip",
+              "cinema_p0_evidence_bundle.py",
+              "Collecting one portable P0 evidence ZIP",
+              "the evidence ZIP contains the first blocker and logs",
+              r"D:\A.I\Python310\python.exe",
+              "--workspace",
+              "--proof-dir",
+              "--output",
+          ]
+          collector_tokens = [
+              "echoes.cinema-p0-evidence-bundle.v1",
+              "READ_ME_FIRST.txt",
+              "evidence-index.json",
+              "firstBlocker",
+              "truthStatus",
+              "missingExpectedProofFiles",
+              "sha256_file",
+              "os.replace",
+              "Authorization",
+              "[REDACTED]",
+              "systemDriveWritesAllowed",
+          ]
+          for token in launcher_tokens:
+              assert token in launcher, f"launcher missing evidence token: {token}"
+          for token in collector_tokens:
+              assert token in collector, f"collector missing evidence token: {token}"
+
+          assert launcher.index("cleanup-cinema-storage.ps1\" -WorkspaceRoot \"%ECHOES_CINEMA_WORKSPACE%\" -AfterRun") < launcher.index("cinema_p0_evidence_bundle.py")
+          assert "%USERPROFILE%" not in launcher
+          print("Automatic P0 evidence bundle integration PASS")
