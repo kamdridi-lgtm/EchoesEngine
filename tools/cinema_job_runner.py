@@ -95,6 +95,11 @@ def main() -> int:
         action="store_true",
         help="Reject providers that do not explicitly allow commercial rendering.",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Reuse only prior HTTP clips whose SHA-256 and media QC evidence still validate.",
+    )
     args = parser.parse_args()
 
     root = args.output_root.resolve()
@@ -114,6 +119,7 @@ def main() -> int:
         "backendStatus": "MISSING",
         "audioStatus": "MISSING" if args.audio is None else "PENDING",
         "commercialUseRequired": args.require_commercial_use,
+        "resumeRequested": args.resume,
         "stages": [],
         "artifacts": {
             "manifest": str(manifest_path),
@@ -135,6 +141,8 @@ def main() -> int:
             raise ValueError("provider timeout must be positive")
         if args.require_commercial_use and args.backend != "http":
             raise ValueError("commercial-use verification is available only for HTTP providers")
+        if args.resume and args.backend != "http":
+            raise ValueError("evidence-validated resume is available only for HTTP providers")
         if not args.sections_csv.is_file():
             raise FileNotFoundError(f"sections CSV not found: {args.sections_csv}")
         if args.manifest_cli is not None and not args.manifest_cli.is_file():
@@ -188,9 +196,10 @@ def main() -> int:
                 str(args.fps),
             ]
         else:
+            http_worker = "resumable_http_render_worker.py" if args.resume else "http_render_worker.py"
             render_command = [
                 sys.executable,
-                str(script_root / "http_render_worker.py"),
+                str(script_root / http_worker),
                 str(manifest_path),
                 str(render_root),
                 "--state",
@@ -244,6 +253,8 @@ def main() -> int:
         commercial_allowed = provider_health.get("commercialUseAllowed") is True
         if args.require_commercial_use and not commercial_allowed:
             raise RuntimeError("commercial-use requirement was not preserved in the render state")
+        if args.resume and render_state.get("resumeRequested") is not True:
+            raise RuntimeError("resume was requested but the render state has no resume evidence")
 
         result["backendUsed"] = backend_name
         result["backendStatus"] = "REAL" if backend_name == "http-provider" and real_model_loaded else "MOCK"
@@ -256,6 +267,14 @@ def main() -> int:
         result["avDriftSeconds"] = probe.get("avDriftSeconds")
         result["qc"] = probe
         result["sizeBytes"] = final_mp4.stat().st_size
+        result["resume"] = {
+            "requested": args.resume,
+            "priorStateFound": bool(render_state.get("priorStateFound")) if args.resume else False,
+            "reuseCompatible": render_state.get("reuseCompatible") if args.resume else None,
+            "reuseBlocker": render_state.get("reuseBlocker") if args.resume else None,
+            "reusedTaskCount": int(render_state.get("reusedTaskCount", 0)),
+            "renderedTaskCount": int(render_state.get("renderedTaskCount", result["taskCount"])),
+        }
         result["artifactEvidence"] = {
             "manifest": artifact_record(manifest_path),
             "renderState": artifact_record(render_state_path),
@@ -268,6 +287,7 @@ def main() -> int:
         print(
             f"CinemaJobRunner PASS job={args.job_id} backend={backend_name} "
             f"classification={result['backendStatus']} audio={result['audioStatus']} "
+            f"reused={result['resume']['reusedTaskCount']} rendered={result['resume']['renderedTaskCount']} "
             f"avDrift={result['avDriftSeconds']} sha256={result['artifactEvidence']['finalMp4']['sha256']} "
             f"output={final_mp4}"
         )
