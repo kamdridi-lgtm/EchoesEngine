@@ -2,7 +2,8 @@ param(
     [string]$WorkspaceRoot = "D:\A.I\EchoesCinema",
     [string]$RepoRoot = "",
     [int]$StartupTimeoutSeconds = 120,
-    [switch]$NoBrowser
+    [switch]$NoBrowser,
+    [string]$ProviderMode = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -82,6 +83,9 @@ $arguments = @(
     "-WorkspaceRoot", $workspace,
     "-RepoRoot", $RepoRoot
 )
+if ($ProviderMode) {
+    $arguments += @("-ProviderMode", $ProviderMode)
+}
 
 Write-Host "Starting Echoes Cinema supervisor. The browser opens only after localhost is truly reachable."
 $supervisorProcess = Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -WorkingDirectory $RepoRoot -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru
