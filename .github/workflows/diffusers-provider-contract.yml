@@ -24,6 +24,7 @@ jobs:
         with:
           sparse-checkout: |
             RUN_FIRST_REAL_AI_CLIP.cmd
+            RUN_ECHOES_CINEMA_PREFLIGHT_ONLY.cmd
             providers
             scripts/bootstrap-cinema-ai.ps1
             scripts/cleanup-cinema-storage.ps1
@@ -102,6 +103,7 @@ jobs:
 
           files = {
               "launcher": Path("RUN_FIRST_REAL_AI_CLIP.cmd").read_text(encoding="utf-8"),
+              "preflight_launcher": Path("RUN_ECHOES_CINEMA_PREFLIGHT_ONLY.cmd").read_text(encoding="utf-8"),
               "runner_ps": Path("scripts/run-first-real-ai-clip.ps1").read_text(encoding="utf-8"),
               "cleanup": Path("scripts/cleanup-cinema-storage.ps1").read_text(encoding="utf-8"),
               "bootstrap": Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8"),
@@ -122,6 +124,7 @@ jobs:
 
           required_tokens = {
               "launcher": [r"D:\A.I\EchoesCinema", "cleanup-cinema-storage.ps1", "-AfterRun"],
+              "preflight_launcher": [r"D:\A.I\EchoesCinema", r".venv-cinema\Scripts\python.exe", "cinema_p0_preflight.py", "p0-preflight-only-report.json", "No model load. No package reinstall. D drive only.", "cleanup-cinema-storage.ps1", "-AfterRun", "--require-cuda"],
               "runner_ps": [r"D:\A.I\EchoesCinema", "systemDriveWritesAllowed = $false", "modelscope_low_vram_provider.py", "cinema_p0_preflight.py", "preflight-report.json", '"--width", "384"', '"--height", "216"', '"--fps", "4"', '"--max-frames", "16"'],
               "cleanup": ["cache\\pip", "cache\\huggingface", '".venv-cinema"', '"proofs\\first-real-ai-clip"', "KeepProofArchives = 2", "build-first-real-cli"],
               "bootstrap": [r"D:\A.I\EchoesCinema\.venv-cinema", r"D:\A.I\Python310", '"systemDriveWritesAllowed": False', "ensure-python-on-d.ps1", "Test-PythonModuleImport"],
@@ -144,13 +147,15 @@ jobs:
                   assert token in files[name], f"{name} missing contract token: {token}"
 
           assert files["launcher"].count("cleanup-cinema-storage.ps1") == 2
+          assert files["preflight_launcher"].count("cleanup-cinema-storage.ps1") == 2
           assert "%USERPROFILE%" not in files["launcher"]
+          assert "%USERPROFILE%" not in files["preflight_launcher"]
           assert "Join-Path $env:USERPROFILE" not in files["runner_ps"]
           assert "Join-Path $env:USERPROFILE" not in files["bootstrap"]
           assert "3.10.20" not in files["ensure_python"]
           assert "Visual Studio 17 2022" not in files["runner_ps"]
           assert 'Assert-Command "cmake"' not in files["runner_ps"]
-          print("D-drive, P0 preflight, evidence resume, cleanup, licensing, SHA-256, and A/V QC contract PASS")
+          print("D-drive, fast P0 preflight, evidence resume, cleanup, licensing, SHA-256, and A/V QC contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
