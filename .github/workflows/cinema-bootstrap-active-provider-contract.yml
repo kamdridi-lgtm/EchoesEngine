@@ -76,7 +76,8 @@ jobs:
           from pathlib import Path
 
           health = json.loads(Path('/tmp/resilient-health.json').read_text(encoding='utf-8'))
-          assert health['schema'] == 'echoes.modelscope-provider-recovery.v1'
+          assert health['schema'] == 'echoes.render-provider-health.v1'
+          assert health['recoverySchema'] == 'echoes.modelscope-provider-recovery.v1'
           assert health['realModelLoaded'] is False
           assert health['loadState'] in {'LOADING', 'RETRY_WAIT'}
           assert health['automaticRetry'] is True
@@ -109,7 +110,7 @@ jobs:
           for token in required:
               assert token in bootstrap, f"bootstrap missing active P0 token: {token}"
           assert "modelscope_resilient_provider" in entry
-          for token in ["automaticRetry", "RETRY_WAIT", "retry_delay_seconds", "modelCacheGiB", "operatorRestartRequired"]:
+          for token in ["automaticRetry", "RETRY_WAIT", "retry_delay_seconds", "modelCacheGiB", "operatorRestartRequired", "recoverySchema"]:
               assert token in resilient, f"resilient provider missing recovery token: {token}"
           assert "Visual Studio 17 2022" not in bootstrap
           assert "Join-Path $env:USERPROFILE" not in bootstrap
