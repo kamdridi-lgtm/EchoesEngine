@@ -16,6 +16,7 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -35,7 +36,6 @@ from modelscope_low_vram_provider_v2 import (  # noqa: F401
     safe_load_attempts,
 )
 from modelscope_low_vram_provider_v2 import self_test as base_self_test
-from http.server import ThreadingHTTPServer
 
 RECOVERY_SCHEMA = "echoes.modelscope-provider-recovery.v1"
 MIN_RETRY_SECONDS = 15.0
@@ -179,9 +179,6 @@ class ResilientModelScopeEngine(LowVramModelScopeEngine):
                 "operatorRestartRequired": False,
             }
         payload.update(recovery)
-        # While automatic recovery is active, loadError is historical evidence,
-        # not a terminal provider state. Consumers use lastLoadError plus
-        # loadState/retry timestamps while continuing to wait.
         if not self.real_model_loaded and recovery["loadState"] in {"LOADING", "RETRY_WAIT", "IDLE"}:
             payload["loadError"] = None
         return payload
@@ -210,6 +207,14 @@ def self_test() -> int:
     engine = ResilientModelScopeEngine(settings, retry_base_seconds=0.01)
     attempts = {"count": 0}
 
+    class FakeCuda:
+        @staticmethod
+        def is_available() -> bool:
+            return False
+
+    class FakeTorch:
+        cuda = FakeCuda()
+
     def fake_load() -> None:
         attempts["count"] += 1
         if attempts["count"] < 3:
@@ -218,7 +223,7 @@ def self_test() -> int:
             engine.load_error = f"temporary self-test failure {attempts['count']}"
             return
         engine.pipeline = object()
-        engine.torch = object()
+        engine.torch = FakeTorch()
         engine.export_to_video = object()
         engine.load_error = ""
 
