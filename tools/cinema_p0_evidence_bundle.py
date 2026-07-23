@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Collect one truthful, portable evidence bundle after a Cinema P0 run.
-
-The collector is standard-library only. It never installs or downloads anything.
-It gathers the current proof, machine/preflight reports, provider logs, final media,
-and a human-readable first-blocker summary into one ZIP on the non-system drive.
-"""
+"""Collect one truthful, portable evidence bundle after a Cinema P0 run."""
 
 from __future__ import annotations
 
@@ -29,6 +24,8 @@ REDACTIONS = (
 )
 
 PROOF_CANDIDATES = (
+    "run-failure.txt",
+    "resume-policy.json",
     "preflight-report.json",
     "gpu-report.json",
     "provider-health.json",
@@ -96,7 +93,22 @@ def tail_nonempty(path: Path, limit: int = 12) -> list[str]:
     return [redact_text(line.strip()) for line in lines if line.strip()][-limit:]
 
 
+def current_run_failure(proof_dir: Path) -> str | None:
+    failure_path = proof_dir / "run-failure.txt"
+    payload = load_json(failure_path)
+    if payload:
+        blocker = str(payload.get("firstBlocker") or "").strip()
+        if blocker:
+            return redact_text(blocker)
+    lines = tail_nonempty(failure_path)
+    return lines[-1] if lines else None
+
+
 def infer_truth_status(proof_dir: Path) -> tuple[str, str]:
+    run_failure = current_run_failure(proof_dir)
+    if run_failure:
+        return "FAILED", run_failure
+
     preflight = load_json(proof_dir / "preflight-report.json")
     health = load_json(proof_dir / "provider-health.json")
     result = load_json(proof_dir / "job-result.json")
@@ -124,7 +136,6 @@ def infer_truth_status(proof_dir: Path) -> tuple[str, str]:
 def collect_sources(workspace: Path, proof_dir: Path) -> list[tuple[Path, Path]]:
     sources: list[tuple[Path, Path]] = []
     seen: set[Path] = set()
-
     for relative in PROOF_CANDIDATES:
         source = proof_dir / relative
         if source.is_file():
@@ -147,10 +158,12 @@ def build_bundle(workspace: Path, proof_dir: Path, output: Path, run_error: str 
     output = output.resolve()
     if str(output).lower().startswith("c:\\"):
         raise RuntimeError(f"P0 evidence ZIP must not target drive C: {output}")
+    (workspace / "temp").mkdir(parents=True, exist_ok=True)
     output.parent.mkdir(parents=True, exist_ok=True)
 
     truth_status, first_blocker = infer_truth_status(proof_dir)
     if run_error:
+        truth_status = "FAILED"
         first_blocker = redact_text(run_error.strip()) or first_blocker
 
     sources = collect_sources(workspace, proof_dir)
@@ -214,7 +227,6 @@ def build_bundle(workspace: Path, proof_dir: Path, output: Path, run_error: str 
             os.replace(temporary_zip, output)
         finally:
             temporary_zip.unlink(missing_ok=True)
-
     return index
 
 
@@ -225,20 +237,30 @@ def self_test() -> int:
         (workspace / "temp").mkdir(parents=True)
         proof.mkdir(parents=True)
         (proof / "preflight-report.json").write_text('{"status":"PASS"}\n', encoding="utf-8")
-        (proof / "provider-error.log").write_text("Authorization: Bearer super-secret-token-value\nOOM test blocker\n", encoding="utf-8")
+        (proof / "provider-error.log").write_text(
+            "Authorization: Bearer super-secret-token-value\nold provider blocker\n", encoding="utf-8"
+        )
+        (proof / "run-failure.txt").write_text(
+            '{"status":"FAILED","firstBlocker":"current bootstrap blocker"}\n', encoding="utf-8"
+        )
+        (proof / "resume-policy.json").write_text(
+            '{"action":"PRESERVED_INCOMPLETE_FOR_RESUME"}\n', encoding="utf-8"
+        )
         output = workspace / "proofs" / "evidence" / "latest.zip"
         report = build_bundle(workspace, proof, output)
-        assert report["truthStatus"] == "MISSING"
-        assert report["firstBlocker"] == "OOM test blocker"
+        assert report["truthStatus"] == "FAILED"
+        assert report["firstBlocker"] == "current bootstrap blocker"
         assert output.is_file() and output.stat().st_size > 0
         with zipfile.ZipFile(output) as archive:
             names = set(archive.namelist())
             assert "READ_ME_FIRST.txt" in names
             assert "evidence-index.json" in names
+            assert "proof/run-failure.txt" in names
+            assert "proof/resume-policy.json" in names
             log = archive.read("proof/provider-error.log").decode("utf-8")
             assert "super-secret-token-value" not in log
             assert "[REDACTED]" in log
-    print("CinemaP0EvidenceBundle PASS zip=validated redaction=validated blocker=validated")
+    print("CinemaP0EvidenceBundle PASS zip=validated redaction=validated currentBlocker=validated")
     return 0
 
 
