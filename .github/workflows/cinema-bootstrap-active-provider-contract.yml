@@ -50,7 +50,7 @@ jobs:
           python3 providers/modelscope_low_vram_provider.py --self-test
           python3 tools/cinema_p0_preflight.py --self-test
 
-      - name: Verify health stays online during an automatic load retry
+      - name: Verify health stays online while a permanent blocker stops retry loops
         shell: bash
         run: |
           export ECHOES_RENDER_TOKEN=contract-recovery-token
@@ -58,6 +58,7 @@ jobs:
             --host 127.0.0.1 \
             --port 18082 \
             --retry-base-seconds 1 \
+            --minimum-free-gib 0 \
             > /tmp/resilient-provider.log 2>&1 &
           provider_pid=$!
           trap 'kill "$provider_pid" 2>/dev/null || true; wait "$provider_pid" 2>/dev/null || true' EXIT
@@ -66,7 +67,8 @@ jobs:
             if curl --fail --silent \
               -H 'Authorization: Bearer contract-recovery-token' \
               http://127.0.0.1:18082/health > /tmp/resilient-health.json; then
-              break
+              state=$(python3 -c "import json; print(json.load(open('/tmp/resilient-health.json'))['loadState'])")
+              if [ "$state" = "BLOCKED" ]; then break; fi
             fi
             sleep 1
           done
@@ -79,13 +81,15 @@ jobs:
           assert health['schema'] == 'echoes.render-provider-health.v1'
           assert health['recoverySchema'] == 'echoes.modelscope-provider-recovery.v1'
           assert health['realModelLoaded'] is False
-          assert health['loadState'] in {'LOADING', 'RETRY_WAIT'}
-          assert health['automaticRetry'] is True
-          assert health['operatorRestartRequired'] is False
-          assert health['loadError'] is None
-          assert isinstance(health['recoveryCount'], int)
-          assert 'modelCacheGiB' in health
-          print('Resilient provider live health PASS state=', health['loadState'], 'retries=', health['recoveryCount'])
+          assert health['loadState'] == 'BLOCKED'
+          assert health['automaticRetry'] is False
+          assert health['operatorRestartRequired'] is True
+          assert health['retryable'] is False
+          assert health['failureClass'] == 'PYTHON_RUNTIME_BLOCKER'
+          assert health['loadError']
+          assert health['operatorAction']
+          assert 'workspaceFreeGiB' in health
+          print('Resilient provider permanent-blocker health PASS class=', health['failureClass'])
           PY
 
       - name: Verify local bootstrap uses the active P0 path
@@ -110,8 +114,20 @@ jobs:
           for token in required:
               assert token in bootstrap, f"bootstrap missing active P0 token: {token}"
           assert "modelscope_resilient_provider" in entry
-          for token in ["automaticRetry", "RETRY_WAIT", "retry_delay_seconds", "modelCacheGiB", "operatorRestartRequired", "recoverySchema"]:
+          for token in [
+              "classify_load_error",
+              "TRANSIENT_NETWORK",
+              "PYTHON_RUNTIME_BLOCKER",
+              "WAITING_STORAGE",
+              "BLOCKED",
+              "automaticRetry",
+              "operatorRestartRequired",
+              "operatorAction",
+              "workspaceFreeGiB",
+              "minimumFreeGiB",
+              "recoverySchema",
+          ]:
               assert token in resilient, f"resilient provider missing recovery token: {token}"
           assert "Visual Studio 17 2022" not in bootstrap
           assert "Join-Path $env:USERPROFILE" not in bootstrap
-          print("Active low-VRAM provider local bootstrap and automatic recovery contract PASS")
+          print("Active low-VRAM bootstrap, transient retry, storage pause, and permanent blocker contract PASS")
