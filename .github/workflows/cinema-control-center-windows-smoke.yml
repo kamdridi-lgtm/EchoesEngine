@@ -31,6 +31,7 @@ jobs:
             tests/mock_health_provider.py
             tools/assemble_render.py
             tools/cinema_control_center.py
+            tools/cinema_p0_autopilot.py
             tools/cinema_job_ledger.py
             tools/cinema_job_runner.py
             tools/cinema_job_scheduler.py
@@ -108,6 +109,7 @@ jobs:
                 if ($dashboard -notlike "*ECHOES CINEMA*") { throw "localhost dashboard HTML is missing" }
                 if ($status.schema -ne "echoes.cinema-control-center.v1") { throw "control center schema mismatch: $($status.schema)" }
                 if ($status.service.backend -ne "cinema-durable-control-center") { throw "control center backend mismatch: $($status.service.backend)" }
+                if ($status.autopilot.status -ne "DORMANT") { throw "mock-contract autopilot must be DORMANT: $($status.autopilot.status)" }
                 Set-Content (Join-Path $diagnostics "03-dashboard.pass") "PASS"
               } catch {
                 $failure = "DASHBOARD: $($_.Exception.Message)"
