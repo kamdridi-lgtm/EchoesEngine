@@ -66,27 +66,72 @@ jobs:
             -NoBrowser
           if ($LASTEXITCODE -ne 0) { throw "Windows stack launcher failed" }
 
-      - name: Verify localhost dashboard and autonomous state
+      - name: Capture Windows stack diagnostics
         shell: pwsh
         run: |
-          $statePath = "D:\A.I\EchoesCinema\runtime\stack-state.json"
-          if (-not (Test-Path $statePath)) { throw "stack-state.json is missing" }
-          $rawState = Get-Content $statePath -Raw
-          Write-Host $rawState
-          $state = $rawState | ConvertFrom-Json
-          if (-not $state.dashboardUrl) { throw "dashboardUrl is missing" }
-          $dashboard = Invoke-WebRequest -Uri $state.dashboardUrl -UseBasicParsing -TimeoutSec 10
-          if ($dashboard.StatusCode -ne 200 -or $dashboard.Content -notlike "*ECHOES CINEMA*") {
-            throw "localhost dashboard is not reachable"
-          }
-          $status = Invoke-RestMethod -Uri ($state.dashboardUrl.TrimEnd('/') + '/v1/control-center/status') -TimeoutSec 10
-          if ($status.schema -ne "echoes.cinema-control-center.v1") { throw "control center schema mismatch" }
-          if (-not $state.servicePid) { throw "service PID is missing" }
-          if ($state.secretsPersisted -ne $false) { throw "secretsPersisted must be false" }
-          if ($rawState -match '(?i)"(?:token|serviceToken|providerToken)"\s*:' -or $rawState -match '(?i)Bearer\s+[A-Za-z0-9._~+\-/=]{16,}') {
-            throw "stack state contains a secret value"
-          }
-          Write-Host "Windows localhost dashboard PASS url=$($state.dashboardUrl) status=$($status.status)"
+          $diagnostics = Join-Path $env:RUNNER_TEMP "echoes-stack-diagnostics"
+          New-Item -ItemType Directory -Path $diagnostics -Force | Out-Null
+          Copy-Item "D:\A.I\EchoesCinema\runtime\stack-state.json" (Join-Path $diagnostics "stack-state.json") -Force
+          $state = Get-Content "D:\A.I\EchoesCinema\runtime\stack-state.json" -Raw | ConvertFrom-Json
+          Invoke-WebRequest -Uri $state.dashboardUrl -UseBasicParsing -TimeoutSec 10 -OutFile (Join-Path $diagnostics "dashboard.html")
+          Invoke-WebRequest -Uri ($state.dashboardUrl.TrimEnd([char]'/') + '/v1/control-center/status') -UseBasicParsing -TimeoutSec 10 -OutFile (Join-Path $diagnostics "status.json")
+          Copy-Item "D:\A.I\EchoesCinema\logs\*" $diagnostics -Force -ErrorAction SilentlyContinue
+          Get-Content (Join-Path $diagnostics "stack-state.json")
+          Get-Content (Join-Path $diagnostics "status.json")
+
+      - name: Verify published stack state
+        shell: python
+        run: |
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "echoes-stack-diagnostics"
+          state = json.loads((root / "stack-state.json").read_text(encoding="utf-8-sig"))
+          assert state["schema"] == "echoes.cinema-stack-state.v1"
+          assert state["status"] in {"RUNNING", "PARTIAL"}
+          assert state.get("dashboardUrl")
+          assert isinstance(state.get("servicePid"), int) and state["servicePid"] > 0
+          assert state.get("secretsPersisted") is False
+          assert state.get("systemDriveWritesAllowed") is False
+          print("Published Windows stack state PASS")
+
+      - name: Verify localhost dashboard HTTP contract
+        shell: python
+        run: |
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "echoes-stack-diagnostics"
+          html = (root / "dashboard.html").read_text(encoding="utf-8-sig")
+          status = json.loads((root / "status.json").read_text(encoding="utf-8-sig"))
+          assert "ECHOES CINEMA" in html
+          assert status["schema"] == "echoes.cinema-control-center.v1"
+          assert status["status"] in {"PASS", "PARTIAL"}
+          assert status["service"]["backend"] == "cinema-durable-control-center"
+          print("Windows localhost dashboard HTTP PASS")
+
+      - name: Verify stack state contains no secret value
+        shell: python
+        run: |
+          import os
+          import re
+          from pathlib import Path
+
+          raw = (Path(os.environ["RUNNER_TEMP"]) / "echoes-stack-diagnostics" / "stack-state.json").read_text(encoding="utf-8-sig")
+          assert not re.search(r'(?i)"(?:token|serviceToken|providerToken)"\s*:', raw)
+          assert not re.search(r'(?i)Bearer\s+[A-Za-z0-9._~+\-/=]{16,}', raw)
+          print("Windows stack secret persistence guard PASS")
+
+      - name: Upload Windows stack diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-windows-control-center-diagnostics
+          path: ${{ runner.temp }}/echoes-stack-diagnostics
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: Stop stack through the real Windows stop logic
         if: always()
