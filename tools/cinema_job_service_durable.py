@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Restart-safe Echoes Cinema job service.
+"""Restart-safe, priority-aware Echoes Cinema job service.
 
-This entrypoint wraps ``cinema_job_service.py`` with an atomic durable ledger.
-QUEUED/RUNNING jobs become RECOVERABLE after a restart and can be explicitly
-resubmitted with ``resumeRecovered=true``. Recovered jobs pass ``--resume`` to
-the Cinema runner so only SHA-256/media-validated clips are reused. No
-interrupted job is silently lost or reported as successful.
+The service persists every state transition, resumes interrupted jobs with
+SHA-256/media validation, orders queued work by explicit priority, limits
+concurrent execution, and rejects new jobs before the configured D-drive free
+space reserve can be violated.
 """
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import threading
@@ -18,21 +18,72 @@ from typing import Any
 
 import cinema_job_service as base
 from cinema_job_ledger import DurableJobLedger, LedgerConfig
+from cinema_job_scheduler import PriorityJobScheduler
+
+
+GIB = 1024**3
+MIN_JOB_RESERVATION_BYTES = 64 * 1024**2
+
+
+def env_gib(name: str, default: float, *, allow_zero: bool = False) -> int:
+    raw = os.getenv(name, str(default))
+    try:
+        value = float(raw)
+    except ValueError as error:
+        raise ValueError(f"{name} must be a number of GiB") from error
+    if value < 0 or (value == 0 and not allow_zero):
+        qualifier = "non-negative" if allow_zero else "positive"
+        raise ValueError(f"{name} must be {qualifier}")
+    return int(value * GIB)
+
+
+def request_priority(request: dict[str, Any], default: int = 50) -> int:
+    value = request.get("priority", default)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError("priority must be an integer between 0 and 100")
+    return PriorityJobScheduler.validate_priority(value)
+
+
+def request_estimated_output_bytes(
+    request: dict[str, Any],
+    *,
+    default_bytes: int,
+    maximum_bytes: int,
+) -> int:
+    value = request.get("estimatedOutputBytes", default_bytes)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError("estimatedOutputBytes must be an integer")
+    if value < MIN_JOB_RESERVATION_BYTES:
+        raise ValueError(f"estimatedOutputBytes must be at least {MIN_JOB_RESERVATION_BYTES}")
+    if value > maximum_bytes:
+        raise ValueError(f"estimatedOutputBytes exceeds configured maximum of {maximum_bytes}")
+    return value
 
 
 class DurableJobRegistry(base.JobRegistry):
     def __init__(self, config: base.ServiceConfig) -> None:
         super().__init__(config)
         self.ledger_lock = threading.RLock()
-        self.retrying_jobs: set[str] = set()
         self.resume_requested: set[str] = set()
         ledger_path = config.output_root / "_service" / "job-ledger.json"
         self.ledger = DurableJobLedger(LedgerConfig(path=ledger_path, max_events=5000))
 
+        self.storage_reserve_bytes = env_gib("ECHOES_CINEMA_STORAGE_RESERVE_GIB", 20.0, allow_zero=True)
+        self.default_job_reservation_bytes = env_gib("ECHOES_CINEMA_DEFAULT_JOB_GIB", 8.0)
+        self.maximum_job_reservation_bytes = env_gib("ECHOES_CINEMA_MAX_JOB_GIB", 200.0)
+        if self.default_job_reservation_bytes > self.maximum_job_reservation_bytes:
+            raise ValueError("default Cinema job reservation exceeds configured maximum")
+        self.scheduler = PriorityJobScheduler(
+            max_workers=config.max_workers,
+            output_root=config.output_root,
+            minimum_free_bytes=self.storage_reserve_bytes,
+        )
+
+    def shutdown(self) -> None:
+        self.scheduler.shutdown(wait=False)
+        self.executor.shutdown(wait=False, cancel_futures=False)
+
     def status(self, job_id: str) -> dict[str, Any] | None:
-        with self.ledger_lock:
-            if job_id in self.retrying_jobs:
-                return None
         current = super().status(job_id)
         if current is not None:
             return current
@@ -53,37 +104,122 @@ class DurableJobRegistry(base.JobRegistry):
                 }
             if resume_recovered and previous_status != "RECOVERABLE":
                 raise ValueError("resumeRecovered=true is allowed only for a RECOVERABLE job")
+            if previous is not None and not resume_recovered:
+                status_code = 200 if previous_status in {"PASS", "FAILED", "BROKEN"} else 202
+                return status_code, previous
 
-            if resume_recovered:
-                self.retrying_jobs.add(job_id)
-                self.resume_requested.add(job_id)
-            try:
-                status_code, accepted = super().submit(request)
-                if accepted.get("status") == "QUEUED":
-                    attempt = int(previous.get("attempt", 0)) + 1 if previous else 1
-                    durable = self.ledger.transition(
-                        job_id,
-                        "QUEUED",
-                        attempt=attempt,
-                        backend=accepted.get("backend"),
-                        modelId=accepted.get("modelId"),
-                        commercialUseRequired=accepted.get("commercialUseRequired", False),
-                        commercialUseAllowed=accepted.get("commercialUseAllowed", False),
-                        requiredCapabilities=accepted.get("requiredCapabilities", []),
-                        manifestGenerator=accepted.get("manifestGenerator"),
-                        sectionsCsv=request.get("sectionsCsv"),
-                        audioFile=request.get("audioFile"),
-                        seed=int(request.get("seed", 1337)),
-                        resumeRecovered=resume_recovered,
-                        resumeRequested=resume_recovered,
-                    )
-                    accepted = {**accepted, **durable}
-                return status_code, accepted
-            except BaseException:
-                self.resume_requested.discard(job_id)
-                raise
-            finally:
-                self.retrying_jobs.discard(job_id)
+        sections_relative = base.safe_relative(request.get("sectionsCsv"), suffixes={".csv"}, field="sectionsCsv")
+        sections_csv = base.resolve_under(self.config.sections_root, sections_relative, field="sectionsCsv")
+
+        audio_file: Path | None = None
+        if request.get("audioFile") not in {None, ""}:
+            audio_relative = base.safe_relative(
+                request.get("audioFile"),
+                suffixes={".wav", ".mp3", ".flac", ".m4a", ".aac", ".ogg"},
+                field="audioFile",
+            )
+            audio_file = base.resolve_under(self.config.audio_root, audio_relative, field="audioFile")
+
+        seed = int(request.get("seed", previous.get("seed", 1337) if previous else 1337))
+        if seed < 0 or seed > 0xFFFFFFFF:
+            raise ValueError("seed must fit in an unsigned 32-bit integer")
+        commercial_use_required = base.request_bool(request, "commercialUseRequired")
+        priority = request_priority(request, int(previous.get("priority", 50)) if previous else 50)
+        estimated_output_bytes = request_estimated_output_bytes(
+            request,
+            default_bytes=int(previous.get("estimatedOutputBytes", self.default_job_reservation_bytes))
+            if previous
+            else self.default_job_reservation_bytes,
+            maximum_bytes=self.maximum_job_reservation_bytes,
+        )
+
+        health = base.fetch_provider_health(
+            self.config.provider_endpoint,
+            self.config.provider_token,
+            self.config.provider_timeout,
+        )
+        required_capabilities = base.validate_provider_health(
+            health,
+            explicit_requirements={"textToVideo"},
+            require_real_model=True,
+            require_commercial_use=commercial_use_required,
+        )
+
+        self.scheduler.reserve_storage(job_id, estimated_output_bytes)
+        queued_in_ledger = False
+        try:
+            accepted = {
+                "schema": "echoes.cinema-service-job.v1",
+                "jobId": job_id,
+                "status": "QUEUED",
+                "backend": "http-provider",
+                "realModelLoaded": True,
+                "modelId": health.get("modelId"),
+                "modelRevision": health.get("modelRevision"),
+                "commercialUseRequired": commercial_use_required,
+                "commercialUseAllowed": health.get("commercialUseAllowed") is True,
+                "requiredCapabilities": sorted(required_capabilities),
+                "manifestGenerator": "native-render-manifest-cli"
+                if self.config.manifest_cli
+                else "python-render-manifest-v1",
+                "priority": priority,
+                "estimatedOutputBytes": estimated_output_bytes,
+                "resumeRecovered": resume_recovered,
+                "resumeRequested": resume_recovered,
+            }
+
+            with self.ledger_lock:
+                latest = self.ledger.get(job_id)
+                latest_status = latest.get("status") if latest else None
+                if resume_recovered and latest_status != "RECOVERABLE":
+                    raise RuntimeError("recoverable job state changed during admission")
+                if not resume_recovered and latest is not None:
+                    raise RuntimeError("job state appeared during admission")
+                attempt = int(latest.get("attempt", 0)) + 1 if latest else 1
+                durable = self.ledger.transition(
+                    job_id,
+                    "QUEUED",
+                    attempt=attempt,
+                    **{key: value for key, value in accepted.items() if key not in {"schema", "jobId", "status"}},
+                    sectionsCsv=request.get("sectionsCsv"),
+                    audioFile=request.get("audioFile"),
+                    seed=seed,
+                )
+                queued_in_ledger = True
+                if resume_recovered:
+                    self.resume_requested.add(job_id)
+
+            with self.lock:
+                self.jobs[job_id] = accepted
+
+            scheduled = self.scheduler.submit_reserved(
+                job_id,
+                priority,
+                estimated_output_bytes,
+                self._run_job,
+                job_id,
+                sections_csv,
+                audio_file,
+                seed,
+                commercial_use_required,
+            )
+            return 202, {
+                **accepted,
+                **durable,
+                "queueSequence": scheduled["sequence"],
+                "scheduler": scheduled["scheduler"],
+            }
+        except BaseException as error:
+            self.scheduler.release_storage(job_id)
+            self.resume_requested.discard(job_id)
+            with self.lock:
+                self.jobs.pop(job_id, None)
+            if queued_in_ledger:
+                with self.ledger_lock:
+                    current = self.ledger.get(job_id)
+                    if current and current.get("status") == "QUEUED":
+                        self.ledger.transition(job_id, "FAILED", error=f"scheduler admission failed: {error}")
+            raise
 
     def _run_resume_job(
         self,
@@ -203,25 +339,73 @@ class DurableJobRegistry(base.JobRegistry):
 
 
 class DurableHandler(base.Handler):
-    server_version = "EchoesCinemaDurableJobService/1.1"
+    server_version = "EchoesCinemaDurableJobService/1.2"
 
     def do_GET(self) -> None:  # noqa: N802
+        if not self.require_authorized():
+            return
+        registry = self.cinema.registry
+        if not isinstance(registry, DurableJobRegistry):
+            self.send_json(500, {"status": "BROKEN", "error": "durable registry is unavailable"})
+            return
+
+        if self.path == "/health":
+            scheduler = registry.scheduler.snapshot()
+            try:
+                provider = base.fetch_provider_health(
+                    self.cinema.config.provider_endpoint,
+                    self.cinema.config.provider_token,
+                    self.cinema.config.provider_timeout,
+                )
+                self.send_json(
+                    200,
+                    {
+                        "schema": "echoes.cinema-service-health.v1",
+                        "status": "PASS",
+                        "backend": "cinema-durable-priority-service",
+                        "realModelLoaded": provider.get("realModelLoaded") is True,
+                        "acceptingRealJobs": base.accepting_real_jobs(provider),
+                        "acceptingCommercialJobs": base.accepting_commercial_jobs(provider),
+                        "provider": provider,
+                        "maxWorkers": self.cinema.config.max_workers,
+                        "manifestGenerator": "native-render-manifest-cli"
+                        if self.cinema.config.manifest_cli
+                        else "python-render-manifest-v1",
+                        "scheduler": scheduler,
+                    },
+                )
+            except Exception as error:  # noqa: BLE001
+                self.send_json(
+                    200,
+                    {
+                        "schema": "echoes.cinema-service-health.v1",
+                        "status": "PARTIAL",
+                        "backend": "cinema-durable-priority-service",
+                        "realModelLoaded": False,
+                        "acceptingRealJobs": False,
+                        "acceptingCommercialJobs": False,
+                        "scheduler": scheduler,
+                        "error": str(error),
+                    },
+                )
+            return
+
         if self.path == "/v1/cinema/jobs":
-            if not self.require_authorized():
-                return
-            registry = self.cinema.registry
-            if not isinstance(registry, DurableJobRegistry):
-                self.send_json(500, {"status": "BROKEN", "error": "durable registry is unavailable"})
-                return
             self.send_json(
                 200,
                 {
                     "schema": "echoes.cinema-job-list.v1",
                     "status": "PASS",
                     "jobs": registry.ledger.list_jobs(),
+                    "scheduler": registry.scheduler.snapshot(),
                 },
             )
             return
+
+        if self.path == "/v1/cinema/scheduler":
+            self.send_json(200, registry.scheduler.snapshot())
+            return
+
         super().do_GET()
 
 
@@ -232,7 +416,8 @@ def main() -> int:
     server.registry = DurableJobRegistry(config)
     print(
         f"EchoesCinemaDurableJobService READY http://{config.host}:{config.port} "
-        f"ledger={server.registry.ledger.config.path} outputRoot={config.output_root}",
+        f"ledger={server.registry.ledger.config.path} outputRoot={config.output_root} "
+        f"maxWorkers={config.max_workers} storageReserveBytes={server.registry.storage_reserve_bytes}",
         flush=True,
     )
     try:
@@ -240,7 +425,7 @@ def main() -> int:
     except KeyboardInterrupt:
         pass
     finally:
-        server.registry.executor.shutdown(wait=False, cancel_futures=False)
+        server.registry.shutdown()
         server.server_close()
     return 0
 
