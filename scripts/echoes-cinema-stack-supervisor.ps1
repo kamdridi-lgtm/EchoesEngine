@@ -6,7 +6,8 @@ param(
     [int]$MaxWorkers = 1,
     [double]$StorageReserveGiB = 20,
     [double]$DefaultJobGiB = 8,
-    [double]$MaxJobGiB = 200
+    [double]$MaxJobGiB = 200,
+    [string]$ProviderMode = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,6 +53,7 @@ function Find-FreePort {
 
 function Test-DashboardReady {
     param([string]$Url)
+    if (-not $Url) { return $false }
     try {
         $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 3
         return $response.StatusCode -eq 200 -and $response.Content -like "*ECHOES CINEMA*"
@@ -82,6 +84,12 @@ if (-not $workspaceDrive -or $workspaceDrive.TrimEnd("\").ToUpperInvariant() -eq
     throw "Echoes Cinema stack refuses workspace storage on drive C:. Current: $workspace"
 }
 if ($MaxWorkers -le 0) { throw "MaxWorkers must be positive." }
+
+$resolvedProviderMode = if ($ProviderMode) { $ProviderMode } elseif ($env:ECHOES_CINEMA_PROVIDER_MODE) { $env:ECHOES_CINEMA_PROVIDER_MODE } else { "real" }
+$resolvedProviderMode = $resolvedProviderMode.Trim().ToLowerInvariant()
+if ($resolvedProviderMode -notin @("real", "mock-contract")) {
+    throw "ProviderMode must be real or mock-contract. Current value: $resolvedProviderMode"
+}
 
 $runtimeRoot = Join-Path $workspace "runtime"
 $logsRoot = Join-Path $workspace "logs"
@@ -169,6 +177,7 @@ try {
     $env:ECHOES_CINEMA_DEFAULT_JOB_GIB = "$DefaultJobGiB"
     $env:ECHOES_CINEMA_MAX_JOB_GIB = "$MaxJobGiB"
     $env:ECHOES_CINEMA_RUNTIME_ROOT = $runtimeRoot
+    $env:ECHOES_CINEMA_PROVIDER_MODE = $resolvedProviderMode
     $env:TEMP = $tempRoot
     $env:TMP = $tempRoot
     $env:TMPDIR = $tempRoot
@@ -204,7 +213,8 @@ try {
             "-File", $providerWorker,
             "-WorkspaceRoot", $workspace,
             "-RepoRoot", $RepoRoot,
-            "-ProviderPort", "$providerPort"
+            "-ProviderPort", "$providerPort",
+            "-ProviderMode", $resolvedProviderMode
         )
         $script:providerWorkerProcess = Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -WorkingDirectory $RepoRoot -RedirectStandardOutput $providerWorkerStdout -RedirectStandardError $providerWorkerStderr -WindowStyle Hidden -PassThru
         Set-Content -LiteralPath $providerWorkerPidPath -Value $providerWorkerProcess.Id -Encoding ascii
@@ -231,6 +241,7 @@ try {
             repoRoot = $RepoRoot
             servicePort = $servicePort
             providerPort = $providerPort
+            providerMode = $resolvedProviderMode
             supervisorPid = $PID
             servicePid = if ($serviceProcess -and -not $serviceProcess.HasExited) { $serviceProcess.Id } else { $null }
             providerWorkerPid = if ($providerWorkerProcess -and -not $providerWorkerProcess.HasExited) { $providerWorkerProcess.Id } else { $null }
@@ -303,6 +314,7 @@ catch {
             timestampUtc = [DateTime]::UtcNow.ToString("o")
             dashboardUrl = $dashboardUrl
             workspace = $workspace
+            providerMode = $resolvedProviderMode
             supervisorPid = $PID
             lastError = $lastError
             secretsPersisted = $false
@@ -327,12 +339,13 @@ finally {
             timestampUtc = [DateTime]::UtcNow.ToString("o")
             dashboardUrl = $dashboardUrl
             workspace = $workspace
+            providerMode = $resolvedProviderMode
             supervisorPid = $PID
             lastError = if ($lastError) { $lastError } else { $null }
             secretsPersisted = $false
             systemDriveWritesAllowed = $false
         }
     } catch { }
-    Remove-Item Env:ECHOES_CINEMA_SERVICE_TOKEN, Env:ECHOES_RENDER_TOKEN -ErrorAction SilentlyContinue
+    Remove-Item Env:ECHOES_CINEMA_SERVICE_TOKEN, Env:ECHOES_RENDER_TOKEN, Env:ECHOES_CINEMA_PROVIDER_MODE -ErrorAction SilentlyContinue
     if ($lockStream) { $lockStream.Dispose() }
 }
