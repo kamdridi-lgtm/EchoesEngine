@@ -1,0 +1,50 @@
+name: Echoes Cinema Durable Job Ledger
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  durable-ledger-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout durable ledger
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/cinema_job_ledger.py
+          sparse-checkout-cone-mode: false
+
+      - name: Compile ledger
+        run: python3 -m py_compile tools/cinema_job_ledger.py
+
+      - name: Verify atomic persistence and restart recovery
+        run: python3 tools/cinema_job_ledger.py --self-test
+
+      - name: Verify fail-closed ledger contract
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("tools/cinema_job_ledger.py").read_text(encoding="utf-8")
+          assert 'SCHEMA = "echoes.cinema-job-ledger.v1"' in source
+          assert 'EVENT_SCHEMA = "echoes.cinema-job-ledger-event.v1"' in source
+          assert 'os.replace(temp_path, path)' in source
+          assert 'os.fsync(handle.fileno())' in source
+          assert '"RECOVERABLE"' in source
+          assert 'service restarted before a terminal result was recorded' in source
+          assert 'invalid Cinema job transition' in source
+          assert 'Cinema job ledger is unreadable or corrupt' in source
+          assert 'TERMINAL_STATUSES = {"PASS", "FAILED", "BROKEN"}' in source
+          print("Durable Cinema job ledger contract PASS")
