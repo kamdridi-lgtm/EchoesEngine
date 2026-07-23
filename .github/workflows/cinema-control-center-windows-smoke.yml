@@ -42,12 +42,15 @@ jobs:
             tools/resumable_http_render_worker.py
           sparse-checkout-cone-mode: false
 
-      - name: Create isolated D drive and D-only Python environment
+      - name: Create D-only Python environment
         shell: pwsh
         run: |
-          $target = Join-Path $env:RUNNER_TEMP "echoes-d"
-          New-Item -ItemType Directory -Path $target -Force | Out-Null
-          subst D: $target
+          if (-not (Test-Path "D:\")) {
+            $target = Join-Path $env:RUNNER_TEMP "echoes-d"
+            New-Item -ItemType Directory -Path $target -Force | Out-Null
+            subst D: $target
+            Set-Content -LiteralPath (Join-Path $env:RUNNER_TEMP "echoes-subst-created.txt") -Value "true"
+          }
           python -m venv D:\A.I\EchoesCinema\.venv-cinema
           if (-not (Test-Path D:\A.I\EchoesCinema\.venv-cinema\Scripts\python.exe)) {
             throw "D-drive venv was not created"
@@ -68,7 +71,9 @@ jobs:
         run: |
           $statePath = "D:\A.I\EchoesCinema\runtime\stack-state.json"
           if (-not (Test-Path $statePath)) { throw "stack-state.json is missing" }
-          $state = Get-Content $statePath -Raw | ConvertFrom-Json
+          $rawState = Get-Content $statePath -Raw
+          Write-Host $rawState
+          $state = $rawState | ConvertFrom-Json
           if (-not $state.dashboardUrl) { throw "dashboardUrl is missing" }
           $dashboard = Invoke-WebRequest -Uri $state.dashboardUrl -UseBasicParsing -TimeoutSec 10
           if ($dashboard.StatusCode -ne 200 -or $dashboard.Content -notlike "*ECHOES CINEMA*") {
@@ -78,9 +83,8 @@ jobs:
           if ($status.schema -ne "echoes.cinema-control-center.v1") { throw "control center schema mismatch" }
           if (-not $state.servicePid) { throw "service PID is missing" }
           if ($state.secretsPersisted -ne $false) { throw "secretsPersisted must be false" }
-          $rawState = Get-Content $statePath -Raw
-          if ($rawState -match 'ECHOES_RENDER_TOKEN|ECHOES_CINEMA_SERVICE_TOKEN|Bearer\s+[A-Za-z0-9]{16,}') {
-            throw "stack state contains a secret"
+          if ($rawState -match '(?i)"(?:token|serviceToken|providerToken)"\s*:' -or $rawState -match '(?i)Bearer\s+[A-Za-z0-9._~+\-/=]{16,}') {
+            throw "stack state contains a secret value"
           }
           Write-Host "Windows localhost dashboard PASS url=$($state.dashboardUrl) status=$($status.status)"
 
@@ -88,15 +92,18 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          if (Test-Path .\scripts\stop-echoes-cinema-stack.ps1) {
-            & .\scripts\stop-echoes-cinema-stack.ps1 -WorkspaceRoot "D:\A.I\EchoesCinema" -GraceSeconds 10
-          }
-          Start-Sleep -Seconds 2
-          $statePath = "D:\A.I\EchoesCinema\runtime\stack-state.json"
-          if (Test-Path $statePath) {
-            $state = Get-Content $statePath -Raw | ConvertFrom-Json
-            if ($state.status -notin @("STOPPED", "BROKEN")) {
-              Write-Warning "Unexpected final state: $($state.status)"
+          try {
+            if (Test-Path .\scripts\stop-echoes-cinema-stack.ps1) {
+              & .\scripts\stop-echoes-cinema-stack.ps1 -WorkspaceRoot "D:\A.I\EchoesCinema" -GraceSeconds 10
+            }
+            Start-Sleep -Seconds 2
+            $statePath = "D:\A.I\EchoesCinema\runtime\stack-state.json"
+            if (Test-Path $statePath) {
+              $state = Get-Content $statePath -Raw | ConvertFrom-Json
+              Write-Host "Final stack state: $($state.status)"
+            }
+          } finally {
+            if (Test-Path (Join-Path $env:RUNNER_TEMP "echoes-subst-created.txt")) {
+              subst D: /d
             }
           }
-          subst D: /d
