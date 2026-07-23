@@ -37,6 +37,7 @@ jobs:
             tools/python_render_manifest.py
             tools/render_capabilities.py
             tools/render_resume.py
+            tools/resumable_http_render_worker.py
             tests/test_diffusers_provider_fail_closed.py
             tests/test_cinema_job_service_fail_closed.py
           sparse-checkout-cone-mode: false
@@ -56,6 +57,7 @@ jobs:
             tools/python_render_manifest.py \
             tools/render_capabilities.py \
             tools/render_resume.py \
+            tools/resumable_http_render_worker.py \
             tests/test_diffusers_provider_fail_closed.py \
             tests/test_cinema_job_service_fail_closed.py
 
@@ -99,7 +101,7 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive, provider choice, resume, low-VRAM, cleanup, capability, and proof contract
+      - name: Verify D-drive, integrated resume, provider choice, cleanup, capability, and proof contract
         shell: python
         run: |
           from pathlib import Path
@@ -112,6 +114,7 @@ jobs:
           runner_py = Path("tools/cinema_job_runner.py").read_text(encoding="utf-8")
           service_py = Path("tools/cinema_job_service.py").read_text(encoding="utf-8")
           http_worker = Path("tools/http_render_worker.py").read_text(encoding="utf-8")
+          resumable_worker = Path("tools/resumable_http_render_worker.py").read_text(encoding="utf-8")
           assemble = Path("tools/assemble_render.py").read_text(encoding="utf-8")
           capabilities = Path("tools/render_capabilities.py").read_text(encoding="utf-8")
           selector = Path("tools/provider_selector.py").read_text(encoding="utf-8")
@@ -233,7 +236,20 @@ jobs:
           assert 'pixel format is not yuv420p' in resume
           assert 'SHA-256 evidence missing or changed' in resume
           assert 'complete' in resume
-          print("D-drive, compiler-free, provider selection, resumability, low-VRAM proof, cleanup, capability, SHA-256, A/V drift, and commercial allowlist contract PASS")
+
+          assert 'parser.add_argument("--resume"' in runner_py
+          assert 'resumable_http_render_worker.py' in runner_py
+          assert 'atomic_write_json' in resumable_worker
+          assert 'build_plan' in resumable_worker
+          assert 'provider_identity' in resumable_worker
+          assert 'REUSED_VALIDATED' in resumable_worker
+          assert 'SHA256_AND_MEDIA_QC_VALIDATED' in resumable_worker
+          assert 'reusedTaskCount' in resumable_worker
+          assert 'renderedTaskCount' in resumable_worker
+          assert 'provider identity, model revision, license, or capabilities changed' in resumable_worker
+          assert 'os.replace(temp_path, path)' in resumable_worker
+          assert 'os.fsync(handle.fileno())' in resumable_worker
+          print("D-drive, integrated evidence resume, provider selection, cleanup, licensing, SHA-256, and A/V QC contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
