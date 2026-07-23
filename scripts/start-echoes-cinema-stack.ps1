@@ -16,7 +16,7 @@ $workspace = [System.IO.Path]::GetFullPath($WorkspaceRoot)
 $runtimeRoot = Join-Path $workspace "runtime"
 $logsRoot = Join-Path $workspace "logs"
 $statePath = Join-Path $runtimeRoot "stack-state.json"
-$supervisor = Join-Path $RepoRoot "scripts\echoes-cinema-supervisor.ps1"
+$supervisor = Join-Path $RepoRoot "scripts\echoes-cinema-stack-supervisor.ps1"
 $stopScript = Join-Path $RepoRoot "scripts\stop-echoes-cinema-stack.ps1"
 
 foreach ($directory in @($workspace, $runtimeRoot, $logsRoot)) {
@@ -36,7 +36,7 @@ function Test-VerifiedSupervisor {
     if ($null -eq $ProcessId -or "$ProcessId" -notmatch '^\d+$') { return $false }
     $pidNumber = [int]$ProcessId
     $process = Get-CimInstance Win32_Process -Filter "ProcessId=$pidNumber" -ErrorAction SilentlyContinue
-    return $null -ne $process -and ([string]$process.CommandLine -like "*echoes-cinema-supervisor.ps1*")
+    return $null -ne $process -and ([string]$process.CommandLine -like "*echoes-cinema-stack-supervisor.ps1*")
 }
 
 function Test-Dashboard {
