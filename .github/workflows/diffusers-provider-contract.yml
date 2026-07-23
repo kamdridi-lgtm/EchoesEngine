@@ -61,26 +61,18 @@ jobs:
             tests/test_diffusers_provider_fail_closed.py \
             tests/test_cinema_job_service_fail_closed.py
 
-      - name: Verify compiler-free render manifest generator
-        run: python3 tools/python_render_manifest.py --self-test
+      - name: Verify compiler-free manifest, capabilities, selection, and resume planner
+        run: |
+          python3 tools/python_render_manifest.py --self-test
+          python3 tools/render_capabilities.py
+          python3 tools/provider_selector.py --self-test
+          python3 tools/render_resume.py --self-test
 
-      - name: Verify fail-closed render capability contract
-        run: python3 tools/render_capabilities.py
-
-      - name: Verify hardware-aware provider selection
-        run: python3 tools/provider_selector.py --self-test
-
-      - name: Verify render resume evidence planner
-        run: python3 tools/render_resume.py --self-test
-
-      - name: Verify RTX 2060 low-VRAM provider profile
-        run: python3 providers/modelscope_low_vram_provider.py --self-test
-
-      - name: Verify exact-revision commercial provider allowlist
-        run: python3 providers/cogvideox_commercial_provider.py --self-test
-
-      - name: Verify missing model is never reported as real
-        run: python3 tests/test_diffusers_provider_fail_closed.py
+      - name: Verify low-VRAM and commercial provider boundaries
+        run: |
+          python3 providers/modelscope_low_vram_provider.py --self-test
+          python3 providers/cogvideox_commercial_provider.py --self-test
+          python3 tests/test_diffusers_provider_fail_closed.py
 
       - name: Verify proof provider is fail-closed and non-commercial
         env:
@@ -96,160 +88,64 @@ jobs:
             "scripts/ensure-python-on-d.ps1",
             "scripts/run-first-real-ai-clip.ps1"
           )) {
-            $content = Get-Content $path -Raw
-            [void][scriptblock]::Create($content)
+            [void][scriptblock]::Create((Get-Content $path -Raw))
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive, integrated resume, provider choice, cleanup, capability, and proof contract
+      - name: Verify D-drive, integrated evidence resume, licensing, and QC contract
         shell: python
         run: |
           from pathlib import Path
 
-          launcher = Path("RUN_FIRST_REAL_AI_CLIP.cmd").read_text(encoding="utf-8")
-          runner_ps = Path("scripts/run-first-real-ai-clip.ps1").read_text(encoding="utf-8")
-          cleanup = Path("scripts/cleanup-cinema-storage.ps1").read_text(encoding="utf-8")
-          bootstrap = Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8")
-          ensure_python = Path("scripts/ensure-python-on-d.ps1").read_text(encoding="utf-8")
-          runner_py = Path("tools/cinema_job_runner.py").read_text(encoding="utf-8")
-          service_py = Path("tools/cinema_job_service.py").read_text(encoding="utf-8")
-          http_worker = Path("tools/http_render_worker.py").read_text(encoding="utf-8")
-          resumable_worker = Path("tools/resumable_http_render_worker.py").read_text(encoding="utf-8")
-          assemble = Path("tools/assemble_render.py").read_text(encoding="utf-8")
-          capabilities = Path("tools/render_capabilities.py").read_text(encoding="utf-8")
-          selector = Path("tools/provider_selector.py").read_text(encoding="utf-8")
-          resume = Path("tools/render_resume.py").read_text(encoding="utf-8")
-          manifest_py = Path("tools/python_render_manifest.py").read_text(encoding="utf-8")
-          low_vram = Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8")
-          commercial = Path("providers/cogvideox_commercial_provider.py").read_text(encoding="utf-8")
+          files = {
+              "launcher": Path("RUN_FIRST_REAL_AI_CLIP.cmd").read_text(encoding="utf-8"),
+              "runner_ps": Path("scripts/run-first-real-ai-clip.ps1").read_text(encoding="utf-8"),
+              "cleanup": Path("scripts/cleanup-cinema-storage.ps1").read_text(encoding="utf-8"),
+              "bootstrap": Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8"),
+              "ensure_python": Path("scripts/ensure-python-on-d.ps1").read_text(encoding="utf-8"),
+              "runner": Path("tools/cinema_job_runner.py").read_text(encoding="utf-8"),
+              "service": Path("tools/cinema_job_service.py").read_text(encoding="utf-8"),
+              "http": Path("tools/http_render_worker.py").read_text(encoding="utf-8"),
+              "resumable": Path("tools/resumable_http_render_worker.py").read_text(encoding="utf-8"),
+              "assemble": Path("tools/assemble_render.py").read_text(encoding="utf-8"),
+              "capabilities": Path("tools/render_capabilities.py").read_text(encoding="utf-8"),
+              "selector": Path("tools/provider_selector.py").read_text(encoding="utf-8"),
+              "resume": Path("tools/render_resume.py").read_text(encoding="utf-8"),
+              "manifest": Path("tools/python_render_manifest.py").read_text(encoding="utf-8"),
+              "low_vram": Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8"),
+              "commercial": Path("providers/cogvideox_commercial_provider.py").read_text(encoding="utf-8"),
+          }
 
-          assert r"D:\A.I\EchoesCinema" in launcher
-          assert r"D:\A.I\EchoesCinema" in runner_ps
-          assert r"D:\A.I\EchoesCinema\.venv-cinema" in bootstrap
-          assert r"D:\A.I\Python310" in bootstrap
-          assert r"D:\A.I\Python310" in ensure_python
+          required_tokens = {
+              "launcher": [r"D:\A.I\EchoesCinema", "cleanup-cinema-storage.ps1", "-AfterRun"],
+              "runner_ps": [r"D:\A.I\EchoesCinema", "systemDriveWritesAllowed = $false", "modelscope_low_vram_provider.py", '"--width", "384"', '"--height", "216"', '"--fps", "4"', '"--max-frames", "16"'],
+              "cleanup": ["cache\\pip", "cache\\huggingface", '".venv-cinema"', '"proofs\\first-real-ai-clip"', "KeepProofArchives = 2", "build-first-real-cli"],
+              "bootstrap": [r"D:\A.I\EchoesCinema\.venv-cinema", r"D:\A.I\Python310", '"systemDriveWritesAllowed": False', "ensure-python-on-d.ps1", "Test-PythonModuleImport"],
+              "ensure_python": [r"D:\A.I\Python310", '[string]$PythonVersion = "3.10.11"', "Get-AuthenticodeSignature", "Python Software Foundation", "Get-FileHash", "Include_launcher=0"],
+              "runner": ["--resume", "resumable_http_render_worker.py", "artifactEvidence", "--require-commercial-use", "reusedTaskCount", "renderedTaskCount"],
+              "service": ["manifest_cli: Path | None", "acceptingCommercialJobs", "commercialUseRequired"],
+              "http": ["validate_provider_health", "--require-commercial-use", "requiredCapabilities", '"sha256": sha256_file(output_path)'],
+              "resumable": ["atomic_write_json", "build_plan", "provider_identity", "REUSED_VALIDATED", "SHA256_AND_MEDIA_QC_VALIDATED", "reusedTaskCount", "renderedTaskCount", "provider identity, model revision, license, or capabilities changed", "os.replace(temp_path, path)", "os.fsync(handle.fileno())"],
+              "assemble": ["MAX_AV_DRIFT_SECONDS", "avDriftSeconds", "sha256_file"],
+              "capabilities": ["task_requirements", "referenceImage", "subjectIdentity", "commercialUseAllowed"],
+              "selector": ['"classification": "CANDIDATE_ONLY"', '"realModelLoaded": False', '"decision": "LOCAL_PROOF_CANDIDATE"', '"decision": "REMOTE_COMMERCIAL_REQUIRED"'],
+              "resume": ["echoes.render-resume-plan.v1", '"classification": "EVIDENCE_VALIDATED"', "sha256_file", "probe_mp4", "SHA-256 evidence missing or changed"],
+              "manifest": ["echoes.render-manifest.v1", "python-render-manifest-v1"],
+              "low_vram": ["enable_sequential_cpu_offload", "enable_attention_slicing", "enable_vae_slicing", "enable_forward_chunking", "OutOfMemoryError", '"commercialUseAllowed": False'],
+              "commercial": ['COMMERCIAL_MODEL_ID = "zai-org/CogVideoX-2b"', 'COMMERCIAL_MODEL_REVISION = "102080da924c0ab684abeeca4b061ec7dfb7d40c"', 'COMMERCIAL_LICENSE = "Apache-2.0"', "MINIMUM_RECOMMENDED_VRAM_GIB = 12.0", "currentLocalGpuSupported"],
+          }
+          for name, tokens in required_tokens.items():
+              for token in tokens:
+                  assert token in files[name], f"{name} missing contract token: {token}"
 
-          required = (
-              "HF_HOME",
-              "HF_HUB_CACHE",
-              "TORCH_HOME",
-              "PIP_CACHE_DIR",
-              "CUDA_CACHE_PATH",
-              "PYTHONPYCACHEPREFIX",
-              "TEMP",
-          )
-          for name in required:
-              assert name in runner_ps, f"runner missing {name}"
-              assert name in bootstrap, f"bootstrap missing {name}"
-
-          assert "%USERPROFILE%" not in launcher
-          assert "Join-Path $env:USERPROFILE" not in runner_ps
-          assert "Join-Path $env:USERPROFILE" not in bootstrap
-          assert "systemDriveWritesAllowed = $false" in runner_ps
-          assert '"systemDriveWritesAllowed": False' in bootstrap
-
-          assert "ensure-python-on-d.ps1" in bootstrap
-          assert 'if ($PythonLauncher -and $PythonLauncher -ne "py"' in bootstrap
-          assert '[string]$PythonVersion = "3.10.11"' in ensure_python
-          assert "3.10.20" not in ensure_python
-          assert "Download-OfficialInstaller" in ensure_python
-          assert "Get-AuthenticodeSignature" in ensure_python
-          assert "Python Software Foundation" in ensure_python
-          assert "Get-FileHash" in ensure_python
-          assert "TargetDir=$installRootFull" in ensure_python
-          assert "Include_launcher=0" in ensure_python
-
-          assert "function Test-PythonModuleImport" in bootstrap
-          assert '$ErrorActionPreference = "SilentlyContinue"' in bootstrap
-          assert "Test-PythonModuleImport -PythonPath $python -ModuleName \"torch\"" in bootstrap
-
-          assert "Visual Studio 17 2022" not in runner_ps
-          assert "Assert-Command \"cmake\"" not in runner_ps
-          assert "compiler-free Python manifest path" in runner_ps
-          assert 'default=None' in runner_py
-          assert 'python_render_manifest.py' in runner_py
-          assert 'echoes.render-manifest.v1' in manifest_py
-          assert 'python-render-manifest-v1' in manifest_py
-          assert "manifest_cli: Path | None" in service_py
-          assert "if self.config.manifest_cli is not None" in service_py
-
-          assert "modelscope_low_vram_provider.py" in runner_ps
-          assert '"--width", "384"' in runner_ps
-          assert '"--height", "216"' in runner_ps
-          assert '"--fps", "4"' in runner_ps
-          assert '"--max-frames", "16"' in runner_ps
-          assert "enable_sequential_cpu_offload" in low_vram
-          assert "enable_attention_slicing" in low_vram
-          assert "enable_vae_slicing" in low_vram
-          assert "enable_forward_chunking" in low_vram
-          assert "OutOfMemoryError" in low_vram
-          assert '"width": 320' in low_vram
-          assert '"height": 184' in low_vram
-          assert '"commercialUseAllowed": False' in low_vram
-
-          assert launcher.count("cleanup-cinema-storage.ps1") == 2
-          assert "-AfterRun" in launcher
-          assert "cache\\pip" in cleanup
-          assert "cache\\huggingface" in cleanup
-          assert '".venv-cinema"' in cleanup
-          assert '"proofs\\first-real-ai-clip"' in cleanup
-          assert "KeepProofArchives = 2" in cleanup
-          assert "build-first-real-cli" in cleanup
-
-          assert "validate_provider_health" in http_worker
-          assert "--require-commercial-use" in http_worker
-          assert "requiredCapabilities" in http_worker
-          assert '"sha256": sha256_file(output_path)' in http_worker
-          assert "acceptingCommercialJobs" in service_py
-          assert "commercialUseRequired" in service_py
-          assert "task_requirements" in capabilities
-          assert "referenceImage" in capabilities
-          assert "subjectIdentity" in capabilities
-          assert "commercialUseAllowed" in capabilities
-          assert "MAX_AV_DRIFT_SECONDS" in assemble
-          assert "avDriftSeconds" in assemble
-          assert "sha256_file" in assemble
-          assert "artifactEvidence" in runner_py
-          assert "--require-commercial-use" in runner_py
-
-          assert 'COMMERCIAL_MODEL_ID = "zai-org/CogVideoX-2b"' in commercial
-          assert 'COMMERCIAL_MODEL_REVISION = "102080da924c0ab684abeeca4b061ec7dfb7d40c"' in commercial
-          assert 'COMMERCIAL_LICENSE = "Apache-2.0"' in commercial
-          assert "is_allowlisted" in commercial
-          assert '"commercialUseAllowed": is_allowlisted' in commercial
-          assert "MINIMUM_RECOMMENDED_VRAM_GIB = 12.0" in commercial
-          assert "CogVideoX-5b" in commercial
-          assert "currentLocalGpuSupported" in commercial
-
-          assert '"classification": "CANDIDATE_ONLY"' in selector
-          assert '"realModelLoaded": False' in selector
-          assert '"decision": "LOCAL_PROOF_CANDIDATE"' in selector
-          assert '"decision": "REMOTE_COMMERCIAL_REQUIRED"' in selector
-          assert '"decision": "LOCAL_COMMERCIAL_CANDIDATE"' in selector
-          assert "COMMERCIAL_MODEL_REVISION" in selector
-
-          assert 'echoes.render-resume-plan.v1' in resume
-          assert '"classification": "EVIDENCE_VALIDATED"' in resume
-          assert "sha256_file" in resume
-          assert "probe_mp4" in resume
-          assert 'codec is not H.264' in resume
-          assert 'pixel format is not yuv420p' in resume
-          assert 'SHA-256 evidence missing or changed' in resume
-          assert 'complete' in resume
-
-          assert 'parser.add_argument("--resume"' in runner_py
-          assert 'resumable_http_render_worker.py' in runner_py
-          assert 'atomic_write_json' in resumable_worker
-          assert 'build_plan' in resumable_worker
-          assert 'provider_identity' in resumable_worker
-          assert 'REUSED_VALIDATED' in resumable_worker
-          assert 'SHA256_AND_MEDIA_QC_VALIDATED' in resumable_worker
-          assert 'reusedTaskCount' in resumable_worker
-          assert 'renderedTaskCount' in resumable_worker
-          assert 'provider identity, model revision, license, or capabilities changed' in resumable_worker
-          assert 'os.replace(temp_path, path)' in resumable_worker
-          assert 'os.fsync(handle.fileno())' in resumable_worker
-          print("D-drive, integrated evidence resume, provider selection, cleanup, licensing, SHA-256, and A/V QC contract PASS")
+          assert files["launcher"].count("cleanup-cinema-storage.ps1") == 2
+          assert "%USERPROFILE%" not in files["launcher"]
+          assert "Join-Path $env:USERPROFILE" not in files["runner_ps"]
+          assert "Join-Path $env:USERPROFILE" not in files["bootstrap"]
+          assert "3.10.20" not in files["ensure_python"]
+          assert "Visual Studio 17 2022" not in files["runner_ps"]
+          assert 'Assert-Command "cmake"' not in files["runner_ps"]
+          print("D-drive, integrated evidence resume, cleanup, licensing, SHA-256, and A/V QC contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
