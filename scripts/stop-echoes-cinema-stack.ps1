@@ -16,6 +16,17 @@ function Get-State {
     try { return Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json } catch { return $null }
 }
 
+function Get-StateProperty {
+    param(
+        [object]$State,
+        [string]$Name
+    )
+    if (-not $State) { return $null }
+    $property = $State.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $null }
+    return $property.Value
+}
+
 function Stop-VerifiedProcess {
     param(
         [object]$ProcessId,
@@ -41,7 +52,7 @@ function Stop-VerifiedProcess {
 New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
 Set-Content -LiteralPath $stopSignalPath -Value ([DateTime]::UtcNow.ToString("o")) -Encoding ascii
 $state = Get-State
-$supervisorPid = if ($state) { $state.supervisorPid } else { $null }
+$supervisorPid = Get-StateProperty -State $state -Name "supervisorPid"
 
 $deadline = (Get-Date).AddSeconds([math]::Max(1, $GraceSeconds))
 while ((Get-Date) -lt $deadline) {
@@ -52,10 +63,10 @@ while ((Get-Date) -lt $deadline) {
 
 $state = Get-State
 if ($state) {
-    Stop-VerifiedProcess -ProcessId $state.providerPid -RequiredCommandFragments @("modelscope_low_vram_provider.py", "modelscope_low_vram_provider_v2.py") | Out-Null
-    Stop-VerifiedProcess -ProcessId $state.providerWorkerPid -RequiredCommandFragments @("echoes-cinema-provider-worker.ps1") | Out-Null
-    Stop-VerifiedProcess -ProcessId $state.servicePid -RequiredCommandFragments @("cinema_control_center.py") | Out-Null
-    Stop-VerifiedProcess -ProcessId $state.supervisorPid -RequiredCommandFragments @("echoes-cinema-stack-supervisor.ps1") | Out-Null
+    Stop-VerifiedProcess -ProcessId (Get-StateProperty -State $state -Name "providerPid") -RequiredCommandFragments @("modelscope_low_vram_provider.py", "modelscope_low_vram_provider_v2.py", "mock_health_provider.py") | Out-Null
+    Stop-VerifiedProcess -ProcessId (Get-StateProperty -State $state -Name "providerWorkerPid") -RequiredCommandFragments @("echoes-cinema-provider-worker.ps1") | Out-Null
+    Stop-VerifiedProcess -ProcessId (Get-StateProperty -State $state -Name "servicePid") -RequiredCommandFragments @("cinema_control_center.py") | Out-Null
+    Stop-VerifiedProcess -ProcessId (Get-StateProperty -State $state -Name "supervisorPid") -RequiredCommandFragments @("echoes-cinema-stack-supervisor.ps1") | Out-Null
 }
 
 foreach ($pidFile in @("provider.pid", "provider-worker.pid", "service.pid", "supervisor.pid")) {
