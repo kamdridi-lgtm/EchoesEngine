@@ -25,18 +25,24 @@ jobs:
           sparse-checkout: |
             scripts/start-cinema-job-service.ps1
             tools/cinema_job_ledger.py
+            tools/cinema_job_runner.py
             tools/cinema_job_service.py
             tools/cinema_job_service_durable.py
             tools/render_capabilities.py
+            tools/render_resume.py
+            tools/resumable_http_render_worker.py
           sparse-checkout-cone-mode: false
 
-      - name: Compile ledger and durable service
+      - name: Compile ledger, durable service, runner, and resume worker
         run: |
           python3 -m py_compile \
             tools/cinema_job_ledger.py \
+            tools/cinema_job_runner.py \
             tools/cinema_job_service.py \
             tools/cinema_job_service_durable.py \
-            tools/render_capabilities.py
+            tools/render_capabilities.py \
+            tools/render_resume.py \
+            tools/resumable_http_render_worker.py
 
       - name: Parse Windows durable-service launcher
         shell: pwsh
@@ -48,13 +54,15 @@ jobs:
       - name: Verify atomic persistence and restart recovery
         run: python3 tools/cinema_job_ledger.py --self-test
 
-      - name: Verify fail-closed durable service contract
+      - name: Verify fail-closed durable resume service contract
         shell: python
         run: |
           from pathlib import Path
 
           ledger = Path("tools/cinema_job_ledger.py").read_text(encoding="utf-8")
           service = Path("tools/cinema_job_service_durable.py").read_text(encoding="utf-8")
+          runner = Path("tools/cinema_job_runner.py").read_text(encoding="utf-8")
+          resume_worker = Path("tools/resumable_http_render_worker.py").read_text(encoding="utf-8")
           launcher = Path("scripts/start-cinema-job-service.ps1").read_text(encoding="utf-8")
 
           assert 'SCHEMA = "echoes.cinema-job-ledger.v1"' in ledger
@@ -75,6 +83,17 @@ jobs:
           assert 'self.ledger.transition' in service
           assert 'terminal_fields.pop(reserved, None)' in service
           assert 'No interrupted job is silently lost' in service
+          assert 'self.resume_requested: set[str]' in service
+          assert 'def _run_resume_job' in service
+          assert '"--resume"' in service
+          assert 'resumeRequested=resume_existing' in service
+          assert 'SHA-256/media-validated clips' in service
+
+          assert 'resumable_http_render_worker.py' in runner
+          assert '"--resume"' in runner
+          assert 'REUSED_VALIDATED' in resume_worker
+          assert 'SHA256_AND_MEDIA_QC_VALIDATED' in resume_worker
+          assert 'os.replace(temp_path, path)' in resume_worker
 
           assert 'D:\\A.I\\EchoesCinema\\jobs' in launcher
           assert 'D:\\A.I\\EchoesCinema\\.venv-cinema\\Scripts\\python.exe' in launcher
@@ -82,4 +101,4 @@ jobs:
           assert 'Cinema job output must not use drive C:' in launcher
           assert 'compiler-free Python' in launcher
           assert 'job-ledger.json' in launcher
-          print("Durable Cinema ledger, restart-safe service, and D-drive launcher contract PASS")
+          print("Durable Cinema ledger, evidence resume, restart safety, and D-drive launcher contract PASS")
