@@ -51,8 +51,16 @@ function Test-Dashboard {
     }
 }
 
+function Test-StateReady {
+    param([object]$State)
+    if (-not $State) { return $false }
+    if (-not $State.dashboardUrl -or -not $State.servicePid) { return $false }
+    if ([string]$State.status -notin @("RUNNING", "PARTIAL")) { return $false }
+    return Test-Dashboard -Url ([string]$State.dashboardUrl)
+}
+
 $existing = Get-State
-if ($existing -and (Test-VerifiedSupervisor -ProcessId $existing.supervisorPid) -and (Test-Dashboard -Url ([string]$existing.dashboardUrl))) {
+if ($existing -and (Test-VerifiedSupervisor -ProcessId $existing.supervisorPid) -and (Test-StateReady -State $existing)) {
     Write-Host "Echoes Cinema is already running. Dashboard: $($existing.dashboardUrl)"
     if (-not $NoBrowser) { Start-Process ([string]$existing.dashboardUrl) }
     exit 0
@@ -83,7 +91,7 @@ $lastState = $null
 while ((Get-Date) -lt $deadline) {
     if ($supervisorProcess.HasExited) { break }
     $lastState = Get-State
-    if ($lastState -and $lastState.dashboardUrl -and (Test-Dashboard -Url ([string]$lastState.dashboardUrl))) {
+    if (Test-StateReady -State $lastState) {
         Write-Host "Echoes Cinema control center is reachable: $($lastState.dashboardUrl)"
         if (-not $NoBrowser) { Start-Process ([string]$lastState.dashboardUrl) }
         exit 0
@@ -97,7 +105,7 @@ $stderrTail = if (Test-Path -LiteralPath $stderrLog) { (Get-Content -LiteralPath
 $stdoutTail = if (Test-Path -LiteralPath $stdoutLog) { (Get-Content -LiteralPath $stdoutLog -Tail 40 -ErrorAction SilentlyContinue | Out-String).Trim() } else { "" }
 
 Write-Error @"
-Echoes Cinema did not open a dead localhost page. Startup failed before the dashboard became reachable.
+Echoes Cinema did not open a dead localhost page. Startup failed before the dashboard became reachable and the service PID was recorded.
 State error: $stateError
 Supervisor stderr: $stderrTail
 Supervisor stdout: $stdoutTail
