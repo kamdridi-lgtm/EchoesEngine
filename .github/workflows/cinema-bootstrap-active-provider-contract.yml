@@ -50,6 +50,43 @@ jobs:
           python3 providers/modelscope_low_vram_provider.py --self-test
           python3 tools/cinema_p0_preflight.py --self-test
 
+      - name: Verify health stays online during an automatic load retry
+        shell: bash
+        run: |
+          export ECHOES_RENDER_TOKEN=contract-recovery-token
+          python3 providers/modelscope_low_vram_provider.py \
+            --host 127.0.0.1 \
+            --port 18082 \
+            --retry-base-seconds 1 \
+            > /tmp/resilient-provider.log 2>&1 &
+          provider_pid=$!
+          trap 'kill "$provider_pid" 2>/dev/null || true; wait "$provider_pid" 2>/dev/null || true' EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent \
+              -H 'Authorization: Bearer contract-recovery-token' \
+              http://127.0.0.1:18082/health > /tmp/resilient-health.json; then
+              break
+            fi
+            sleep 1
+          done
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          health = json.loads(Path('/tmp/resilient-health.json').read_text(encoding='utf-8'))
+          assert health['schema'] == 'echoes.modelscope-provider-recovery.v1'
+          assert health['realModelLoaded'] is False
+          assert health['loadState'] in {'LOADING', 'RETRY_WAIT'}
+          assert health['automaticRetry'] is True
+          assert health['operatorRestartRequired'] is False
+          assert health['loadError'] is None
+          assert isinstance(health['recoveryCount'], int)
+          assert 'modelCacheGiB' in health
+          print('Resilient provider live health PASS state=', health['loadState'], 'retries=', health['recoveryCount'])
+          PY
+
       - name: Verify local bootstrap uses the active P0 path
         shell: python
         run: |
