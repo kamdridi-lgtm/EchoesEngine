@@ -18,6 +18,9 @@ param(
     [string]$HostAddress = "127.0.0.1",
     [int]$Port = 8090,
     [int]$MaxWorkers = 1,
+    [double]$StorageReserveGiB = 20,
+    [double]$DefaultJobGiB = 8,
+    [double]$MaxJobGiB = 200,
     [double]$ProviderTimeout = 180
 )
 
@@ -42,6 +45,15 @@ if ($Port -le 0 -or $Port -gt 65535) {
 }
 if ($MaxWorkers -le 0) {
     throw "MaxWorkers must be positive"
+}
+if ($StorageReserveGiB -lt 0) {
+    throw "StorageReserveGiB must be non-negative"
+}
+if ($DefaultJobGiB -le 0 -or $MaxJobGiB -le 0) {
+    throw "DefaultJobGiB and MaxJobGiB must be positive"
+}
+if ($DefaultJobGiB -gt $MaxJobGiB) {
+    throw "DefaultJobGiB must not exceed MaxJobGiB"
 }
 if ($ProviderTimeout -le 0) {
     throw "ProviderTimeout must be positive"
@@ -69,6 +81,9 @@ $env:ECHOES_RENDER_TOKEN = $ProviderToken
 $env:ECHOES_RENDER_ENDPOINT = $ProviderEndpoint
 $env:ECHOES_RENDER_HEALTH_URL = $ProviderHealthUrl
 $env:ECHOES_RENDER_HOST_ALLOWLIST = $ProviderAllowlist
+$env:ECHOES_CINEMA_STORAGE_RESERVE_GIB = "$StorageReserveGiB"
+$env:ECHOES_CINEMA_DEFAULT_JOB_GIB = "$DefaultJobGiB"
+$env:ECHOES_CINEMA_MAX_JOB_GIB = "$MaxJobGiB"
 
 $arguments = @(
     $service,
@@ -92,6 +107,8 @@ Write-Host "Provider endpoint: $ProviderEndpoint"
 Write-Host "Sections root: $sections"
 Write-Host "Output root: $output"
 Write-Host "Durable ledger: $(Join-Path $output '_service\job-ledger.json')"
+Write-Host "Priority workers: $MaxWorkers"
+Write-Host "Storage policy: reserve ${StorageReserveGiB} GiB; default job ${DefaultJobGiB} GiB; maximum job ${MaxJobGiB} GiB"
 Write-Host "Manifest generator: $(if ($manifest) { 'native CLI' } else { 'compiler-free Python' })"
 Write-Host "Tokens remain only in this process environment and are not printed."
 
