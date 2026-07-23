@@ -19,6 +19,7 @@ from typing import Any
 
 import cinema_job_service as base
 import cinema_job_service_durable as durable
+import cinema_p0_autopilot as p0auto
 
 DASHBOARD_SCHEMA = "echoes.cinema-control-center.v1"
 PUBLIC_PATHS = frozenset({"/", "/index.html", "/v1/control-center/status"})
@@ -42,7 +43,7 @@ h1 { margin: 0; font-size: clamp(28px, 5vw, 48px); letter-spacing: .04em; }
 .detail { color: #b9c2d0; font-size: 13px; margin-top: 8px; line-height: 1.45; overflow-wrap: anywhere; }
 .badge { display: inline-block; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
 .PASS,.REAL { background:#113d2a; color:#72f2b2; }
-.PARTIAL,.MISSING { background:#49390d; color:#ffd978; }
+.PARTIAL,.MISSING,.DORMANT { background:#49390d; color:#ffd978; }
 .FAILED,.BROKEN { background:#501a20; color:#ff98a4; }
 .QUEUED,.RUNNING,.RECOVERABLE { background:#153c5a; color:#91d8ff; }
 section { margin-top: 18px; }
@@ -53,10 +54,11 @@ footer { color:#778399; margin-top:24px; font-size:12px; }
 <body>
 <main>
 <h1>ECHOES CINEMA</h1>
-<p class="subtitle">Local control center — this page stays available while the AI model loads.</p>
+<p class="subtitle">Local control center — this page stays available while the AI model loads and P0 resumes automatically.</p>
 <div class="grid">
   <div class="card"><div class="label">Stack</div><div id="stack" class="value">Connecting…</div><div id="stackDetail" class="detail"></div></div>
   <div class="card"><div class="label">AI provider</div><div id="provider" class="value">Checking…</div><div id="providerDetail" class="detail"></div></div>
+  <div class="card"><div class="label">P0 autopilot</div><div id="autopilot" class="value">Checking…</div><div id="autopilotDetail" class="detail"></div></div>
   <div class="card"><div class="label">Real jobs</div><div id="realJobs" class="value">—</div><div id="commercialJobs" class="detail"></div></div>
   <div class="card"><div class="label">Queue</div><div id="queue" class="value">—</div><div id="workers" class="detail"></div></div>
 </div>
@@ -85,6 +87,9 @@ async function refresh() {
     const p = data.provider || {};
     byId('provider').innerHTML = badge(p.status || 'PARTIAL');
     byId('providerDetail').textContent = `${text(p.modelId, 'model not loaded')} · ${text(p.gpuName, 'GPU pending')}`;
+    const a = data.autopilot || {};
+    byId('autopilot').innerHTML = badge(a.status || 'MISSING');
+    byId('autopilotDetail').textContent = `${text(a.phase, 'NOT_STARTED')} · ${text(a.message, 'No status yet')}`;
     byId('realJobs').textContent = data.acceptingRealJobs ? 'READY' : 'NOT READY';
     byId('commercialJobs').textContent = `Commercial: ${data.acceptingCommercialJobs ? 'READY' : 'NOT READY'}`;
     const s = data.scheduler || {};
@@ -182,16 +187,32 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
             "loadError": provider_error,
         }
 
-    if accepting_real:
-        next_action = "The real provider is ready. Submit or resume a Cinema job."
+    autopilot_object = getattr(server, "p0_autopilot", None)
+    autopilot = autopilot_object.snapshot() if autopilot_object is not None else {
+        "schema": p0auto.SCHEMA,
+        "status": "MISSING",
+        "phase": "NOT_STARTED",
+        "message": "P0 autopilot is not attached to this control center.",
+    }
+    autopilot_status = str(autopilot.get("status") or "MISSING")
+
+    if autopilot_status == "REAL":
+        next_action = "The first REAL AI clip is complete. Open the P0 proof MP4 and validate it visually."
         status = "PASS"
+    elif autopilot_status == "BROKEN":
+        next_action = "The control center is online. P0 stopped safely and will resume on the next repair/start cycle."
+        status = "PARTIAL"
+    elif accepting_real:
+        next_action = "The real provider is ready. P0 autopilot is rendering or preparing the resumable proof."
+        status = "PARTIAL"
     elif provider_error:
         next_action = "The control center is online. The AI provider is still loading or blocked; inspect the exact message below."
         status = "PARTIAL"
     else:
-        next_action = "The control center is online and waiting for the AI provider to finish loading."
+        next_action = "The control center is online and P0 autopilot is waiting for the AI provider to finish loading."
         status = "PARTIAL"
 
+    combined_error = str(autopilot.get("blocker") or "").strip() or provider_error
     return {
         "schema": DASHBOARD_SCHEMA,
         "status": status,
@@ -202,17 +223,18 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
             "manifestGenerator": "native-render-manifest-cli" if server.config.manifest_cli else "python-render-manifest-v1",
         },
         "provider": provider_summary,
+        "autopilot": autopilot,
         "acceptingRealJobs": accepting_real,
         "acceptingCommercialJobs": accepting_commercial,
         "scheduler": scheduler,
         "jobs": jobs[-20:],
         "nextAction": next_action,
-        "error": provider_error or None,
+        "error": combined_error or None,
     }
 
 
 class ControlCenterHandler(durable.DurableHandler):
-    server_version = "EchoesCinemaControlCenter/1.0"
+    server_version = "EchoesCinemaControlCenter/1.1"
 
     def send_html(self, status: int, body: str) -> None:
         payload = body.encode("utf-8")
@@ -246,8 +268,9 @@ def self_test() -> int:
     assert "/v1/control-center/status" in DASHBOARD_HTML
     assert "Run START_ECHOES_CINEMA.cmd again" in DASHBOARD_HTML
     assert "Protected render APIs still require authentication" in DASHBOARD_HTML
+    assert "P0 autopilot" in DASHBOARD_HTML
     assert "localhost refused" not in DASHBOARD_HTML.lower()
-    print("CinemaControlCenter PASS loopback=protected dashboard=embedded polling=enabled")
+    print("CinemaControlCenter PASS loopback=protected dashboard=embedded p0-autopilot=visible polling=enabled")
     return 0
 
 
@@ -259,10 +282,12 @@ def main() -> int:
     server = base.CinemaServer((config.host, config.port), ControlCenterHandler)
     server.config = config
     server.registry = durable.DurableJobRegistry(config)
+    server.p0_autopilot = p0auto.P0Autopilot(p0auto.AutopilotConfig.from_environment())
+    server.p0_autopilot.start()
     print(
         f"EchoesCinemaControlCenter READY http://{config.host}:{config.port} "
         f"ledger={server.registry.ledger.config.path} outputRoot={config.output_root} "
-        f"maxWorkers={config.max_workers}",
+        f"maxWorkers={config.max_workers} p0Autorun={server.p0_autopilot.config.enabled}",
         flush=True,
     )
     try:
@@ -270,6 +295,7 @@ def main() -> int:
     except KeyboardInterrupt:
         pass
     finally:
+        server.p0_autopilot.stop()
         server.registry.shutdown()
         server.server_close()
     return 0
