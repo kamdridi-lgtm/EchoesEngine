@@ -53,6 +53,7 @@ jobs:
             providers/modelscope_proof_provider.py \
             providers/modelscope_low_vram_provider.py \
             providers/modelscope_low_vram_provider_v2.py \
+            providers/modelscope_resilient_provider.py \
             tools/assemble_render.py \
             tools/cinema_job_service.py \
             tools/cinema_job_runner.py \
@@ -76,7 +77,7 @@ jobs:
           python3 tools/provider_selector.py --self-test
           python3 tools/render_resume.py --self-test
 
-      - name: Verify pinned safe low-VRAM and commercial provider boundaries
+      - name: Verify pinned safe low-VRAM recovery and commercial provider boundaries
         run: |
           python3 providers/modelscope_low_vram_provider.py --self-test
           python3 providers/cogvideox_commercial_provider.py --self-test
@@ -100,7 +101,7 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive, evidence ZIP, pinned model, P0 preflight, resume, licensing, and QC contract
+      - name: Verify D-drive, evidence ZIP, pinned model, automatic recovery, P0 preflight, resume, licensing, and QC contract
         shell: python
         run: |
           from pathlib import Path
@@ -125,6 +126,7 @@ jobs:
               "manifest": Path("tools/python_render_manifest.py").read_text(encoding="utf-8"),
               "low_vram": Path("providers/modelscope_low_vram_provider_v2.py").read_text(encoding="utf-8"),
               "low_vram_entry": Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8"),
+              "resilient": Path("providers/modelscope_resilient_provider.py").read_text(encoding="utf-8"),
               "commercial": Path("providers/cogvideox_commercial_provider.py").read_text(encoding="utf-8"),
           }
 
@@ -147,7 +149,8 @@ jobs:
               "resume": ["echoes.render-resume-plan.v1", '"classification": "EVIDENCE_VALIDATED"', "sha256_file", "probe_mp4", "SHA-256 evidence missing or changed"],
               "manifest": ["echoes.render-manifest.v1", "python-render-manifest-v1"],
               "low_vram": ["DEFAULT_MODEL_REVISION", "safe_load_attempts", "use_safetensors", "modelSourcePinned", "loadAttempts", "enable_sequential_cpu_offload", "enable_attention_slicing", "enable_vae_slicing", "enable_forward_chunking", "is_cuda_oom", '"commercialUseAllowed": False'],
-              "low_vram_entry": ["modelscope_low_vram_provider_v2", "raise SystemExit(main())"],
+              "low_vram_entry": ["modelscope_resilient_provider", "raise SystemExit(main())"],
+              "resilient": ["ResilientModelScopeEngine", "RETRY_WAIT", "retry_delay_seconds", "automaticRetry", "operatorRestartRequired", "modelCacheGiB", "ThreadingHTTPServer"],
               "commercial": ['COMMERCIAL_MODEL_ID = "zai-org/CogVideoX-2b"', 'COMMERCIAL_MODEL_REVISION = "102080da924c0ab684abeeca4b061ec7dfb7d40c"', 'COMMERCIAL_LICENSE = "Apache-2.0"', "MINIMUM_RECOMMENDED_VRAM_GIB = 12.0", "currentLocalGpuSupported"],
           }
           for name, tokens in required_tokens.items():
@@ -168,7 +171,7 @@ jobs:
           assert '"trust_remote_code": True' not in files["low_vram"]
           assert 'use_safetensors=False' not in files["low_vram"]
           assert '"use_safetensors": False' not in files["low_vram"]
-          print("D-drive, automatic evidence ZIP, pinned safe model loading, P0 preflight, resume, licensing, SHA-256, and A/V QC contract PASS")
+          print("D-drive, automatic recovery, evidence ZIP, pinned safe model loading, P0 preflight, resume, licensing, SHA-256, and A/V QC contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
