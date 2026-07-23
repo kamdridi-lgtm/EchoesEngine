@@ -23,6 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
+            scripts/start-cinema-job-service.ps1
             tools/cinema_job_ledger.py
             tools/cinema_job_service.py
             tools/cinema_job_service_durable.py
@@ -37,6 +38,13 @@ jobs:
             tools/cinema_job_service_durable.py \
             tools/render_capabilities.py
 
+      - name: Parse Windows durable-service launcher
+        shell: pwsh
+        run: |
+          $content = Get-Content "scripts/start-cinema-job-service.ps1" -Raw
+          [void][scriptblock]::Create($content)
+          Write-Host "Durable Cinema service launcher syntax PASS"
+
       - name: Verify atomic persistence and restart recovery
         run: python3 tools/cinema_job_ledger.py --self-test
 
@@ -47,6 +55,7 @@ jobs:
 
           ledger = Path("tools/cinema_job_ledger.py").read_text(encoding="utf-8")
           service = Path("tools/cinema_job_service_durable.py").read_text(encoding="utf-8")
+          launcher = Path("scripts/start-cinema-job-service.ps1").read_text(encoding="utf-8")
 
           assert 'SCHEMA = "echoes.cinema-job-ledger.v1"' in ledger
           assert 'EVENT_SCHEMA = "echoes.cinema-job-ledger-event.v1"' in ledger
@@ -66,4 +75,11 @@ jobs:
           assert 'self.ledger.transition' in service
           assert 'terminal_fields.pop(reserved, None)' in service
           assert 'No interrupted job is silently lost' in service
-          print("Durable Cinema job ledger and restart-safe service contract PASS")
+
+          assert 'D:\\A.I\\EchoesCinema\\jobs' in launcher
+          assert 'D:\\A.I\\EchoesCinema\\.venv-cinema\\Scripts\\python.exe' in launcher
+          assert 'cinema_job_service_durable.py' in launcher
+          assert 'Cinema job output must not use drive C:' in launcher
+          assert 'compiler-free Python' in launcher
+          assert 'job-ledger.json' in launcher
+          print("Durable Cinema ledger, restart-safe service, and D-drive launcher contract PASS")
