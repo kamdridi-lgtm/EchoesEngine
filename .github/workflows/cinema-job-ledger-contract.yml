@@ -26,6 +26,7 @@ jobs:
             scripts/start-cinema-job-service.ps1
             tools/cinema_job_ledger.py
             tools/cinema_job_runner.py
+            tools/cinema_job_scheduler.py
             tools/cinema_job_service.py
             tools/cinema_job_service_durable.py
             tools/render_capabilities.py
@@ -33,11 +34,12 @@ jobs:
             tools/resumable_http_render_worker.py
           sparse-checkout-cone-mode: false
 
-      - name: Compile ledger, durable service, runner, and resume worker
+      - name: Compile ledger, scheduler, durable service, runner, and resume worker
         run: |
           python3 -m py_compile \
             tools/cinema_job_ledger.py \
             tools/cinema_job_runner.py \
+            tools/cinema_job_scheduler.py \
             tools/cinema_job_service.py \
             tools/cinema_job_service_durable.py \
             tools/render_capabilities.py \
@@ -54,67 +56,96 @@ jobs:
       - name: Verify atomic persistence and restart recovery
         run: python3 tools/cinema_job_ledger.py --self-test
 
-      - name: Verify fail-closed durable resume service contract
+      - name: Verify priority, bounded concurrency, and storage admission
+        run: python3 tools/cinema_job_scheduler.py --self-test
+
+      - name: Verify fail-closed durable scheduler and resume service contract
         shell: python
         run: |
           from pathlib import Path
 
           ledger = Path("tools/cinema_job_ledger.py").read_text(encoding="utf-8")
+          scheduler = Path("tools/cinema_job_scheduler.py").read_text(encoding="utf-8")
           service = Path("tools/cinema_job_service_durable.py").read_text(encoding="utf-8")
           runner = Path("tools/cinema_job_runner.py").read_text(encoding="utf-8")
           resume_worker = Path("tools/resumable_http_render_worker.py").read_text(encoding="utf-8")
           launcher = Path("scripts/start-cinema-job-service.ps1").read_text(encoding="utf-8")
 
           required = {
-              "ledger": [
-                  'SCHEMA = "echoes.cinema-job-ledger.v1"',
-                  'EVENT_SCHEMA = "echoes.cinema-job-ledger-event.v1"',
-                  'os.replace(temp_path, path)',
-                  'os.fsync(handle.fileno())',
-                  '"RECOVERABLE"',
-                  'service restarted before a terminal result was recorded',
-                  'invalid Cinema job transition',
-                  'Cinema job ledger is unreadable or corrupt',
-                  'TERMINAL_STATUSES = {"PASS", "FAILED", "BROKEN"}',
-              ],
-              "service": [
-                  'class DurableJobRegistry(base.JobRegistry)',
-                  'resumeRecovered',
-                  'actionRequired',
-                  '"/v1/cinema/jobs"',
-                  'job-ledger.json',
-                  'self.ledger.transition',
-                  'terminal_fields.pop(reserved, None)',
-                  'interrupted job is silently lost',
-                  'self.resume_requested: set[str]',
-                  'def _run_resume_job',
-                  '"--resume"',
-                  'resumeRequested=resume_existing',
-                  'SHA-256/media-validated clips',
-              ],
-              "runner": ['resumable_http_render_worker.py', '"--resume"'],
-              "resume_worker": [
-                  'REUSED_VALIDATED',
-                  'SHA256_AND_MEDIA_QC_VALIDATED',
-                  'os.replace(temp_path, path)',
-              ],
-              "launcher": [
-                  'D:\\A.I\\EchoesCinema\\jobs',
-                  'D:\\A.I\\EchoesCinema\\.venv-cinema\\Scripts\\python.exe',
-                  'cinema_job_service_durable.py',
-                  'Cinema job output must not use drive C:',
-                  'compiler-free Python',
-                  'job-ledger.json',
-              ],
+            "ledger": [
+              'SCHEMA = "echoes.cinema-job-ledger.v1"',
+              'EVENT_SCHEMA = "echoes.cinema-job-ledger-event.v1"',
+              'os.replace(temp_path, path)',
+              'os.fsync(handle.fileno())',
+              '"RECOVERABLE"',
+              'service restarted before a terminal result was recorded',
+              'invalid Cinema job transition',
+              'Cinema job ledger is unreadable or corrupt',
+              'TERMINAL_STATUSES = {"PASS", "FAILED", "BROKEN"}',
+            ],
+            "scheduler": [
+              'class StorageAdmissionError',
+              'class StorageBudget',
+              'class PriorityJobScheduler',
+              'queue.PriorityQueue',
+              'sort_key=(-parsed_priority, sequence)',
+              'minimumFreeBytes',
+              'projectedFreeBytes',
+              'insufficient storage for Cinema job',
+              'recentWorkerFailures',
+              'maxWorkers',
+              'CinemaJobScheduler PASS',
+            ],
+            "service": [
+              'class DurableJobRegistry(base.JobRegistry)',
+              'PriorityJobScheduler',
+              'resumeRecovered',
+              'actionRequired',
+              '"/v1/cinema/jobs"',
+              '"/v1/cinema/scheduler"',
+              'job-ledger.json',
+              'self.ledger.transition',
+              'terminal_fields.pop(reserved, None)',
+              'self.resume_requested: set[str]',
+              'def _run_resume_job',
+              '"--resume"',
+              'resumeRequested=resume_existing',
+              'request_priority',
+              'estimatedOutputBytes',
+              'reserve_storage',
+              'submit_reserved',
+              'ECHOES_CINEMA_STORAGE_RESERVE_GIB',
+              'ECHOES_CINEMA_DEFAULT_JOB_GIB',
+              'ECHOES_CINEMA_MAX_JOB_GIB',
+            ],
+            "runner": ['resumable_http_render_worker.py', '"--resume"'],
+            "resume_worker": [
+              'REUSED_VALIDATED',
+              'SHA256_AND_MEDIA_QC_VALIDATED',
+              'os.replace(temp_path, path)',
+            ],
+            "launcher": [
+              'D:\\A.I\\EchoesCinema\\jobs',
+              'D:\\A.I\\EchoesCinema\\.venv-cinema\\Scripts\\python.exe',
+              'cinema_job_service_durable.py',
+              'Cinema job output must not use drive C:',
+              'compiler-free Python',
+              'job-ledger.json',
+              'StorageReserveGiB',
+              'DefaultJobGiB',
+              'MaxJobGiB',
+              'ECHOES_CINEMA_STORAGE_RESERVE_GIB',
+            ],
           }
           sources = {
-              "ledger": ledger,
-              "service": service,
-              "runner": runner,
-              "resume_worker": resume_worker,
-              "launcher": launcher,
+            "ledger": ledger,
+            "scheduler": scheduler,
+            "service": service,
+            "runner": runner,
+            "resume_worker": resume_worker,
+            "launcher": launcher,
           }
           for name, tokens in required.items():
-              for token in tokens:
-                  assert token in sources[name], f"{name} missing durable contract token: {token}"
-          print("Durable Cinema ledger, evidence resume, restart safety, and D-drive launcher contract PASS")
+            for token in tokens:
+              assert token in sources[name], f"{name} missing durable scheduler token: {token}"
+          print("Durable Cinema priority, storage admission, evidence resume, restart safety, and D-drive contract PASS")
