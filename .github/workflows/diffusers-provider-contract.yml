@@ -33,6 +33,7 @@ jobs:
             tools/assemble_render.py
             tools/cinema_job_service.py
             tools/cinema_job_runner.py
+            tools/cinema_p0_evidence_bundle.py
             tools/cinema_p0_preflight.py
             tools/http_render_worker.py
             tools/provider_selector.py
@@ -44,7 +45,7 @@ jobs:
             tests/test_cinema_job_service_fail_closed.py
           sparse-checkout-cone-mode: false
 
-      - name: Compile provider, preflight, selection, resume, QC, manifest, and service modules
+      - name: Compile provider, evidence, preflight, selection, resume, QC, manifest, and service modules
         run: |
           python3 -m py_compile \
             providers/cogvideox_commercial_provider.py \
@@ -55,6 +56,7 @@ jobs:
             tools/assemble_render.py \
             tools/cinema_job_service.py \
             tools/cinema_job_runner.py \
+            tools/cinema_p0_evidence_bundle.py \
             tools/cinema_p0_preflight.py \
             tools/http_render_worker.py \
             tools/provider_selector.py \
@@ -65,9 +67,10 @@ jobs:
             tests/test_diffusers_provider_fail_closed.py \
             tests/test_cinema_job_service_fail_closed.py
 
-      - name: Verify compiler-free manifest, P0 preflight, capabilities, selection, and resume planner
+      - name: Verify compiler-free manifest, P0 evidence, preflight, capabilities, selection, and resume planner
         run: |
           python3 tools/python_render_manifest.py --self-test
+          python3 tools/cinema_p0_evidence_bundle.py --self-test
           python3 tools/cinema_p0_preflight.py --self-test
           python3 tools/render_capabilities.py
           python3 tools/provider_selector.py --self-test
@@ -97,7 +100,7 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive, pinned model, P0 preflight, evidence resume, licensing, and QC contract
+      - name: Verify D-drive, evidence ZIP, pinned model, P0 preflight, resume, licensing, and QC contract
         shell: python
         run: |
           from pathlib import Path
@@ -110,6 +113,7 @@ jobs:
               "bootstrap": Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8"),
               "ensure_python": Path("scripts/ensure-python-on-d.ps1").read_text(encoding="utf-8"),
               "runner": Path("tools/cinema_job_runner.py").read_text(encoding="utf-8"),
+              "evidence": Path("tools/cinema_p0_evidence_bundle.py").read_text(encoding="utf-8"),
               "preflight": Path("tools/cinema_p0_preflight.py").read_text(encoding="utf-8"),
               "service": Path("tools/cinema_job_service.py").read_text(encoding="utf-8"),
               "http": Path("tools/http_render_worker.py").read_text(encoding="utf-8"),
@@ -125,13 +129,14 @@ jobs:
           }
 
           required_tokens = {
-              "launcher": [r"D:\A.I\EchoesCinema", "cleanup-cinema-storage.ps1", "-AfterRun"],
+              "launcher": [r"D:\A.I\EchoesCinema", "cleanup-cinema-storage.ps1", "-AfterRun", "cinema_p0_evidence_bundle.py", "latest-p0-evidence.zip", "Collecting one portable P0 evidence ZIP", "the evidence ZIP contains the first blocker and logs"],
               "preflight_launcher": [r"D:\A.I\EchoesCinema", r".venv-cinema\Scripts\python.exe", "cinema_p0_preflight.py", "p0-preflight-only-report.json", "No model load. No package reinstall. D drive only.", "cleanup-cinema-storage.ps1", "-AfterRun", "--require-cuda"],
               "runner_ps": [r"D:\A.I\EchoesCinema", "systemDriveWritesAllowed = $false", "modelscope_low_vram_provider.py", "cinema_p0_preflight.py", "preflight-report.json", '"--width", "384"', '"--height", "216"', '"--fps", "4"', '"--max-frames", "16"'],
               "cleanup": ["cache\\pip", "cache\\huggingface", '".venv-cinema"', '"proofs\\first-real-ai-clip"', "KeepProofArchives = 2", "build-first-real-cli"],
               "bootstrap": [r"D:\A.I\EchoesCinema\.venv-cinema", r"D:\A.I\Python310", '"systemDriveWritesAllowed": False', "ensure-python-on-d.ps1", "Test-PythonModuleImport"],
               "ensure_python": [r"D:\A.I\Python310", '[string]$PythonVersion = "3.10.11"', "Get-AuthenticodeSignature", "Python Software Foundation", "Get-FileHash", "Include_launcher=0"],
               "runner": ["--resume", "resumable_http_render_worker.py", "artifactEvidence", "--require-commercial-use", "reusedTaskCount", "renderedTaskCount"],
+              "evidence": ["echoes.cinema-p0-evidence-bundle.v1", "READ_ME_FIRST.txt", "evidence-index.json", "truthStatus", "firstBlocker", "missingExpectedProofFiles", "sha256_file", "os.replace", "[REDACTED]", "systemDriveWritesAllowed"],
               "preflight": ["echoes.cinema-p0-preflight.v1", "atomic_write_json", "REQUIRED_PACKAGES", "STORAGE_ENV_VARS", "workspace-free-space", "storage-redirection", "provider-port", "nvidia-smi", "systemDriveWritesAllowed", "--require-cuda", "CinemaP0Preflight PASS"],
               "service": ["manifest_cli: Path | None", "acceptingCommercialJobs", "commercialUseRequired"],
               "http": ["validate_provider_health", "--require-commercial-use", "requiredCapabilities", '"sha256": sha256_file(output_path)'],
@@ -150,6 +155,7 @@ jobs:
                   assert token in files[name], f"{name} missing contract token: {token}"
 
           assert files["launcher"].count("cleanup-cinema-storage.ps1") == 2
+          assert files["launcher"].index("-AfterRun") < files["launcher"].index("cinema_p0_evidence_bundle.py")
           assert files["preflight_launcher"].count("cleanup-cinema-storage.ps1") == 2
           assert "%USERPROFILE%" not in files["launcher"]
           assert "%USERPROFILE%" not in files["preflight_launcher"]
@@ -162,7 +168,7 @@ jobs:
           assert '"trust_remote_code": True' not in files["low_vram"]
           assert 'use_safetensors=False' not in files["low_vram"]
           assert '"use_safetensors": False' not in files["low_vram"]
-          print("D-drive, pinned safe model loading, P0 preflight, evidence resume, cleanup, licensing, SHA-256, and A/V QC contract PASS")
+          print("D-drive, automatic evidence ZIP, pinned safe model loading, P0 preflight, resume, licensing, SHA-256, and A/V QC contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
