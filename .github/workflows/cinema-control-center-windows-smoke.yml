@@ -1,0 +1,102 @@
+name: Echoes Cinema Windows Control Center Smoke
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-one-click-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Windows control center stack
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/echoes-cinema-provider-worker.ps1
+            scripts/echoes-cinema-stack-supervisor.ps1
+            scripts/start-echoes-cinema-stack.ps1
+            scripts/stop-echoes-cinema-stack.ps1
+            tests/fixtures/first_real_clip_sections.csv
+            tools/assemble_render.py
+            tools/cinema_control_center.py
+            tools/cinema_job_ledger.py
+            tools/cinema_job_runner.py
+            tools/cinema_job_scheduler.py
+            tools/cinema_job_service.py
+            tools/cinema_job_service_durable.py
+            tools/http_render_worker.py
+            tools/python_render_manifest.py
+            tools/render_capabilities.py
+            tools/render_resume.py
+            tools/resumable_http_render_worker.py
+          sparse-checkout-cone-mode: false
+
+      - name: Create isolated D drive and D-only Python environment
+        shell: pwsh
+        run: |
+          $target = Join-Path $env:RUNNER_TEMP "echoes-d"
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          subst D: $target
+          python -m venv D:\A.I\EchoesCinema\.venv-cinema
+          if (-not (Test-Path D:\A.I\EchoesCinema\.venv-cinema\Scripts\python.exe)) {
+            throw "D-drive venv was not created"
+          }
+
+      - name: Start stack through the real Windows launcher logic
+        shell: pwsh
+        run: |
+          & .\scripts\start-echoes-cinema-stack.ps1 `
+            -WorkspaceRoot "D:\A.I\EchoesCinema" `
+            -RepoRoot $PWD.Path `
+            -StartupTimeoutSeconds 90 `
+            -NoBrowser
+          if ($LASTEXITCODE -ne 0) { throw "Windows stack launcher failed" }
+
+      - name: Verify localhost dashboard and autonomous state
+        shell: pwsh
+        run: |
+          $statePath = "D:\A.I\EchoesCinema\runtime\stack-state.json"
+          if (-not (Test-Path $statePath)) { throw "stack-state.json is missing" }
+          $state = Get-Content $statePath -Raw | ConvertFrom-Json
+          if (-not $state.dashboardUrl) { throw "dashboardUrl is missing" }
+          $dashboard = Invoke-WebRequest -Uri $state.dashboardUrl -UseBasicParsing -TimeoutSec 10
+          if ($dashboard.StatusCode -ne 200 -or $dashboard.Content -notlike "*ECHOES CINEMA*") {
+            throw "localhost dashboard is not reachable"
+          }
+          $status = Invoke-RestMethod -Uri ($state.dashboardUrl.TrimEnd('/') + '/v1/control-center/status') -TimeoutSec 10
+          if ($status.schema -ne "echoes.cinema-control-center.v1") { throw "control center schema mismatch" }
+          if (-not $state.servicePid) { throw "service PID is missing" }
+          if ($state.secretsPersisted -ne $false) { throw "secretsPersisted must be false" }
+          $rawState = Get-Content $statePath -Raw
+          if ($rawState -match 'ECHOES_RENDER_TOKEN|ECHOES_CINEMA_SERVICE_TOKEN|Bearer\s+[A-Za-z0-9]{16,}') {
+            throw "stack state contains a secret"
+          }
+          Write-Host "Windows localhost dashboard PASS url=$($state.dashboardUrl) status=$($status.status)"
+
+      - name: Stop stack through the real Windows stop logic
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path .\scripts\stop-echoes-cinema-stack.ps1) {
+            & .\scripts\stop-echoes-cinema-stack.ps1 -WorkspaceRoot "D:\A.I\EchoesCinema" -GraceSeconds 10
+          }
+          Start-Sleep -Seconds 2
+          $statePath = "D:\A.I\EchoesCinema\runtime\stack-state.json"
+          if (Test-Path $statePath) {
+            $state = Get-Content $statePath -Raw | ConvertFrom-Json
+            if ($state.status -notin @("STOPPED", "BROKEN")) {
+              Write-Warning "Unexpected final state: $($state.status)"
+            }
+          }
+          subst D: /d
