@@ -22,6 +22,8 @@ set "PYTHONPYCACHEPREFIX=%ECHOES_CINEMA_WORKSPACE%\cache\python-bytecode"
 set "TEMP=%ECHOES_CINEMA_WORKSPACE%\temp"
 set "TMP=%TEMP%"
 set "TMPDIR=%TEMP%"
+set "EVIDENCE_ZIP=%ECHOES_CINEMA_WORKSPACE%\proofs\evidence\latest-p0-evidence.zip"
+set "EVIDENCE_PYTHON=%ECHOES_CINEMA_WORKSPACE%\.venv-cinema\Scripts\python.exe"
 
 for %%D in (
   "%ECHOES_CINEMA_WORKSPACE%"
@@ -35,6 +37,7 @@ for %%D in (
   "%NUMBA_CACHE_DIR%"
   "%PYTHONPYCACHEPREFIX%"
   "%TEMP%"
+  "%ECHOES_CINEMA_WORKSPACE%\proofs\evidence"
 ) do if not exist "%%~D" mkdir "%%~D"
 
 echo.
@@ -43,6 +46,7 @@ echo  ECHOES CINEMA - FIRST REAL AI CLIP
 echo  STORAGE ROOT: D:\A.I\EchoesCinema
 echo  DRIVE C: STORAGE: DISABLED
 echo  SAFE CLEANUP: BEFORE AND AFTER EVERY RUN
+echo  AUTOMATIC EVIDENCE ZIP: ENABLED
 echo ============================================================
 echo.
 
@@ -63,12 +67,27 @@ set "CLEANUP_EXIT=%ERRORLEVEL%"
 if not "%CLEANUP_EXIT%"=="0" echo WARNING: post-run cleanup reported an error.
 
 echo.
+echo Collecting one portable P0 evidence ZIP ...
+if not exist "%EVIDENCE_PYTHON%" set "EVIDENCE_PYTHON=D:\A.I\Python310\python.exe"
+if exist "%EVIDENCE_PYTHON%" (
+  "%EVIDENCE_PYTHON%" "%~dp0tools\cinema_p0_evidence_bundle.py" ^
+    --workspace "%ECHOES_CINEMA_WORKSPACE%" ^
+    --proof-dir "%ECHOES_CINEMA_WORKSPACE%\proofs\first-real-ai-clip" ^
+    --output "%EVIDENCE_ZIP%"
+  set "EVIDENCE_EXIT=%ERRORLEVEL%"
+  if not "%EVIDENCE_EXIT%"=="0" echo WARNING: P0 evidence bundle collection failed.
+) else (
+  echo WARNING: no D-drive Python executable was available for evidence collection.
+)
+
+echo.
 if not "%EXIT_CODE%"=="0" (
-  echo ECHOES CINEMA FAILED - read the exact blocker above.
+  echo ECHOES CINEMA FAILED - the evidence ZIP contains the first blocker and logs.
 ) else (
   echo ECHOES CINEMA REAL AI PROOF PASS.
   echo Video folder: D:\A.I\EchoesCinema\proofs\first-real-ai-clip
 )
+echo Evidence ZIP: %EVIDENCE_ZIP%
 echo.
 pause
 exit /b %EXIT_CODE%
