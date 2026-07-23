@@ -111,16 +111,21 @@ class DurableJobRegistry(base.JobRegistry):
             if terminal not in {"PASS", "FAILED", "BROKEN"}:
                 terminal = "BROKEN"
                 result = {**result, "error": "job ended without a terminal truth status"}
+            terminal_fields = dict(result)
+            for reserved in ("jobId", "status", "attempt", "createdAt", "updatedAt", "finishedAt"):
+                terminal_fields.pop(reserved, None)
             with self.ledger_lock:
-                self.ledger.transition(job_id, terminal, attempt=attempt, **result)
+                self.ledger.transition(job_id, terminal, attempt=attempt, **terminal_fields)
         except BaseException as error:
             with self.ledger_lock:
-                self.ledger.transition(
-                    job_id,
-                    "BROKEN",
-                    attempt=attempt,
-                    error=f"durable job worker crashed: {error}",
-                )
+                current = self.ledger.get(job_id)
+                if current and current.get("status") not in {"PASS", "FAILED", "BROKEN"}:
+                    self.ledger.transition(
+                        job_id,
+                        "BROKEN",
+                        attempt=attempt,
+                        error=f"durable job worker crashed: {error}",
+                    )
             raise
 
 
