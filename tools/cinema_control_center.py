@@ -33,8 +33,8 @@ h1 { margin: 0; font-size: clamp(28px, 5vw, 48px); letter-spacing: .04em; }
 .detail { color: #b9c2d0; font-size: 13px; margin-top: 8px; line-height: 1.45; overflow-wrap: anywhere; }
 .badge { display: inline-block; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
 .PASS,.REAL,.READY { background:#113d2a; color:#72f2b2; }
-.PARTIAL,.MISSING,.DORMANT,.LOADING,.RETRY_WAIT,.WAITING_PROVIDER,.RENDERING { background:#49390d; color:#ffd978; }
-.FAILED,.BROKEN { background:#501a20; color:#ff98a4; }
+.PARTIAL,.MISSING,.DORMANT,.LOADING,.RETRY_WAIT,.WAITING_PROVIDER,.RENDERING,.WAITING_STORAGE { background:#49390d; color:#ffd978; }
+.FAILED,.BROKEN,.BLOCKED { background:#501a20; color:#ff98a4; }
 .QUEUED,.RUNNING,.RECOVERABLE { background:#153c5a; color:#91d8ff; }
 section { margin-top: 18px; }
 pre { white-space: pre-wrap; word-break: break-word; background:#0c1018; border:1px solid #222b3c; border-radius:12px; padding:16px; color:#c8d0dc; max-height:360px; overflow:auto; }
@@ -62,7 +62,7 @@ footer { color:#778399; margin-top:24px; font-size:12px; }
   <div class="label">Recent jobs</div>
   <pre id="jobs">No jobs yet.</pre>
 </section>
-<footer>Refreshes every 2 seconds. Automatic recovery uses bounded backoff. Protected render APIs still require authentication.</footer>
+<footer>Refreshes every 2 seconds. Automatic recovery retries only transient failures; permanent blockers stop safely instead of looping forever. Protected render APIs still require authentication.</footer>
 </main>
 <script>
 const byId = id => document.getElementById(id);
@@ -80,7 +80,7 @@ async function refresh() {
     byId('provider').innerHTML = badge(p.status || 'PARTIAL');
     byId('providerDetail').textContent = `${text(p.modelId, 'model not loaded')} · ${text(p.gpuName, 'GPU pending')}`;
     byId('recovery').innerHTML = badge(p.loadState || 'MISSING');
-    byId('recoveryDetail').textContent = `retry ${text(p.recoveryCount, 0)} · cache ${giB(p.modelCacheGiB)} · next ${text(p.nextRetryUtc, 'not scheduled')}`;
+    byId('recoveryDetail').textContent = `${text(p.failureClass, 'no failure')} · retry ${text(p.recoveryCount, 0)} · cache ${giB(p.modelCacheGiB)} · free ${giB(p.workspaceFreeGiB)} / min ${giB(p.minimumFreeGiB)} · next ${text(p.nextRetryUtc, 'not scheduled')}`;
     const a = data.autopilot || {};
     byId('autopilot').innerHTML = badge(a.status || 'MISSING');
     byId('autopilotDetail').textContent = `${text(a.phase, 'NOT_STARTED')} · ${text(a.message, 'No status yet')}`;
@@ -169,9 +169,16 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
             "lastLoadError": provider.get("lastLoadError"),
             "loadState": provider.get("loadState") or ("READY" if provider.get("realModelLoaded") else "LOADING"),
             "recoveryCount": int(provider.get("recoveryCount", 0) or 0),
+            "consecutiveSameFailure": int(provider.get("consecutiveSameFailure", 0) or 0),
+            "failureClass": provider.get("failureClass"),
+            "retryable": provider.get("retryable"),
+            "operatorAction": provider.get("operatorAction"),
             "nextRetryUtc": provider.get("nextRetryUtc"),
             "lastAttemptUtc": provider.get("lastAttemptUtc"),
+            "blockedSinceUtc": provider.get("blockedSinceUtc"),
             "modelCacheGiB": provider.get("modelCacheGiB"),
+            "workspaceFreeGiB": provider.get("workspaceFreeGiB"),
+            "minimumFreeGiB": provider.get("minimumFreeGiB"),
             "automaticRetry": provider.get("automaticRetry") is True,
             "operatorRestartRequired": provider.get("operatorRestartRequired") is True,
         }
@@ -186,8 +193,14 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
             "lastLoadError": provider_error,
             "loadState": "CONNECTING",
             "recoveryCount": 0,
+            "consecutiveSameFailure": 0,
+            "failureClass": "PROVIDER_UNREACHABLE",
+            "retryable": True,
+            "operatorAction": "No action is required while the supervisor restarts the provider worker.",
             "nextRetryUtc": None,
             "modelCacheGiB": None,
+            "workspaceFreeGiB": None,
+            "minimumFreeGiB": None,
             "automaticRetry": True,
             "operatorRestartRequired": False,
         }
@@ -201,6 +214,7 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
     }
     autopilot_status = str(autopilot.get("status") or "MISSING")
     load_state = str(provider_summary.get("loadState") or "")
+    operator_action = str(provider_summary.get("operatorAction") or "").strip()
 
     if autopilot_status == "REAL":
         next_action = "The first REAL AI clip is complete. Open the P0 proof MP4 and validate it visually."
@@ -208,8 +222,14 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
     elif accepting_real:
         next_action = "The real provider is ready. P0 autopilot is rendering or verifying the resumable proof."
         status = "PARTIAL"
+    elif load_state == "BLOCKED":
+        next_action = operator_action or "The provider stopped a permanent retry loop. Inspect the exact blocker below."
+        status = "PARTIAL"
+    elif load_state == "WAITING_STORAGE":
+        next_action = operator_action or "Free space on drive D:. Recovery will continue automatically."
+        status = "PARTIAL"
     elif load_state == "RETRY_WAIT":
-        next_action = "No action is required. Model recovery is waiting safely and will retry automatically."
+        next_action = operator_action or "No action is required. A transient model failure will retry automatically."
         status = "PARTIAL"
     elif load_state == "LOADING":
         next_action = "No action is required. The model is loading or downloading on D: and P0 will start automatically."
@@ -243,7 +263,7 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
 
 
 class ControlCenterHandler(durable.DurableHandler):
-    server_version = "EchoesCinemaControlCenter/1.2"
+    server_version = "EchoesCinemaControlCenter/1.3"
 
     def send_html(self, status: int, body: str) -> None:
         payload = body.encode("utf-8")
@@ -279,9 +299,11 @@ def self_test() -> int:
     assert "Protected render APIs still require authentication" in DASHBOARD_HTML
     assert "P0 autopilot" in DASHBOARD_HTML
     assert "Model recovery" in DASHBOARD_HTML
-    assert "retry" in DASHBOARD_HTML
+    assert "failureClass" in DASHBOARD_HTML
+    assert "workspaceFreeGiB" in DASHBOARD_HTML
+    assert "permanent blockers stop safely" in DASHBOARD_HTML
     assert "localhost refused" not in DASHBOARD_HTML.lower()
-    print("CinemaControlCenter PASS loopback=protected p0=visible model-recovery=visible polling=enabled")
+    print("CinemaControlCenter PASS loopback=protected p0=visible blocker-classification=visible polling=enabled")
     return 0
 
 
