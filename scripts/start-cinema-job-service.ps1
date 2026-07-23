@@ -6,15 +6,12 @@ param(
     [string]$ProviderToken,
 
     [Parameter(Mandatory = $true)]
-    [string]$ManifestCli,
-
-    [Parameter(Mandatory = $true)]
     [string]$SectionsRoot,
 
-    [Parameter(Mandatory = $true)]
-    [string]$OutputRoot,
-
+    [string]$OutputRoot = "D:\A.I\EchoesCinema\jobs",
     [string]$AudioRoot = "",
+    [string]$ManifestCli = "",
+    [string]$PythonExecutable = "D:\A.I\EchoesCinema\.venv-cinema\Scripts\python.exe",
     [string]$ProviderEndpoint = "http://127.0.0.1:8081/v1/render",
     [string]$ProviderHealthUrl = "http://127.0.0.1:8081/health",
     [string]$ProviderAllowlist = "127.0.0.1,localhost",
@@ -25,32 +22,47 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 
-if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-    throw "Python is not available in PATH"
+function Resolve-RequiredPath {
+    param(
+        [string]$Path,
+        [string]$Label,
+        [switch]$Container
+    )
+    $pathType = if ($Container) { "Container" } else { "Leaf" }
+    if (-not (Test-Path -LiteralPath $Path -PathType $pathType)) {
+        throw "$Label not found: $Path"
+    }
+    return (Resolve-Path -LiteralPath $Path).Path
 }
-if (-not (Test-Path $ManifestCli)) {
-    throw "RenderManifestCli not found: $ManifestCli"
-}
-if (-not (Test-Path $SectionsRoot -PathType Container)) {
-    throw "Sections root not found: $SectionsRoot"
-}
-if ($AudioRoot -and -not (Test-Path $AudioRoot -PathType Container)) {
-    throw "Audio root not found: $AudioRoot"
-}
+
 if ($Port -le 0 -or $Port -gt 65535) {
     throw "Port must be between 1 and 65535"
 }
 if ($MaxWorkers -le 0) {
     throw "MaxWorkers must be positive"
 }
-
-$service = Join-Path $PSScriptRoot "..\tools\cinema_job_service.py"
-if (-not (Test-Path $service)) {
-    throw "Cinema job service not found: $service"
+if ($ProviderTimeout -le 0) {
+    throw "ProviderTimeout must be positive"
 }
 
-New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
+$python = Resolve-RequiredPath -Path $PythonExecutable -Label "Cinema Python"
+$sections = Resolve-RequiredPath -Path $SectionsRoot -Label "Sections root" -Container
+$audio = if ($AudioRoot) { Resolve-RequiredPath -Path $AudioRoot -Label "Audio root" -Container } else { "" }
+$manifest = if ($ManifestCli) { Resolve-RequiredPath -Path $ManifestCli -Label "RenderManifestCli" } else { "" }
+
+$output = [System.IO.Path]::GetFullPath($OutputRoot)
+$outputDrive = [System.IO.Path]::GetPathRoot($output)
+if (-not $outputDrive -or $outputDrive.TrimEnd("\").ToUpperInvariant() -eq "C:") {
+    throw "Cinema job output must not use drive C:. Current path: $output"
+}
+New-Item -ItemType Directory -Path $output -Force | Out-Null
+
+$service = (Resolve-Path (Join-Path $PSScriptRoot "..\tools\cinema_job_service_durable.py")).Path
+if (-not (Test-Path -LiteralPath $service -PathType Leaf)) {
+    throw "Durable Cinema job service not found: $service"
+}
 
 $env:ECHOES_CINEMA_SERVICE_TOKEN = $ServiceToken
 $env:ECHOES_RENDER_TOKEN = $ProviderToken
@@ -63,21 +75,25 @@ $arguments = @(
     "--host", $HostAddress,
     "--port", "$Port",
     "--token", $ServiceToken,
-    "--manifest-cli", (Resolve-Path $ManifestCli).Path,
-    "--sections-root", (Resolve-Path $SectionsRoot).Path,
-    "--output-root", (Resolve-Path $OutputRoot).Path,
+    "--sections-root", $sections,
+    "--output-root", $output,
     "--provider-timeout", "$ProviderTimeout",
     "--max-workers", "$MaxWorkers"
 )
-if ($AudioRoot) {
-    $arguments += @("--audio-root", (Resolve-Path $AudioRoot).Path)
+if ($audio) {
+    $arguments += @("--audio-root", $audio)
+}
+if ($manifest) {
+    $arguments += @("--manifest-cli", $manifest)
 }
 
-Write-Host "Starting Echoes Cinema job service on http://${HostAddress}:$Port"
+Write-Host "Starting restart-safe Echoes Cinema service on http://${HostAddress}:$Port"
 Write-Host "Provider endpoint: $ProviderEndpoint"
-Write-Host "Sections root: $SectionsRoot"
-Write-Host "Output root: $OutputRoot"
-Write-Host "Tokens are stored only in this process environment and are not printed."
+Write-Host "Sections root: $sections"
+Write-Host "Output root: $output"
+Write-Host "Durable ledger: $(Join-Path $output '_service\job-ledger.json')"
+Write-Host "Manifest generator: $(if ($manifest) { 'native CLI' } else { 'compiler-free Python' })"
+Write-Host "Tokens remain only in this process environment and are not printed."
 
-& python @arguments
+& $python @arguments
 exit $LASTEXITCODE
