@@ -65,40 +65,56 @@ jobs:
           resume_worker = Path("tools/resumable_http_render_worker.py").read_text(encoding="utf-8")
           launcher = Path("scripts/start-cinema-job-service.ps1").read_text(encoding="utf-8")
 
-          assert 'SCHEMA = "echoes.cinema-job-ledger.v1"' in ledger
-          assert 'EVENT_SCHEMA = "echoes.cinema-job-ledger-event.v1"' in ledger
-          assert 'os.replace(temp_path, path)' in ledger
-          assert 'os.fsync(handle.fileno())' in ledger
-          assert '"RECOVERABLE"' in ledger
-          assert 'service restarted before a terminal result was recorded' in ledger
-          assert 'invalid Cinema job transition' in ledger
-          assert 'Cinema job ledger is unreadable or corrupt' in ledger
-          assert 'TERMINAL_STATUSES = {"PASS", "FAILED", "BROKEN"}' in ledger
-
-          assert 'class DurableJobRegistry(base.JobRegistry)' in service
-          assert 'resumeRecovered' in service
-          assert 'actionRequired' in service
-          assert '"/v1/cinema/jobs"' in service
-          assert 'job-ledger.json' in service
-          assert 'self.ledger.transition' in service
-          assert 'terminal_fields.pop(reserved, None)' in service
-          assert 'No interrupted job is silently lost' in service
-          assert 'self.resume_requested: set[str]' in service
-          assert 'def _run_resume_job' in service
-          assert '"--resume"' in service
-          assert 'resumeRequested=resume_existing' in service
-          assert 'SHA-256/media-validated clips' in service
-
-          assert 'resumable_http_render_worker.py' in runner
-          assert '"--resume"' in runner
-          assert 'REUSED_VALIDATED' in resume_worker
-          assert 'SHA256_AND_MEDIA_QC_VALIDATED' in resume_worker
-          assert 'os.replace(temp_path, path)' in resume_worker
-
-          assert 'D:\\A.I\\EchoesCinema\\jobs' in launcher
-          assert 'D:\\A.I\\EchoesCinema\\.venv-cinema\\Scripts\\python.exe' in launcher
-          assert 'cinema_job_service_durable.py' in launcher
-          assert 'Cinema job output must not use drive C:' in launcher
-          assert 'compiler-free Python' in launcher
-          assert 'job-ledger.json' in launcher
+          required = {
+              "ledger": [
+                  'SCHEMA = "echoes.cinema-job-ledger.v1"',
+                  'EVENT_SCHEMA = "echoes.cinema-job-ledger-event.v1"',
+                  'os.replace(temp_path, path)',
+                  'os.fsync(handle.fileno())',
+                  '"RECOVERABLE"',
+                  'service restarted before a terminal result was recorded',
+                  'invalid Cinema job transition',
+                  'Cinema job ledger is unreadable or corrupt',
+                  'TERMINAL_STATUSES = {"PASS", "FAILED", "BROKEN"}',
+              ],
+              "service": [
+                  'class DurableJobRegistry(base.JobRegistry)',
+                  'resumeRecovered',
+                  'actionRequired',
+                  '"/v1/cinema/jobs"',
+                  'job-ledger.json',
+                  'self.ledger.transition',
+                  'terminal_fields.pop(reserved, None)',
+                  'interrupted job is silently lost',
+                  'self.resume_requested: set[str]',
+                  'def _run_resume_job',
+                  '"--resume"',
+                  'resumeRequested=resume_existing',
+                  'SHA-256/media-validated clips',
+              ],
+              "runner": ['resumable_http_render_worker.py', '"--resume"'],
+              "resume_worker": [
+                  'REUSED_VALIDATED',
+                  'SHA256_AND_MEDIA_QC_VALIDATED',
+                  'os.replace(temp_path, path)',
+              ],
+              "launcher": [
+                  'D:\\A.I\\EchoesCinema\\jobs',
+                  'D:\\A.I\\EchoesCinema\\.venv-cinema\\Scripts\\python.exe',
+                  'cinema_job_service_durable.py',
+                  'Cinema job output must not use drive C:',
+                  'compiler-free Python',
+                  'job-ledger.json',
+              ],
+          }
+          sources = {
+              "ledger": ledger,
+              "service": service,
+              "runner": runner,
+              "resume_worker": resume_worker,
+              "launcher": launcher,
+          }
+          for name, tokens in required.items():
+              for token in tokens:
+                  assert token in sources[name], f"{name} missing durable contract token: {token}"
           print("Durable Cinema ledger, evidence resume, restart safety, and D-drive launcher contract PASS")
