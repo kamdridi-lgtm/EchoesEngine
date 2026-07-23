@@ -1,0 +1,72 @@
+name: Echoes Cinema Active Provider Bootstrap
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  active-provider-bootstrap-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout active bootstrap sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/bootstrap-cinema-ai.ps1
+            providers/modelscope_low_vram_provider.py
+            providers/modelscope_low_vram_provider_v2.py
+            tools/cinema_p0_preflight.py
+          sparse-checkout-cone-mode: false
+
+      - name: Parse bootstrap PowerShell
+        shell: pwsh
+        run: |
+          $content = Get-Content "scripts/bootstrap-cinema-ai.ps1" -Raw
+          [void][scriptblock]::Create($content)
+          Write-Host "Cinema bootstrap PowerShell syntax PASS"
+
+      - name: Compile active provider and preflight
+        run: |
+          python3 -m py_compile \
+            providers/modelscope_low_vram_provider.py \
+            providers/modelscope_low_vram_provider_v2.py \
+            tools/cinema_p0_preflight.py
+
+      - name: Run active provider and preflight self-tests
+        run: |
+          python3 providers/modelscope_low_vram_provider.py --self-test
+          python3 tools/cinema_p0_preflight.py --self-test
+
+      - name: Verify local bootstrap uses the active P0 path
+        shell: python
+        run: |
+          from pathlib import Path
+
+          bootstrap = Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8")
+          required = [
+              '$lowVramProvider = Join-Path $repoRoot "providers\\modelscope_low_vram_provider.py"',
+              '$p0Preflight = Join-Path $repoRoot "tools\\cinema_p0_preflight.py"',
+              '& $python -m py_compile $provider $proofProvider $lowVramProvider $p0Preflight $service $runner',
+              '& $python $lowVramProvider --self-test',
+              'throw "Active low-VRAM provider self-test failed"',
+              '& $python $p0Preflight --self-test',
+              'throw "Cinema P0 preflight self-test failed"',
+              r'D:\A.I\EchoesCinema\.venv-cinema',
+              r'D:\A.I\Python310',
+          ]
+          for token in required:
+              assert token in bootstrap, f"bootstrap missing active P0 token: {token}"
+          assert "Visual Studio 17 2022" not in bootstrap
+          assert "Join-Path $env:USERPROFILE" not in bootstrap
+          print("Active low-VRAM provider local bootstrap contract PASS")
