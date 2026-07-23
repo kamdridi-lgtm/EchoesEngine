@@ -123,7 +123,7 @@ $fallbackPython = "D:\A.I\Python310\python.exe"
 $statusPath = Join-Path $runtimeRoot "provider-worker-status.json"
 $pidPath = Join-Path $runtimeRoot "provider.pid"
 $provider = Join-Path $RepoRoot "providers\modelscope_low_vram_provider.py"
-$mockProvider = Join-Path $RepoRoot "tests\mock_render_provider.py"
+$mockProvider = Join-Path $RepoRoot "tests\mock_health_provider.py"
 $bootstrap = Join-Path $RepoRoot "scripts\bootstrap-cinema-ai.ps1"
 
 foreach ($directory in @(
@@ -178,20 +178,13 @@ try {
         if (-not (Test-Path -LiteralPath $mockProvider -PathType Leaf)) {
             throw "Mock contract provider not found: $mockProvider"
         }
-        if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
-            throw "FFmpeg is required by the mock contract provider"
-        }
-
         $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
         $stdoutLog = Join-Path $logsRoot "provider-mock-$stamp.log"
         $stderrLog = Join-Path $logsRoot "provider-mock-$stamp.error.log"
         $arguments = @(
             $mockProvider,
             "--host", "127.0.0.1",
-            "--port", "$ProviderPort",
-            "--width", "320",
-            "--height", "180",
-            "--fps", "12"
+            "--port", "$ProviderPort"
         )
         $providerProcess = Start-Process -FilePath $mockPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
         $exitCode = Wait-ProviderProcess -Process $providerProcess -StatusPath $statusPath -Mode $resolvedMode -Port $ProviderPort -StdoutLog $stdoutLog -StderrLog $stderrLog -Workspace $workspace
