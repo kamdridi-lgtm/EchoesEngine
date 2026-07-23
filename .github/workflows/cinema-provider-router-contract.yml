@@ -1,0 +1,190 @@
+name: Echoes Cinema Provider Router
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  provider-router-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout routing policy sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/cinema_provider_router.py
+            tools/render_capabilities.py
+          sparse-checkout-cone-mode: false
+
+      - name: Compile routing policy
+        run: python3 -m py_compile tools/cinema_provider_router.py tools/render_capabilities.py
+
+      - name: Run routing policy self-tests
+        run: |
+          python3 tools/render_capabilities.py
+          python3 tools/cinema_provider_router.py --self-test
+
+      - name: Exercise proof and commercial routes through the CLI
+        shell: bash
+        run: |
+          cat > catalog.json <<'JSON'
+          {
+            "schema": "echoes.cinema-provider-catalog.v1",
+            "providers": [
+              {
+                "name": "local-proof",
+                "scope": "proof",
+                "location": "local",
+                "endpoint": "http://127.0.0.1:8081/v1/render",
+                "tokenEnv": "ECHOES_LOCAL_PROOF_TOKEN",
+                "priority": 100,
+                "expectedModelId": "proof-model",
+                "expectedModelRevision": "proof-revision",
+                "pricing": {"billingMode": "local"}
+              },
+              {
+                "name": "remote-commercial",
+                "scope": "commercial",
+                "location": "remote",
+                "endpoint": "https://cinema.example.test/v1/render",
+                "tokenEnv": "ECHOES_REMOTE_COMMERCIAL_TOKEN",
+                "priority": 80,
+                "expectedModelId": "commercial-model",
+                "expectedModelRevision": "commercial-revision",
+                "pricing": {
+                  "billingMode": "metered",
+                  "fixedUsd": 0.25,
+                  "usdPerSecond": 0.05,
+                  "verified": true
+                }
+              }
+            ]
+          }
+          JSON
+
+          cat > health.json <<'JSON'
+          {
+            "local-proof": {
+              "schema": "echoes.render-provider-health.v1",
+              "status": "PASS",
+              "realModelLoaded": true,
+              "modelId": "proof-model",
+              "modelRevision": "proof-revision",
+              "commercialUseAllowed": false,
+              "license": "NON_COMMERCIAL_TEST",
+              "capabilities": {
+                "textToVideo": true,
+                "referenceImage": false,
+                "subjectIdentity": false
+              }
+            },
+            "remote-commercial": {
+              "schema": "echoes.render-provider-health.v1",
+              "status": "PASS",
+              "realModelLoaded": true,
+              "modelId": "commercial-model",
+              "modelRevision": "commercial-revision",
+              "commercialUseAllowed": true,
+              "license": "COMMERCIAL_TEST",
+              "capabilities": {
+                "textToVideo": true,
+                "referenceImage": true,
+                "subjectIdentity": true
+              }
+            }
+          }
+          JSON
+
+          python3 tools/cinema_provider_router.py \
+            --catalog catalog.json \
+            --health-evidence health.json \
+            --usage proof \
+            --duration-seconds 4 \
+            --max-cost-usd 0 \
+            --output proof-route.json
+
+          python3 tools/cinema_provider_router.py \
+            --catalog catalog.json \
+            --health-evidence health.json \
+            --usage commercial \
+            --duration-seconds 10 \
+            --max-cost-usd 1 \
+            --require-capability subjectIdentity \
+            --output commercial-route.json
+
+          set +e
+          python3 tools/cinema_provider_router.py \
+            --catalog catalog.json \
+            --health-evidence health.json \
+            --usage commercial \
+            --duration-seconds 10 \
+            --max-cost-usd 0.5 \
+            --output blocked-route.json
+          blocked_exit=$?
+          set -e
+          test "$blocked_exit" -eq 2
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          proof = json.loads(Path("proof-route.json").read_text())
+          commercial = json.loads(Path("commercial-route.json").read_text())
+          blocked = json.loads(Path("blocked-route.json").read_text())
+
+          assert proof["decision"] == "ROUTE_SELECTED"
+          assert proof["selectedProvider"]["name"] == "local-proof"
+          assert proof["selectedProvider"]["estimatedCostUsd"] == 0.0
+          assert proof["classification"] == "CANDIDATE_ONLY"
+          assert proof["renderCompleted"] is False
+
+          assert commercial["decision"] == "ROUTE_SELECTED"
+          assert commercial["selectedProvider"]["name"] == "remote-commercial"
+          assert commercial["selectedProvider"]["estimatedCostUsd"] == 0.75
+          assert commercial["selectedProvider"]["budgetRemainingUsd"] == 0.25
+          assert commercial["selectedProvider"]["commercialUseAllowed"] is True
+          assert commercial["selectedProvider"]["pricingVerified"] is True
+
+          assert blocked["decision"] == "BLOCKED"
+          assert "exceeds budget" in blocked["evaluations"][1]["blocker"]
+          assert not list(Path(".").glob("*.tmp"))
+          print("Provider routing CLI contract PASS")
+          PY
+
+      - name: Verify fail-closed security and truth boundaries
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("tools/cinema_provider_router.py").read_text(encoding="utf-8")
+          required = [
+              "CANDIDATE_ONLY",
+              "selectionOnly",
+              "renderCompleted",
+              "remote providers require HTTPS",
+              "local provider must target loopback",
+              "commercial providers require exact model id and revision",
+              "remote pricing must be explicitly verified",
+              "estimated cost",
+              "exceeds budget",
+              "require_commercial_use=usage == \"commercial\"",
+              "model revision mismatch",
+              "commercial provider health has no license declaration",
+              "os.replace",
+          ]
+          for token in required:
+              assert token in source, f"provider router missing contract token: {token}"
+          assert "print(token" not in source
+          assert "realModelLoadedByRouter\": True" not in source
+          print("Provider routing security and truth contract PASS")
