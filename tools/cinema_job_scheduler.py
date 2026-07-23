@@ -14,10 +14,12 @@ import queue
 import shutil
 import tempfile
 import threading
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
+
+
+STOP_JOB_ID = "__ECHOES_SCHEDULER_STOP__"
 
 
 class StorageAdmissionError(RuntimeError):
@@ -28,7 +30,7 @@ class StorageAdmissionError(RuntimeError):
 class _PriorityItem:
     sort_key: tuple[int, int]
     job_id: str = field(compare=False)
-    function: Callable[..., Any] = field(compare=False)
+    function: Callable[..., Any] | None = field(compare=False)
     args: tuple[Any, ...] = field(compare=False)
     kwargs: dict[str, Any] = field(compare=False)
 
@@ -111,11 +113,12 @@ class PriorityJobScheduler:
             minimum_free_bytes=minimum_free_bytes,
             free_space_provider=free_space_provider,
         )
-        self._queue: queue.PriorityQueue[_PriorityItem | None] = queue.PriorityQueue()
+        self._queue: queue.PriorityQueue[_PriorityItem] = queue.PriorityQueue()
         self._lock = threading.RLock()
         self._sequence = 0
         self._queued: dict[str, dict[str, Any]] = {}
         self._running: dict[str, dict[str, Any]] = {}
+        self._failures: dict[str, str] = {}
         self._closed = False
         self._workers = [
             threading.Thread(target=self._worker, name=f"echoes-cinema-priority-{index + 1}", daemon=True)
@@ -204,7 +207,7 @@ class PriorityJobScheduler:
     def _worker(self) -> None:
         while True:
             item = self._queue.get()
-            if item is None:
+            if item.job_id == STOP_JOB_ID:
                 self._queue.task_done()
                 return
             with self._lock:
@@ -213,10 +216,17 @@ class PriorityJobScheduler:
                     "priority": -item.sort_key[0],
                     "sequence": item.sort_key[1],
                 }
-                running = {**queued, "status": "RUNNING"}
-                self._running[item.job_id] = running
+                self._running[item.job_id] = {**queued, "status": "RUNNING"}
             try:
+                if item.function is None:
+                    raise RuntimeError("scheduler received a job without a function")
                 item.function(*item.args, **item.kwargs)
+            except BaseException as error:  # noqa: BLE001 - scheduler must survive a failed worker task
+                with self._lock:
+                    self._failures[item.job_id] = f"{type(error).__name__}: {error}"
+                    if len(self._failures) > 20:
+                        oldest = next(iter(self._failures))
+                        self._failures.pop(oldest, None)
             finally:
                 with self._lock:
                     self._running.pop(item.job_id, None)
@@ -238,6 +248,7 @@ class PriorityJobScheduler:
                 "runningCount": len(running),
                 "queuedJobs": queued,
                 "runningJobs": running,
+                "recentWorkerFailures": dict(self._failures),
                 "storage": self.storage.snapshot(),
             }
 
@@ -249,13 +260,21 @@ class PriorityJobScheduler:
             if self._closed:
                 return
             self._closed = True
-        if wait:
-            self._queue.join()
-        for _ in self._workers:
-            self._queue.put(None)
-        if wait:
-            for worker in self._workers:
-                worker.join(timeout=5)
+        if not wait:
+            return
+        self._queue.join()
+        for index in range(len(self._workers)):
+            self._queue.put(
+                _PriorityItem(
+                    sort_key=(10**9, self._sequence + index + 1),
+                    job_id=STOP_JOB_ID,
+                    function=None,
+                    args=(),
+                    kwargs={},
+                )
+            )
+        for worker in self._workers:
+            worker.join(timeout=5)
 
 
 def self_test() -> int:
