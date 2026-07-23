@@ -32,6 +32,7 @@ jobs:
             tools/assemble_render.py
             tools/cinema_job_service.py
             tools/cinema_job_runner.py
+            tools/cinema_p0_preflight.py
             tools/http_render_worker.py
             tools/provider_selector.py
             tools/python_render_manifest.py
@@ -42,7 +43,7 @@ jobs:
             tests/test_cinema_job_service_fail_closed.py
           sparse-checkout-cone-mode: false
 
-      - name: Compile provider, selection, resume, QC, manifest, and service modules
+      - name: Compile provider, preflight, selection, resume, QC, manifest, and service modules
         run: |
           python3 -m py_compile \
             providers/cogvideox_commercial_provider.py \
@@ -52,6 +53,7 @@ jobs:
             tools/assemble_render.py \
             tools/cinema_job_service.py \
             tools/cinema_job_runner.py \
+            tools/cinema_p0_preflight.py \
             tools/http_render_worker.py \
             tools/provider_selector.py \
             tools/python_render_manifest.py \
@@ -61,9 +63,10 @@ jobs:
             tests/test_diffusers_provider_fail_closed.py \
             tests/test_cinema_job_service_fail_closed.py
 
-      - name: Verify compiler-free manifest, capabilities, selection, and resume planner
+      - name: Verify compiler-free manifest, P0 preflight, capabilities, selection, and resume planner
         run: |
           python3 tools/python_render_manifest.py --self-test
+          python3 tools/cinema_p0_preflight.py --self-test
           python3 tools/render_capabilities.py
           python3 tools/provider_selector.py --self-test
           python3 tools/render_resume.py --self-test
@@ -92,7 +95,7 @@ jobs:
             Write-Host "PowerShell syntax PASS: $path"
           }
 
-      - name: Verify D-drive, integrated evidence resume, licensing, and QC contract
+      - name: Verify D-drive, P0 preflight, evidence resume, licensing, and QC contract
         shell: python
         run: |
           from pathlib import Path
@@ -104,6 +107,7 @@ jobs:
               "bootstrap": Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8"),
               "ensure_python": Path("scripts/ensure-python-on-d.ps1").read_text(encoding="utf-8"),
               "runner": Path("tools/cinema_job_runner.py").read_text(encoding="utf-8"),
+              "preflight": Path("tools/cinema_p0_preflight.py").read_text(encoding="utf-8"),
               "service": Path("tools/cinema_job_service.py").read_text(encoding="utf-8"),
               "http": Path("tools/http_render_worker.py").read_text(encoding="utf-8"),
               "resumable": Path("tools/resumable_http_render_worker.py").read_text(encoding="utf-8"),
@@ -118,11 +122,12 @@ jobs:
 
           required_tokens = {
               "launcher": [r"D:\A.I\EchoesCinema", "cleanup-cinema-storage.ps1", "-AfterRun"],
-              "runner_ps": [r"D:\A.I\EchoesCinema", "systemDriveWritesAllowed = $false", "modelscope_low_vram_provider.py", '"--width", "384"', '"--height", "216"', '"--fps", "4"', '"--max-frames", "16"'],
+              "runner_ps": [r"D:\A.I\EchoesCinema", "systemDriveWritesAllowed = $false", "modelscope_low_vram_provider.py", "cinema_p0_preflight.py", "preflight-report.json", '"--width", "384"', '"--height", "216"', '"--fps", "4"', '"--max-frames", "16"'],
               "cleanup": ["cache\\pip", "cache\\huggingface", '".venv-cinema"', '"proofs\\first-real-ai-clip"', "KeepProofArchives = 2", "build-first-real-cli"],
               "bootstrap": [r"D:\A.I\EchoesCinema\.venv-cinema", r"D:\A.I\Python310", '"systemDriveWritesAllowed": False', "ensure-python-on-d.ps1", "Test-PythonModuleImport"],
               "ensure_python": [r"D:\A.I\Python310", '[string]$PythonVersion = "3.10.11"', "Get-AuthenticodeSignature", "Python Software Foundation", "Get-FileHash", "Include_launcher=0"],
               "runner": ["--resume", "resumable_http_render_worker.py", "artifactEvidence", "--require-commercial-use", "reusedTaskCount", "renderedTaskCount"],
+              "preflight": ["echoes.cinema-p0-preflight.v1", "atomic_write_json", "REQUIRED_PACKAGES", "STORAGE_ENV_VARS", "workspace-free-space", "storage-redirection", "provider-port", "nvidia-smi", "systemDriveWritesAllowed", "--require-cuda", "CinemaP0Preflight PASS"],
               "service": ["manifest_cli: Path | None", "acceptingCommercialJobs", "commercialUseRequired"],
               "http": ["validate_provider_health", "--require-commercial-use", "requiredCapabilities", '"sha256": sha256_file(output_path)'],
               "resumable": ["atomic_write_json", "build_plan", "provider_identity", "REUSED_VALIDATED", "SHA256_AND_MEDIA_QC_VALIDATED", "reusedTaskCount", "renderedTaskCount", "provider identity, model revision, license, or capabilities changed", "os.replace(temp_path, path)", "os.fsync(handle.fileno())"],
@@ -145,7 +150,7 @@ jobs:
           assert "3.10.20" not in files["ensure_python"]
           assert "Visual Studio 17 2022" not in files["runner_ps"]
           assert 'Assert-Command "cmake"' not in files["runner_ps"]
-          print("D-drive, integrated evidence resume, cleanup, licensing, SHA-256, and A/V QC contract PASS")
+          print("D-drive, P0 preflight, evidence resume, cleanup, licensing, SHA-256, and A/V QC contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py
