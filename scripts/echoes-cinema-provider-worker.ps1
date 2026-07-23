@@ -2,7 +2,8 @@ param(
     [string]$WorkspaceRoot = "D:\A.I\EchoesCinema",
     [string]$RepoRoot = "",
     [int]$ProviderPort = 8081,
-    [string]$TorchIndexUrl = "https://download.pytorch.org/whl/cu128"
+    [string]$TorchIndexUrl = "https://download.pytorch.org/whl/cu128",
+    [string]$ProviderMode = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,8 +14,81 @@ function Write-AtomicJson {
     $directory = Split-Path -Parent $Path
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     $temporary = "$Path.$PID.tmp"
-    $Payload | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $temporary -Encoding utf8
+    $Payload | ConvertTo-Json -Depth 16 | Set-Content -LiteralPath $temporary -Encoding utf8
     Move-Item -LiteralPath $temporary -Destination $Path -Force
+}
+
+function Test-CinemaEnvironment {
+    param([string]$PythonPath)
+    if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
+        return @{
+            healthy = $false
+            reason = "Cinema virtual-environment Python is missing: $PythonPath"
+        }
+    }
+
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "SilentlyContinue"
+        $probe = & $PythonPath -c "import torch, diffusers, transformers, accelerate, safetensors; assert torch.cuda.is_available(), 'CUDA unavailable'; print(torch.__version__)" 2>&1 | Out-String
+        $exitCode = $LASTEXITCODE
+    } catch {
+        $probe = $_.Exception.Message
+        $exitCode = 1
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+
+    $detail = ([string]$probe).Trim()
+    if ($detail.Length -gt 4000) { $detail = $detail.Substring($detail.Length - 4000) }
+    return @{
+        healthy = ($exitCode -eq 0)
+        reason = if ($exitCode -eq 0) { "CUDA/Diffusers environment is healthy" } elseif ($detail) { $detail } else { "CUDA/Diffusers import probe failed with exit code $exitCode" }
+    }
+}
+
+function Wait-ProviderProcess {
+    param(
+        [System.Diagnostics.Process]$Process,
+        [string]$StatusPath,
+        [string]$Mode,
+        [int]$Port,
+        [string]$StdoutLog,
+        [string]$StderrLog,
+        [string]$Workspace
+    )
+
+    Set-Content -LiteralPath $pidPath -Value $Process.Id -Encoding ascii
+    Write-AtomicJson -Path $StatusPath -Payload @{
+        schema = "echoes.cinema-provider-worker.v1"
+        status = "RUNNING"
+        timestampUtc = [DateTime]::UtcNow.ToString("o")
+        providerMode = $Mode
+        providerPort = $Port
+        providerPid = $Process.Id
+        stdoutLog = $StdoutLog
+        stderrLog = $StderrLog
+        workspace = $Workspace
+        systemDriveWritesAllowed = $false
+    }
+
+    Wait-Process -Id $Process.Id
+    $Process.Refresh()
+    $exitCode = $Process.ExitCode
+    Write-AtomicJson -Path $StatusPath -Payload @{
+        schema = "echoes.cinema-provider-worker.v1"
+        status = if ($exitCode -eq 0) { "STOPPED" } else { "BROKEN" }
+        timestampUtc = [DateTime]::UtcNow.ToString("o")
+        providerMode = $Mode
+        providerPort = $Port
+        providerPid = $Process.Id
+        exitCode = $exitCode
+        stdoutLog = $StdoutLog
+        stderrLog = $StderrLog
+        workspace = $Workspace
+        systemDriveWritesAllowed = $false
+    }
+    return $exitCode
 }
 
 if (-not $RepoRoot) {
@@ -33,15 +107,23 @@ if ($ProviderPort -le 0 -or $ProviderPort -gt 65535) {
     throw "ProviderPort must be between 1 and 65535."
 }
 
+$resolvedMode = if ($ProviderMode) { $ProviderMode } elseif ($env:ECHOES_CINEMA_PROVIDER_MODE) { $env:ECHOES_CINEMA_PROVIDER_MODE } else { "real" }
+$resolvedMode = $resolvedMode.Trim().ToLowerInvariant()
+if ($resolvedMode -notin @("real", "mock-contract")) {
+    throw "ProviderMode must be real or mock-contract. Current value: $resolvedMode"
+}
+
 $runtimeRoot = Join-Path $workspace "runtime"
 $logsRoot = Join-Path $workspace "logs"
 $cacheRoot = Join-Path $workspace "cache"
 $tempRoot = Join-Path $workspace "temp"
 $venvRoot = Join-Path $workspace ".venv-cinema"
 $venvPython = Join-Path $venvRoot "Scripts\python.exe"
+$fallbackPython = "D:\A.I\Python310\python.exe"
 $statusPath = Join-Path $runtimeRoot "provider-worker-status.json"
 $pidPath = Join-Path $runtimeRoot "provider.pid"
 $provider = Join-Path $RepoRoot "providers\modelscope_low_vram_provider.py"
+$mockProvider = Join-Path $RepoRoot "tests\mock_render_provider.py"
 $bootstrap = Join-Path $RepoRoot "scripts\bootstrap-cinema-ai.ps1"
 
 foreach ($directory in @(
@@ -85,32 +167,62 @@ try {
         schema = "echoes.cinema-provider-worker.v1"
         status = "PREPARING"
         timestampUtc = [DateTime]::UtcNow.ToString("o")
+        providerMode = $resolvedMode
         providerPort = $ProviderPort
         workspace = $workspace
         systemDriveWritesAllowed = $false
     }
 
-    if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
-        if (-not (Test-Path -LiteralPath $bootstrap -PathType Leaf)) {
-            throw "Cinema bootstrap not found: $bootstrap"
+    if ($resolvedMode -eq "mock-contract") {
+        $mockPython = if (Test-Path -LiteralPath $venvPython -PathType Leaf) { $venvPython } elseif (Test-Path -LiteralPath $fallbackPython -PathType Leaf) { $fallbackPython } else { "python" }
+        if (-not (Test-Path -LiteralPath $mockProvider -PathType Leaf)) {
+            throw "Mock contract provider not found: $mockProvider"
         }
+        if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+            throw "FFmpeg is required by the mock contract provider"
+        }
+
+        $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+        $stdoutLog = Join-Path $logsRoot "provider-mock-$stamp.log"
+        $stderrLog = Join-Path $logsRoot "provider-mock-$stamp.error.log"
+        $arguments = @(
+            $mockProvider,
+            "--host", "127.0.0.1",
+            "--port", "$ProviderPort",
+            "--width", "320",
+            "--height", "180",
+            "--fps", "12"
+        )
+        $providerProcess = Start-Process -FilePath $mockPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
+        $exitCode = Wait-ProviderProcess -Process $providerProcess -StatusPath $statusPath -Mode $resolvedMode -Port $ProviderPort -StdoutLog $stdoutLog -StderrLog $stderrLog -Workspace $workspace
+        exit $exitCode
+    }
+
+    if (-not (Test-Path -LiteralPath $bootstrap -PathType Leaf)) {
+        throw "Cinema bootstrap not found: $bootstrap"
+    }
+    $environment = Test-CinemaEnvironment -PythonPath $venvPython
+    $bootstrapAttempted = $false
+    if (-not $environment.healthy) {
+        $bootstrapAttempted = $true
         Write-AtomicJson -Path $statusPath -Payload @{
             schema = "echoes.cinema-provider-worker.v1"
             status = "BOOTSTRAPPING"
             timestampUtc = [DateTime]::UtcNow.ToString("o")
+            providerMode = $resolvedMode
             providerPort = $ProviderPort
+            bootstrapReason = $environment.reason
             workspace = $workspace
             systemDriveWritesAllowed = $false
         }
         & powershell -NoProfile -ExecutionPolicy Bypass -File $bootstrap -VenvPath $venvRoot -TorchIndexUrl $TorchIndexUrl
         if ($LASTEXITCODE -ne 0) {
-            throw "Cinema bootstrap failed with exit code $LASTEXITCODE"
+            throw "Cinema bootstrap failed with exit code $LASTEXITCODE. Initial environment blocker: $($environment.reason)"
         }
+        $environment = Test-CinemaEnvironment -PythonPath $venvPython
     }
-
-    & $venvPython -c "import torch, diffusers, transformers, accelerate; assert torch.cuda.is_available(), 'CUDA unavailable'"
-    if ($LASTEXITCODE -ne 0) {
-        throw "Cinema Python exists but CUDA/Diffusers imports are not healthy."
+    if (-not $environment.healthy) {
+        throw "Cinema environment is still unhealthy after bootstrap. $($environment.reason)"
     }
     if (-not (Test-Path -LiteralPath $provider -PathType Leaf)) {
         throw "Low-VRAM provider not found: $provider"
@@ -135,7 +247,9 @@ try {
         schema = "echoes.cinema-provider-worker.v1"
         status = "MODEL_LOADING"
         timestampUtc = [DateTime]::UtcNow.ToString("o")
+        providerMode = $resolvedMode
         providerPort = $ProviderPort
+        bootstrapAttempted = $bootstrapAttempted
         stdoutLog = $stdoutLog
         stderrLog = $stderrLog
         workspace = $workspace
@@ -143,34 +257,7 @@ try {
     }
 
     $providerProcess = Start-Process -FilePath $venvPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
-    Set-Content -LiteralPath $pidPath -Value $providerProcess.Id -Encoding ascii
-    Write-AtomicJson -Path $statusPath -Payload @{
-        schema = "echoes.cinema-provider-worker.v1"
-        status = "RUNNING"
-        timestampUtc = [DateTime]::UtcNow.ToString("o")
-        providerPort = $ProviderPort
-        providerPid = $providerProcess.Id
-        stdoutLog = $stdoutLog
-        stderrLog = $stderrLog
-        workspace = $workspace
-        systemDriveWritesAllowed = $false
-    }
-
-    Wait-Process -Id $providerProcess.Id
-    $providerProcess.Refresh()
-    $exitCode = $providerProcess.ExitCode
-    Write-AtomicJson -Path $statusPath -Payload @{
-        schema = "echoes.cinema-provider-worker.v1"
-        status = if ($exitCode -eq 0) { "STOPPED" } else { "BROKEN" }
-        timestampUtc = [DateTime]::UtcNow.ToString("o")
-        providerPort = $ProviderPort
-        providerPid = $providerProcess.Id
-        exitCode = $exitCode
-        stdoutLog = $stdoutLog
-        stderrLog = $stderrLog
-        workspace = $workspace
-        systemDriveWritesAllowed = $false
-    }
+    $exitCode = Wait-ProviderProcess -Process $providerProcess -StatusPath $statusPath -Mode $resolvedMode -Port $ProviderPort -StdoutLog $stdoutLog -StderrLog $stderrLog -Workspace $workspace
     exit $exitCode
 }
 catch {
@@ -178,6 +265,7 @@ catch {
         schema = "echoes.cinema-provider-worker.v1"
         status = "BROKEN"
         timestampUtc = [DateTime]::UtcNow.ToString("o")
+        providerMode = $resolvedMode
         providerPort = $ProviderPort
         error = $_.Exception.Message
         workspace = $workspace
