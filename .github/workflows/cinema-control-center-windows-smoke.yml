@@ -28,7 +28,7 @@ jobs:
             scripts/start-echoes-cinema-stack.ps1
             scripts/stop-echoes-cinema-stack.ps1
             tests/fixtures/first_real_clip_sections.csv
-            tests/mock_render_provider.py
+            tests/mock_health_provider.py
             tools/assemble_render.py
             tools/cinema_control_center.py
             tools/cinema_job_ledger.py
