@@ -56,78 +56,54 @@ jobs:
             throw "D-drive venv was not created"
           }
 
-      - name: Start stack through the real Windows launcher logic
-        shell: pwsh
-        run: |
-          # GitHub normally kills child processes after each step. Clearing this
-          # CI-only marker lets the real supervisor survive into the verification step.
-          $env:RUNNER_TRACKING_ID = ""
-          & .\scripts\start-echoes-cinema-stack.ps1 `
-            -WorkspaceRoot "D:\A.I\EchoesCinema" `
-            -RepoRoot $PWD.Path `
-            -StartupTimeoutSeconds 90 `
-            -NoBrowser
-          if ($LASTEXITCODE -ne 0) { throw "Windows stack launcher failed" }
-
-      - name: Capture Windows stack diagnostics
+      - name: Run the real Windows one-click stack end to end
         shell: pwsh
         run: |
           $diagnostics = Join-Path $env:RUNNER_TEMP "echoes-stack-diagnostics"
           New-Item -ItemType Directory -Path $diagnostics -Force | Out-Null
-          Copy-Item "D:\A.I\EchoesCinema\runtime\stack-state.json" (Join-Path $diagnostics "stack-state.json") -Force
-          $state = Get-Content "D:\A.I\EchoesCinema\runtime\stack-state.json" -Raw | ConvertFrom-Json
-          Invoke-WebRequest -Uri $state.dashboardUrl -UseBasicParsing -TimeoutSec 10 -OutFile (Join-Path $diagnostics "dashboard.html")
-          Invoke-WebRequest -Uri ($state.dashboardUrl.TrimEnd([char]'/') + '/v1/control-center/status') -UseBasicParsing -TimeoutSec 10 -OutFile (Join-Path $diagnostics "status.json")
-          Copy-Item "D:\A.I\EchoesCinema\logs\*" $diagnostics -Force -ErrorAction SilentlyContinue
-          Get-Content (Join-Path $diagnostics "stack-state.json")
-          Get-Content (Join-Path $diagnostics "status.json")
+          $env:RUNNER_TRACKING_ID = ""
+          try {
+            & .\scripts\start-echoes-cinema-stack.ps1 `
+              -WorkspaceRoot "D:\A.I\EchoesCinema" `
+              -RepoRoot $PWD.Path `
+              -StartupTimeoutSeconds 90 `
+              -NoBrowser
+            if ($LASTEXITCODE -ne 0) { throw "Windows stack launcher failed" }
 
-      - name: Verify published stack state
-        shell: python
-        run: |
-          import json
-          import os
-          from pathlib import Path
+            $statePath = "D:\A.I\EchoesCinema\runtime\stack-state.json"
+            if (-not (Test-Path $statePath)) { throw "stack-state.json is missing" }
+            $rawState = Get-Content $statePath -Raw
+            $state = $rawState | ConvertFrom-Json
+            $statusUrl = $state.dashboardUrl.TrimEnd([char]'/') + '/v1/control-center/status'
+            Invoke-WebRequest -Uri $state.dashboardUrl -UseBasicParsing -TimeoutSec 10 -OutFile (Join-Path $diagnostics "dashboard.html")
+            Invoke-WebRequest -Uri $statusUrl -UseBasicParsing -TimeoutSec 10 -OutFile (Join-Path $diagnostics "status.json")
+            Copy-Item $statePath (Join-Path $diagnostics "stack-state.json") -Force
+            Copy-Item "D:\A.I\EchoesCinema\logs\*" $diagnostics -Force -ErrorAction SilentlyContinue
 
-          root = Path(os.environ["RUNNER_TEMP"]) / "echoes-stack-diagnostics"
-          state = json.loads((root / "stack-state.json").read_text(encoding="utf-8-sig"))
-          assert state["schema"] == "echoes.cinema-stack-state.v1"
-          assert state["status"] in {"RUNNING", "PARTIAL"}
-          assert state.get("dashboardUrl")
-          assert isinstance(state.get("servicePid"), int) and state["servicePid"] > 0
-          assert state.get("secretsPersisted") is False
-          assert state.get("systemDriveWritesAllowed") is False
-          print("Published Windows stack state PASS")
+            $dashboard = Get-Content (Join-Path $diagnostics "dashboard.html") -Raw
+            $status = Get-Content (Join-Path $diagnostics "status.json") -Raw | ConvertFrom-Json
+            if ($state.schema -ne "echoes.cinema-stack-state.v1") { throw "stack state schema mismatch" }
+            if ($state.status -notin @("RUNNING", "PARTIAL")) { throw "stack state is not running" }
+            if (-not $state.servicePid) { throw "service PID is missing" }
+            if ($state.secretsPersisted -ne $false) { throw "secretsPersisted must be false" }
+            if ($state.systemDriveWritesAllowed -ne $false) { throw "systemDriveWritesAllowed must be false" }
+            if ($dashboard -notlike "*ECHOES CINEMA*") { throw "localhost dashboard HTML is missing" }
+            if ($status.schema -ne "echoes.cinema-control-center.v1") { throw "control center schema mismatch" }
+            if ($status.service.backend -ne "cinema-durable-control-center") { throw "control center backend mismatch" }
+            if ($rawState -match '(?i)"(?:token|serviceToken|providerToken)"\s*:' -or $rawState -match '(?i)Bearer\s+[A-Za-z0-9._~+\-/=]{16,}') {
+              throw "stack state contains a secret value"
+            }
+            Write-Host "Windows localhost dashboard PASS url=$($state.dashboardUrl) status=$($status.status)"
+          } finally {
+            if (Test-Path .\scripts\stop-echoes-cinema-stack.ps1) {
+              & .\scripts\stop-echoes-cinema-stack.ps1 -WorkspaceRoot "D:\A.I\EchoesCinema" -GraceSeconds 10
+            }
+            if (Test-Path (Join-Path $env:RUNNER_TEMP "echoes-subst-created.txt")) {
+              subst D: /d
+            }
+          }
 
-      - name: Verify localhost dashboard HTTP contract
-        shell: python
-        run: |
-          import json
-          import os
-          from pathlib import Path
-
-          root = Path(os.environ["RUNNER_TEMP"]) / "echoes-stack-diagnostics"
-          html = (root / "dashboard.html").read_text(encoding="utf-8-sig")
-          status = json.loads((root / "status.json").read_text(encoding="utf-8-sig"))
-          assert "ECHOES CINEMA" in html
-          assert status["schema"] == "echoes.cinema-control-center.v1"
-          assert status["status"] in {"PASS", "PARTIAL"}
-          assert status["service"]["backend"] == "cinema-durable-control-center"
-          print("Windows localhost dashboard HTTP PASS")
-
-      - name: Verify stack state contains no secret value
-        shell: python
-        run: |
-          import os
-          import re
-          from pathlib import Path
-
-          raw = (Path(os.environ["RUNNER_TEMP"]) / "echoes-stack-diagnostics" / "stack-state.json").read_text(encoding="utf-8-sig")
-          assert not re.search(r'(?i)"(?:token|serviceToken|providerToken)"\s*:', raw)
-          assert not re.search(r'(?i)Bearer\s+[A-Za-z0-9._~+\-/=]{16,}', raw)
-          print("Windows stack secret persistence guard PASS")
-
-      - name: Upload Windows stack diagnostics
+      - name: Upload Windows stack evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -135,23 +111,3 @@ jobs:
           path: ${{ runner.temp }}/echoes-stack-diagnostics
           if-no-files-found: warn
           retention-days: 3
-
-      - name: Stop stack through the real Windows stop logic
-        if: always()
-        shell: pwsh
-        run: |
-          try {
-            if (Test-Path .\scripts\stop-echoes-cinema-stack.ps1) {
-              & .\scripts\stop-echoes-cinema-stack.ps1 -WorkspaceRoot "D:\A.I\EchoesCinema" -GraceSeconds 10
-            }
-            Start-Sleep -Seconds 2
-            $statePath = "D:\A.I\EchoesCinema\runtime\stack-state.json"
-            if (Test-Path $statePath) {
-              $state = Get-Content $statePath -Raw | ConvertFrom-Json
-              Write-Host "Final stack state: $($state.status)"
-            }
-          } finally {
-            if (Test-Path (Join-Path $env:RUNNER_TEMP "echoes-subst-created.txt")) {
-              subst D: /d
-            }
-          }
