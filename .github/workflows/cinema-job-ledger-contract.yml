@@ -19,32 +19,51 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Checkout durable ledger
+      - name: Checkout durable service sources
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             tools/cinema_job_ledger.py
+            tools/cinema_job_service.py
+            tools/cinema_job_service_durable.py
+            tools/render_capabilities.py
           sparse-checkout-cone-mode: false
 
-      - name: Compile ledger
-        run: python3 -m py_compile tools/cinema_job_ledger.py
+      - name: Compile ledger and durable service
+        run: |
+          python3 -m py_compile \
+            tools/cinema_job_ledger.py \
+            tools/cinema_job_service.py \
+            tools/cinema_job_service_durable.py \
+            tools/render_capabilities.py
 
       - name: Verify atomic persistence and restart recovery
         run: python3 tools/cinema_job_ledger.py --self-test
 
-      - name: Verify fail-closed ledger contract
+      - name: Verify fail-closed durable service contract
         shell: python
         run: |
           from pathlib import Path
 
-          source = Path("tools/cinema_job_ledger.py").read_text(encoding="utf-8")
-          assert 'SCHEMA = "echoes.cinema-job-ledger.v1"' in source
-          assert 'EVENT_SCHEMA = "echoes.cinema-job-ledger-event.v1"' in source
-          assert 'os.replace(temp_path, path)' in source
-          assert 'os.fsync(handle.fileno())' in source
-          assert '"RECOVERABLE"' in source
-          assert 'service restarted before a terminal result was recorded' in source
-          assert 'invalid Cinema job transition' in source
-          assert 'Cinema job ledger is unreadable or corrupt' in source
-          assert 'TERMINAL_STATUSES = {"PASS", "FAILED", "BROKEN"}' in source
-          print("Durable Cinema job ledger contract PASS")
+          ledger = Path("tools/cinema_job_ledger.py").read_text(encoding="utf-8")
+          service = Path("tools/cinema_job_service_durable.py").read_text(encoding="utf-8")
+
+          assert 'SCHEMA = "echoes.cinema-job-ledger.v1"' in ledger
+          assert 'EVENT_SCHEMA = "echoes.cinema-job-ledger-event.v1"' in ledger
+          assert 'os.replace(temp_path, path)' in ledger
+          assert 'os.fsync(handle.fileno())' in ledger
+          assert '"RECOVERABLE"' in ledger
+          assert 'service restarted before a terminal result was recorded' in ledger
+          assert 'invalid Cinema job transition' in ledger
+          assert 'Cinema job ledger is unreadable or corrupt' in ledger
+          assert 'TERMINAL_STATUSES = {"PASS", "FAILED", "BROKEN"}' in ledger
+
+          assert 'class DurableJobRegistry(base.JobRegistry)' in service
+          assert 'resumeRecovered' in service
+          assert 'actionRequired' in service
+          assert '"/v1/cinema/jobs"' in service
+          assert 'job-ledger.json' in service
+          assert 'self.ledger.transition' in service
+          assert 'terminal_fields.pop(reserved, None)' in service
+          assert 'No interrupted job is silently lost' in service
+          print("Durable Cinema job ledger and restart-safe service contract PASS")
