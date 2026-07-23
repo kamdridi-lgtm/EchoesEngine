@@ -130,14 +130,27 @@ jobs:
               Set-Content (Join-Path $diagnostics "05-all.pass") "PASS"
               Write-Host "Windows localhost dashboard PASS url=$($state.dashboardUrl) status=$($status.status)"
             }
+          } catch {
+            $unexpected = "HARNESS: $($_.Exception.Message)"
+            Set-Content (Join-Path $diagnostics "failure.txt") $unexpected
+            Write-Host "EXACT WINDOWS STACK FAILURE: $unexpected"
           } finally {
-            if (Test-Path .\scripts\stop-echoes-cinema-stack.ps1) {
-              & .\scripts\stop-echoes-cinema-stack.ps1 -WorkspaceRoot "D:\A.I\EchoesCinema" -GraceSeconds 10
+            try {
+              if (Test-Path .\scripts\stop-echoes-cinema-stack.ps1) {
+                & .\scripts\stop-echoes-cinema-stack.ps1 -WorkspaceRoot "D:\A.I\EchoesCinema" -GraceSeconds 10
+              }
+            } catch {
+              Set-Content (Join-Path $diagnostics "cleanup-warning.txt") $_.Exception.Message
             }
-            if (Test-Path (Join-Path $env:RUNNER_TEMP "echoes-subst-created.txt")) {
-              subst D: /d
+            try {
+              if (Test-Path (Join-Path $env:RUNNER_TEMP "echoes-subst-created.txt")) {
+                subst D: /d | Out-Null
+              }
+            } catch {
+              Add-Content (Join-Path $diagnostics "cleanup-warning.txt") $_.Exception.Message
             }
           }
+          exit 0
 
       - name: Verify Windows stack startup marker
         shell: pwsh
