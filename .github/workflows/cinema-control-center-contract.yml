@@ -51,12 +51,12 @@ jobs:
         run: |
           python3 -m py_compile \
             tools/cinema_control_center.py \
-            tools/cinema_p0_autopilot.py \
-            tools/cinema_p0_evidence_bundle.py \
             tools/cinema_job_service.py \
             tools/cinema_job_service_durable.py \
             tools/cinema_job_ledger.py \
             tools/cinema_job_scheduler.py \
+            tools/cinema_p0_autopilot.py \
+            tools/cinema_p0_evidence_bundle.py \
             tools/render_capabilities.py \
             tests/mock_render_provider.py
 
@@ -89,12 +89,12 @@ jobs:
           ECHOES_CINEMA_STORAGE_RESERVE_GIB: "0"
           ECHOES_CINEMA_DEFAULT_JOB_GIB: "0.0625"
           ECHOES_CINEMA_MAX_JOB_GIB: "1"
-          ECHOES_CINEMA_P0_AUTORUN: "0"
+          ECHOES_CINEMA_PROVIDER_MODE: mock-contract
         run: |
-          mkdir -p /tmp/echoes-control-center/audio /tmp/echoes-control-center/jobs /tmp/echoes-control-center/runtime
+          mkdir -p /tmp/echoes-control-center/audio /tmp/echoes-control-center/jobs
           python3 tests/mock_render_provider.py --host 127.0.0.1 --port 18081 > /tmp/mock-provider.log 2>&1 &
           echo $! > /tmp/mock-provider.pid
-          ECHOES_CINEMA_RUNTIME_ROOT=/tmp/echoes-control-center/runtime PYTHONPATH=tools python3 tools/cinema_control_center.py \
+          PYTHONPATH=tools python3 tools/cinema_control_center.py \
             --host 127.0.0.1 \
             --port 18090 \
             --sections-root tests/fixtures \
@@ -124,15 +124,15 @@ jobs:
           status = json.loads(Path("/tmp/status.json").read_text(encoding="utf-8"))
 
           assert "ECHOES CINEMA" in html
-          assert "P0 autopilot" in html
-          assert "this page stays available while the AI model loads and P0 resumes automatically" in html
+          assert "localhost stays online" in html
+          assert "Model recovery" in html
           assert status["schema"] == "echoes.cinema-control-center.v1"
           assert status["status"] in {"PASS", "PARTIAL"}
           assert status["service"]["port"] == 18090
           assert status["provider"]["status"] == "PARTIAL"
+          assert status["provider"]["loadState"] in {"CONNECTING", "LOADING"}
+          assert status["provider"]["automaticRetry"] is True
           assert status["acceptingRealJobs"] is False
-          assert status["autopilot"]["status"] == "DORMANT"
-          assert status["autopilot"]["phase"] == "DISABLED"
           assert "control center is online" in status["nextAction"].lower()
 
           try:
@@ -141,7 +141,7 @@ jobs:
               assert error.code == 401
           else:
               raise AssertionError("protected /health unexpectedly allowed anonymous access")
-          print("Local dashboard reachable, P0 visible, and authenticated API boundary PASS")
+          print("Local dashboard reachable, recovery visible, and authenticated API boundary PASS")
 
       - name: Verify no dead-localhost or secret persistence path remains
         shell: python
@@ -164,8 +164,8 @@ jobs:
               "supervisor": ["Test-DashboardReady", "Start-ControlCenterProcess", "Start-ProviderWorkerProcess", "being restarted automatically", "secretsPersisted = $false", "systemDriveWritesAllowed = $false"],
               "worker": ["BOOTSTRAPPING", "MODEL_LOADING", "provider.pid", "systemDriveWritesAllowed = $false"],
               "stop": ["Stop-VerifiedProcess", "Refusing to stop PID", "echoes-cinema-stack-supervisor.ps1"],
-              "center": ["PUBLIC_PATHS", "public dashboard is loopback-only", "Protected render APIs still require authentication", "p0_autopilot.start", "v1/control-center/status"],
-              "autopilot": ["realModelLoaded", "--resume", "video-qc.json", "artifactEvidence", "secretsPersisted", "latest-p0-evidence.zip"],
+              "center": ["PUBLIC_PATHS", "public dashboard is loopback-only", "Protected render APIs still require authentication", "v1/control-center/status", "Model recovery", "lastLoadError", "modelCacheGiB"],
+              "autopilot": ["--resume", "verified_proof", "latest-p0-evidence.zip", "secretsPersisted", "WAITING_PROVIDER", "RENDERING"],
           }
           for name, tokens in required.items():
               for token in tokens:
@@ -177,7 +177,7 @@ jobs:
           assert "providerToken =" not in files["supervisor"]
           assert "Start-Process ([string]$lastState.dashboardUrl)" in files["launcher"]
           assert files["launcher"].index("Test-Dashboard") < files["launcher"].index("Start-Process ([string]$lastState.dashboardUrl)")
-          print("No dead localhost, autonomous P0, and no persisted secret contract PASS")
+          print("No dead localhost launch, no persisted secret, and recovery telemetry contract PASS")
 
       - name: Stop contract processes
         if: always()
