@@ -162,7 +162,7 @@ class ResilientModelScopeEngine(LowVramModelScopeEngine):
         payload = super().health()
         with self._recovery_lock:
             recovery = {
-                "schema": RECOVERY_SCHEMA,
+                "recoverySchema": RECOVERY_SCHEMA,
                 "loadState": self.load_state,
                 "recoveryCount": self.recovery_count,
                 "lastAttemptUtc": self.last_attempt_utc,
@@ -238,6 +238,8 @@ def self_test() -> int:
     assert engine.recovery_count == 2
     assert engine.next_retry_utc is None
     health = engine.health()
+    assert health["schema"] == "echoes.render-provider-health.v1"
+    assert health["recoverySchema"] == RECOVERY_SCHEMA
     assert health["automaticRetry"] is True
     assert health["operatorRestartRequired"] is False
     assert health["loadState"] == "READY"
