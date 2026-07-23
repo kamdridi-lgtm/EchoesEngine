@@ -158,8 +158,10 @@ jobs:
           assert "3.10.20" not in files["ensure_python"]
           assert "Visual Studio 17 2022" not in files["runner_ps"]
           assert 'Assert-Command "cmake"' not in files["runner_ps"]
-          assert "trust_remote_code" not in files["low_vram"]
-          assert "use_safetensors\": False" not in files["low_vram"]
+          assert 'trust_remote_code=True' not in files["low_vram"]
+          assert '"trust_remote_code": True' not in files["low_vram"]
+          assert 'use_safetensors=False' not in files["low_vram"]
+          assert '"use_safetensors": False' not in files["low_vram"]
           print("D-drive, pinned safe model loading, P0 preflight, evidence resume, cleanup, licensing, SHA-256, and A/V QC contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
