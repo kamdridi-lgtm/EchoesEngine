@@ -1,7 +1,8 @@
 param(
     [string]$WorkspaceRoot = "D:\A.I\EchoesCinema",
     [string]$RepoRoot = "",
-    [int]$StartupTimeoutSeconds = 120
+    [int]$StartupTimeoutSeconds = 120,
+    [switch]$NoBrowser
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,8 +53,8 @@ function Test-Dashboard {
 
 $existing = Get-State
 if ($existing -and (Test-VerifiedSupervisor -ProcessId $existing.supervisorPid) -and (Test-Dashboard -Url ([string]$existing.dashboardUrl))) {
-    Write-Host "Echoes Cinema is already running. Opening $($existing.dashboardUrl)"
-    Start-Process ([string]$existing.dashboardUrl)
+    Write-Host "Echoes Cinema is already running. Dashboard: $($existing.dashboardUrl)"
+    if (-not $NoBrowser) { Start-Process ([string]$existing.dashboardUrl) }
     exit 0
 }
 
@@ -74,7 +75,7 @@ $arguments = @(
     "-RepoRoot", $RepoRoot
 )
 
-Write-Host "Starting Echoes Cinema supervisor. The browser will open only after localhost is truly reachable."
+Write-Host "Starting Echoes Cinema supervisor. The browser opens only after localhost is truly reachable."
 $supervisorProcess = Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -WorkingDirectory $RepoRoot -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru
 
 $deadline = (Get-Date).AddSeconds([math]::Max(20, $StartupTimeoutSeconds))
@@ -84,7 +85,7 @@ while ((Get-Date) -lt $deadline) {
     $lastState = Get-State
     if ($lastState -and $lastState.dashboardUrl -and (Test-Dashboard -Url ([string]$lastState.dashboardUrl))) {
         Write-Host "Echoes Cinema control center is reachable: $($lastState.dashboardUrl)"
-        Start-Process ([string]$lastState.dashboardUrl)
+        if (-not $NoBrowser) { Start-Process ([string]$lastState.dashboardUrl) }
         exit 0
     }
     Start-Sleep -Seconds 1
