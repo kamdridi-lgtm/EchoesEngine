@@ -55,7 +55,7 @@ if ($state) {
     Stop-VerifiedProcess -ProcessId $state.providerPid -RequiredCommandFragments @("modelscope_low_vram_provider.py", "modelscope_low_vram_provider_v2.py") | Out-Null
     Stop-VerifiedProcess -ProcessId $state.providerWorkerPid -RequiredCommandFragments @("echoes-cinema-provider-worker.ps1") | Out-Null
     Stop-VerifiedProcess -ProcessId $state.servicePid -RequiredCommandFragments @("cinema_control_center.py") | Out-Null
-    Stop-VerifiedProcess -ProcessId $state.supervisorPid -RequiredCommandFragments @("echoes-cinema-supervisor.ps1") | Out-Null
+    Stop-VerifiedProcess -ProcessId $state.supervisorPid -RequiredCommandFragments @("echoes-cinema-stack-supervisor.ps1") | Out-Null
 }
 
 foreach ($pidFile in @("provider.pid", "provider-worker.pid", "service.pid", "supervisor.pid")) {
