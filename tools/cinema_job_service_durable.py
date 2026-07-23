@@ -3,12 +3,15 @@
 
 This entrypoint wraps ``cinema_job_service.py`` with an atomic durable ledger.
 QUEUED/RUNNING jobs become RECOVERABLE after a restart and can be explicitly
-resubmitted with ``resumeRecovered=true``. No interrupted job is silently lost
-or reported as successful.
+resubmitted with ``resumeRecovered=true``. Recovered jobs pass ``--resume`` to
+the Cinema runner so only SHA-256/media-validated clips are reused. No
+interrupted job is silently lost or reported as successful.
 """
 
 from __future__ import annotations
 
+import subprocess
+import sys
 import threading
 from pathlib import Path
 from typing import Any
@@ -22,6 +25,7 @@ class DurableJobRegistry(base.JobRegistry):
         super().__init__(config)
         self.ledger_lock = threading.RLock()
         self.retrying_jobs: set[str] = set()
+        self.resume_requested: set[str] = set()
         ledger_path = config.output_root / "_service" / "job-ledger.json"
         self.ledger = DurableJobLedger(LedgerConfig(path=ledger_path, max_events=5000))
 
@@ -52,6 +56,7 @@ class DurableJobRegistry(base.JobRegistry):
 
             if resume_recovered:
                 self.retrying_jobs.add(job_id)
+                self.resume_requested.add(job_id)
             try:
                 status_code, accepted = super().submit(request)
                 if accepted.get("status") == "QUEUED":
@@ -70,11 +75,73 @@ class DurableJobRegistry(base.JobRegistry):
                         audioFile=request.get("audioFile"),
                         seed=int(request.get("seed", 1337)),
                         resumeRecovered=resume_recovered,
+                        resumeRequested=resume_recovered,
                     )
                     accepted = {**accepted, **durable}
                 return status_code, accepted
+            except BaseException:
+                self.resume_requested.discard(job_id)
+                raise
             finally:
                 self.retrying_jobs.discard(job_id)
+
+    def _run_resume_job(
+        self,
+        job_id: str,
+        sections_csv: Path,
+        audio_file: Path | None,
+        seed: int,
+        commercial_use_required: bool,
+    ) -> None:
+        job_dir = self._job_dir(job_id)
+        job_dir.mkdir(parents=True, exist_ok=True)
+        with self.lock:
+            self.jobs[job_id] = {
+                "schema": "echoes.cinema-service-job.v1",
+                "jobId": job_id,
+                "status": "RUNNING",
+                "commercialUseRequired": commercial_use_required,
+                "resumeRequested": True,
+            }
+
+        command = [
+            sys.executable,
+            str(self.config.runner),
+            str(sections_csv),
+            str(job_dir),
+            "--job-id",
+            job_id,
+            "--seed",
+            str(seed),
+            "--backend",
+            "http",
+            "--provider-timeout",
+            str(self.config.provider_timeout),
+            "--resume",
+        ]
+        if self.config.manifest_cli is not None:
+            command.extend(["--manifest-cli", str(self.config.manifest_cli)])
+        if audio_file is not None:
+            command.extend(["--audio", str(audio_file)])
+        if commercial_use_required:
+            command.append("--require-commercial-use")
+
+        completed = subprocess.run(command, text=True, capture_output=True, check=False, shell=False)
+        (job_dir / "service-run.log").write_text(
+            "$ " + " ".join(command) + "\n\nSTDOUT\n" + completed.stdout + "\nSTDERR\n" + completed.stderr,
+            encoding="utf-8",
+        )
+        result = self.read_result(job_id)
+        if result is None:
+            result = {
+                "schema": "echoes.cinema-service-job.v1",
+                "jobId": job_id,
+                "status": "FAILED",
+                "resumeRequested": True,
+                "error": f"resumed Cinema runner exited with {completed.returncode} without job-result.json",
+            }
+        with self.lock:
+            self.jobs[job_id] = result
 
     def _run_job(
         self,
@@ -85,6 +152,8 @@ class DurableJobRegistry(base.JobRegistry):
         commercial_use_required: bool,
     ) -> None:
         with self.ledger_lock:
+            resume_existing = job_id in self.resume_requested
+            self.resume_requested.discard(job_id)
             queued = self.ledger.get(job_id)
             attempt = int(queued.get("attempt", 1)) if queued else 1
             self.ledger.transition(
@@ -95,10 +164,14 @@ class DurableJobRegistry(base.JobRegistry):
                 audioFile=str(audio_file) if audio_file else None,
                 seed=seed,
                 commercialUseRequired=commercial_use_required,
+                resumeRequested=resume_existing,
             )
 
         try:
-            super()._run_job(job_id, sections_csv, audio_file, seed, commercial_use_required)
+            if resume_existing:
+                self._run_resume_job(job_id, sections_csv, audio_file, seed, commercial_use_required)
+            else:
+                super()._run_job(job_id, sections_csv, audio_file, seed, commercial_use_required)
             result = super().status(job_id)
             if result is None:
                 result = {
@@ -130,7 +203,7 @@ class DurableJobRegistry(base.JobRegistry):
 
 
 class DurableHandler(base.Handler):
-    server_version = "EchoesCinemaDurableJobService/1.0"
+    server_version = "EchoesCinemaDurableJobService/1.1"
 
     def do_GET(self) -> None:  # noqa: N802
         if self.path == "/v1/cinema/jobs":
