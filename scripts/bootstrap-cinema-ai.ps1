@@ -23,6 +23,8 @@ $tempRoot = Join-Path $workspaceRoot "temp"
 $requirements = Join-Path $repoRoot "providers\requirements-diffusers.txt"
 $provider = Join-Path $repoRoot "providers\diffusers_video_provider.py"
 $proofProvider = Join-Path $repoRoot "providers\modelscope_proof_provider.py"
+$lowVramProvider = Join-Path $repoRoot "providers\modelscope_low_vram_provider.py"
+$p0Preflight = Join-Path $repoRoot "tools\cinema_p0_preflight.py"
 $service = Join-Path $repoRoot "tools\cinema_job_service.py"
 $runner = Join-Path $repoRoot "tools\cinema_job_runner.py"
 $ensurePython = Join-Path $repoRoot "scripts\ensure-python-on-d.ps1"
@@ -184,9 +186,18 @@ if ($LASTEXITCODE -ne 0) {
     throw "Diffusers provider dependency installation failed"
 }
 
-& $python -m py_compile $provider $proofProvider $service $runner
+& $python -m py_compile $provider $proofProvider $lowVramProvider $p0Preflight $service $runner
 if ($LASTEXITCODE -ne 0) {
-    throw "Cinema provider/service Python compilation failed"
+    throw "Cinema provider/preflight/service Python compilation failed"
+}
+
+& $python $lowVramProvider --self-test
+if ($LASTEXITCODE -ne 0) {
+    throw "Active low-VRAM provider self-test failed"
+}
+& $python $p0Preflight --self-test
+if ($LASTEXITCODE -ne 0) {
+    throw "Cinema P0 preflight self-test failed"
 }
 
 $diagnosticScript = @'
