@@ -1,20 +1,10 @@
 #!/usr/bin/env python3
-"""Local-only browser control center for the durable Echoes Cinema service.
-
-The protected job API remains authenticated. Only the dashboard HTML and its
-read-only summary endpoint are public, and only when both the server binding and
-the connecting client are loopback addresses. This prevents a browser opened on
-localhost from showing a misleading connection/authentication error while keeping
-remote bindings fail-closed.
-"""
+"""Local-only browser control center for the durable Echoes Cinema service."""
 
 from __future__ import annotations
 
-import html
 import ipaddress
-import json
 import urllib.parse
-from pathlib import Path
 from typing import Any
 
 import cinema_job_service as base
@@ -33,7 +23,7 @@ DASHBOARD_HTML = r"""<!doctype html>
 <style>
 :root { color-scheme: dark; font-family: Inter, Segoe UI, Arial, sans-serif; }
 body { margin: 0; background: #090b0f; color: #f4f6fa; }
-main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 48px; }
+main { max-width: 1180px; margin: 0 auto; padding: 28px 20px 48px; }
 h1 { margin: 0; font-size: clamp(28px, 5vw, 48px); letter-spacing: .04em; }
 .subtitle { color: #aeb7c7; margin: 8px 0 28px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 14px; }
@@ -42,8 +32,8 @@ h1 { margin: 0; font-size: clamp(28px, 5vw, 48px); letter-spacing: .04em; }
 .value { font-size: 24px; margin-top: 10px; font-weight: 700; overflow-wrap: anywhere; }
 .detail { color: #b9c2d0; font-size: 13px; margin-top: 8px; line-height: 1.45; overflow-wrap: anywhere; }
 .badge { display: inline-block; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
-.PASS,.REAL { background:#113d2a; color:#72f2b2; }
-.PARTIAL,.MISSING,.DORMANT { background:#49390d; color:#ffd978; }
+.PASS,.REAL,.READY { background:#113d2a; color:#72f2b2; }
+.PARTIAL,.MISSING,.DORMANT,.LOADING,.RETRY_WAIT,.WAITING_PROVIDER,.RENDERING { background:#49390d; color:#ffd978; }
 .FAILED,.BROKEN { background:#501a20; color:#ff98a4; }
 .QUEUED,.RUNNING,.RECOVERABLE { background:#153c5a; color:#91d8ff; }
 section { margin-top: 18px; }
@@ -54,10 +44,11 @@ footer { color:#778399; margin-top:24px; font-size:12px; }
 <body>
 <main>
 <h1>ECHOES CINEMA</h1>
-<p class="subtitle">Local control center — this page stays available while the AI model loads and P0 resumes automatically.</p>
+<p class="subtitle">Local control center — localhost stays online while model recovery and P0 rendering continue automatically.</p>
 <div class="grid">
   <div class="card"><div class="label">Stack</div><div id="stack" class="value">Connecting…</div><div id="stackDetail" class="detail"></div></div>
   <div class="card"><div class="label">AI provider</div><div id="provider" class="value">Checking…</div><div id="providerDetail" class="detail"></div></div>
+  <div class="card"><div class="label">Model recovery</div><div id="recovery" class="value">Checking…</div><div id="recoveryDetail" class="detail"></div></div>
   <div class="card"><div class="label">P0 autopilot</div><div id="autopilot" class="value">Checking…</div><div id="autopilotDetail" class="detail"></div></div>
   <div class="card"><div class="label">Real jobs</div><div id="realJobs" class="value">—</div><div id="commercialJobs" class="detail"></div></div>
   <div class="card"><div class="label">Queue</div><div id="queue" class="value">—</div><div id="workers" class="detail"></div></div>
@@ -71,12 +62,13 @@ footer { color:#778399; margin-top:24px; font-size:12px; }
   <div class="label">Recent jobs</div>
   <pre id="jobs">No jobs yet.</pre>
 </section>
-<footer>Refreshes automatically every 2 seconds. Protected render APIs still require authentication.</footer>
+<footer>Refreshes every 2 seconds. Automatic recovery uses bounded backoff. Protected render APIs still require authentication.</footer>
 </main>
 <script>
 const byId = id => document.getElementById(id);
 function badge(value) { return `<span class="badge ${value}">${value}</span>`; }
 function text(value, fallback='—') { return value === undefined || value === null || value === '' ? fallback : String(value); }
+function giB(value) { return value === undefined || value === null ? '—' : `${Number(value).toFixed(2)} GiB`; }
 async function refresh() {
   try {
     const response = await fetch('/v1/control-center/status', {cache:'no-store'});
@@ -87,6 +79,8 @@ async function refresh() {
     const p = data.provider || {};
     byId('provider').innerHTML = badge(p.status || 'PARTIAL');
     byId('providerDetail').textContent = `${text(p.modelId, 'model not loaded')} · ${text(p.gpuName, 'GPU pending')}`;
+    byId('recovery').innerHTML = badge(p.loadState || 'MISSING');
+    byId('recoveryDetail').textContent = `retry ${text(p.recoveryCount, 0)} · cache ${giB(p.modelCacheGiB)} · next ${text(p.nextRetryUtc, 'not scheduled')}`;
     const a = data.autopilot || {};
     byId('autopilot').innerHTML = badge(a.status || 'MISSING');
     byId('autopilotDetail').textContent = `${text(a.phase, 'NOT_STARTED')} · ${text(a.message, 'No status yet')}`;
@@ -139,8 +133,6 @@ def scheduler_counts(snapshot: dict[str, Any]) -> dict[str, Any]:
 
 def build_status(server: base.CinemaServer) -> dict[str, Any]:
     registry = server.registry
-    scheduler: dict[str, Any] = {}
-    jobs: list[dict[str, Any]] = []
     if isinstance(registry, durable.DurableJobRegistry):
         scheduler = scheduler_counts(registry.scheduler.snapshot())
         jobs = registry.ledger.list_jobs()
@@ -153,7 +145,6 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
             "maxWorkers": server.config.max_workers,
         }
 
-    provider_summary: dict[str, Any]
     accepting_real = False
     accepting_commercial = False
     provider_error = ""
@@ -165,6 +156,7 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
         )
         accepting_real = base.accepting_real_jobs(provider)
         accepting_commercial = base.accepting_commercial_jobs(provider)
+        provider_error = str(provider.get("lastLoadError") or provider.get("loadError") or "").strip()
         provider_summary = {
             "status": "PASS" if provider.get("realModelLoaded") is True else "PARTIAL",
             "realModelLoaded": provider.get("realModelLoaded") is True,
@@ -174,10 +166,16 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
             "license": provider.get("license"),
             "gpuName": (provider.get("gpu") or {}).get("name") if isinstance(provider.get("gpu"), dict) else None,
             "loadError": provider.get("loadError"),
+            "lastLoadError": provider.get("lastLoadError"),
+            "loadState": provider.get("loadState") or ("READY" if provider.get("realModelLoaded") else "LOADING"),
+            "recoveryCount": int(provider.get("recoveryCount", 0) or 0),
+            "nextRetryUtc": provider.get("nextRetryUtc"),
+            "lastAttemptUtc": provider.get("lastAttemptUtc"),
+            "modelCacheGiB": provider.get("modelCacheGiB"),
+            "automaticRetry": provider.get("automaticRetry") is True,
+            "operatorRestartRequired": provider.get("operatorRestartRequired") is True,
         }
-        if provider.get("loadError"):
-            provider_error = str(provider.get("loadError"))
-    except Exception as error:  # noqa: BLE001 - dashboard must show the exact local blocker
+    except Exception as error:  # noqa: BLE001
         provider_error = str(error)
         provider_summary = {
             "status": "PARTIAL",
@@ -185,6 +183,13 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
             "modelId": None,
             "commercialUseAllowed": False,
             "loadError": provider_error,
+            "lastLoadError": provider_error,
+            "loadState": "CONNECTING",
+            "recoveryCount": 0,
+            "nextRetryUtc": None,
+            "modelCacheGiB": None,
+            "automaticRetry": True,
+            "operatorRestartRequired": False,
         }
 
     autopilot_object = getattr(server, "p0_autopilot", None)
@@ -195,24 +200,28 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
         "message": "P0 autopilot is not attached to this control center.",
     }
     autopilot_status = str(autopilot.get("status") or "MISSING")
+    load_state = str(provider_summary.get("loadState") or "")
 
     if autopilot_status == "REAL":
         next_action = "The first REAL AI clip is complete. Open the P0 proof MP4 and validate it visually."
         status = "PASS"
-    elif autopilot_status == "BROKEN":
-        next_action = "The control center is online. P0 stopped safely and will resume on the next repair/start cycle."
-        status = "PARTIAL"
     elif accepting_real:
-        next_action = "The real provider is ready. P0 autopilot is rendering or preparing the resumable proof."
+        next_action = "The real provider is ready. P0 autopilot is rendering or verifying the resumable proof."
         status = "PARTIAL"
-    elif provider_error:
-        next_action = "The control center is online. The AI provider is still loading or blocked; inspect the exact message below."
+    elif load_state == "RETRY_WAIT":
+        next_action = "No action is required. Model recovery is waiting safely and will retry automatically."
+        status = "PARTIAL"
+    elif load_state == "LOADING":
+        next_action = "No action is required. The model is loading or downloading on D: and P0 will start automatically."
+        status = "PARTIAL"
+    elif autopilot_status == "BROKEN":
+        next_action = "P0 preserved its evidence. Provider recovery remains active; the proof will resume after the blocker clears."
         status = "PARTIAL"
     else:
-        next_action = "The control center is online and P0 autopilot is waiting for the AI provider to finish loading."
+        next_action = "The control center is online and waiting for the self-healing provider."
         status = "PARTIAL"
 
-    combined_error = str(autopilot.get("blocker") or "").strip() or provider_error
+    combined_error = provider_error or str(autopilot.get("blocker") or "").strip()
     return {
         "schema": DASHBOARD_SCHEMA,
         "status": status,
@@ -234,7 +243,7 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
 
 
 class ControlCenterHandler(durable.DurableHandler):
-    server_version = "EchoesCinemaControlCenter/1.1"
+    server_version = "EchoesCinemaControlCenter/1.2"
 
     def send_html(self, status: int, body: str) -> None:
         payload = body.encode("utf-8")
@@ -269,8 +278,10 @@ def self_test() -> int:
     assert "Run START_ECHOES_CINEMA.cmd again" in DASHBOARD_HTML
     assert "Protected render APIs still require authentication" in DASHBOARD_HTML
     assert "P0 autopilot" in DASHBOARD_HTML
+    assert "Model recovery" in DASHBOARD_HTML
+    assert "retry" in DASHBOARD_HTML
     assert "localhost refused" not in DASHBOARD_HTML.lower()
-    print("CinemaControlCenter PASS loopback=protected dashboard=embedded p0-autopilot=visible polling=enabled")
+    print("CinemaControlCenter PASS loopback=protected p0=visible model-recovery=visible polling=enabled")
     return 0
 
 
