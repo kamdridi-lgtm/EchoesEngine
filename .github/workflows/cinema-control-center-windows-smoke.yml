@@ -59,6 +59,9 @@ jobs:
       - name: Start stack through the real Windows launcher logic
         shell: pwsh
         run: |
+          # GitHub normally kills child processes after each step. Clearing this
+          # CI-only marker lets the real supervisor survive into the verification step.
+          $env:RUNNER_TRACKING_ID = ""
           & .\scripts\start-echoes-cinema-stack.ps1 `
             -WorkspaceRoot "D:\A.I\EchoesCinema" `
             -RepoRoot $PWD.Path `
