@@ -26,6 +26,7 @@ jobs:
             scripts/bootstrap-cinema-ai.ps1
             providers/modelscope_low_vram_provider.py
             providers/modelscope_low_vram_provider_v2.py
+            providers/modelscope_resilient_provider.py
             tools/cinema_p0_preflight.py
           sparse-checkout-cone-mode: false
 
@@ -41,6 +42,7 @@ jobs:
           python3 -m py_compile \
             providers/modelscope_low_vram_provider.py \
             providers/modelscope_low_vram_provider_v2.py \
+            providers/modelscope_resilient_provider.py \
             tools/cinema_p0_preflight.py
 
       - name: Run active provider and preflight self-tests
@@ -54,6 +56,8 @@ jobs:
           from pathlib import Path
 
           bootstrap = Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8")
+          entry = Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8")
+          resilient = Path("providers/modelscope_resilient_provider.py").read_text(encoding="utf-8")
           required = [
               '$lowVramProvider = Join-Path $repoRoot "providers\\modelscope_low_vram_provider.py"',
               '$p0Preflight = Join-Path $repoRoot "tools\\cinema_p0_preflight.py"',
@@ -67,6 +71,9 @@ jobs:
           ]
           for token in required:
               assert token in bootstrap, f"bootstrap missing active P0 token: {token}"
+          assert "modelscope_resilient_provider" in entry
+          for token in ["automaticRetry", "RETRY_WAIT", "retry_delay_seconds", "modelCacheGiB", "operatorRestartRequired"]:
+              assert token in resilient, f"resilient provider missing recovery token: {token}"
           assert "Visual Studio 17 2022" not in bootstrap
           assert "Join-Path $env:USERPROFILE" not in bootstrap
-          print("Active low-VRAM provider local bootstrap contract PASS")
+          print("Active low-VRAM provider local bootstrap and automatic recovery contract PASS")
