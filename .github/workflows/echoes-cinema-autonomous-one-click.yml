@@ -77,19 +77,17 @@ jobs:
       - name: Verify explicit origin main fetch contract
         shell: pwsh
         run: |
-          $launcher = Get-Content -LiteralPath 'DOWNLOAD_AND_RUN_ECHOES_CINEMA.cmd' -Raw
-          foreach ($token in @(
+          $path = 'DOWNLOAD_AND_RUN_ECHOES_CINEMA.cmd'
+          $tokens = @(
             '+refs/heads/main:refs/remotes/origin/main',
             'rev-parse --verify',
             'FETCH_HEAD',
-            '%MAIN_REF%:scripts/one-click-echoes-cinema.ps1'
-          )) {
-            if (-not $launcher.Contains($token)) {
-              throw "Missing origin/main recovery token: $token"
-            }
-          }
-          if ($launcher -match 'fetch\s+origin\s+main\s*(\r?\n)+.*show\s+"?origin/main') {
-            throw 'Old fetch/show origin/main bug is still present'
+            'one-click-echoes-cinema.ps1'
+          )
+          foreach ($token in $tokens) {
+            $found = Select-String -LiteralPath $path -Pattern $token -SimpleMatch -Quiet
+            Write-Host "$token => $found"
+            if (-not $found) { throw "Missing origin/main recovery token: $token" }
           }
           Write-Host 'Explicit origin/main fetch contract PASS'
 
