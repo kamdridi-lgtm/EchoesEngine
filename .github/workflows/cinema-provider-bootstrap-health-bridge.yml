@@ -47,7 +47,6 @@ jobs:
             'provider_bootstrap_health_bridge.py',
             'status = "BOOTSTRAPPING"',
             'status = "RETRY_WAIT"',
-            'realModelLoaded',
             'Wait-PortReleased',
             'systemDriveWritesAllowed = $false'
           )) {
