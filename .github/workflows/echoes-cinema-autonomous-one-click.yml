@@ -25,6 +25,7 @@ jobs:
           sparse-checkout: |
             START_ECHOES_CINEMA.cmd
             STOP_ECHOES_CINEMA.cmd
+            CLIQUE_ICI_ECHOES_CINEMA.cmd
             scripts/one-click-echoes-cinema.ps1
             scripts/one-click-echoes-cinema-monitor.ps1
             scripts/echoes-cinema-provider-worker.ps1
@@ -35,8 +36,10 @@ jobs:
       - name: Run orchestrator self-test
         shell: pwsh
         run: |
-          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/one-click-echoes-cinema.ps1 -RepoRoot $PWD -WorkspaceRoot (Join-Path $PWD '.ci-workspace') -SelfTest
-          if ($LASTEXITCODE -ne 0) { throw "Autonomous one-click self-test failed" }
+          $repo = (Resolve-Path '.').Path
+          $workspace = Join-Path $repo '.ci-workspace'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/one-click-echoes-cinema.ps1 -RepoRoot $repo -WorkspaceRoot $workspace -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Autonomous one-click self-test failed with exit code $LASTEXITCODE" }
 
       - name: Parse monitor and launch chain
         shell: pwsh
@@ -56,15 +59,16 @@ jobs:
         run: |
           $orchestrator = Get-Content scripts/one-click-echoes-cinema.ps1 -Raw
           $monitor = Get-Content scripts/one-click-echoes-cinema-monitor.ps1 -Raw
+          $launcher = Get-Content CLIQUE_ICI_ECHOES_CINEMA.cmd -Raw
           foreach ($required in @(
             'origin/main',
             'backups\one-click',
             'one-click-monitor-status.json',
             'provider_bootstrap_health_bridge.py',
             'WorkspaceRoot',
-            'systemDriveWritesAllowed'
+            'one-click-echoes-cinema.ps1'
           )) {
-            if (-not (($orchestrator + $monitor).Contains($required))) {
+            if (-not (($orchestrator + $monitor + $launcher).Contains($required))) {
               throw "Missing autonomous contract token: $required"
             }
           }
@@ -73,7 +77,7 @@ jobs:
             ('clean ' + '-fdx'),
             ('clean ' + '-xdf')
           )) {
-            if (($orchestrator + $monitor).Contains($forbidden)) {
+            if (($orchestrator + $monitor + $launcher).Contains($forbidden)) {
               throw "Forbidden destructive command present: $forbidden"
             }
           }
