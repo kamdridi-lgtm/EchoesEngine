@@ -82,7 +82,7 @@ jobs:
             '+refs/heads/main:refs/remotes/origin/main',
             'rev-parse --verify',
             'FETCH_HEAD',
-            'refs/remotes/origin/main:scripts/one-click-echoes-cinema.ps1'
+            '%MAIN_REF%:scripts/one-click-echoes-cinema.ps1'
           )) {
             if (-not $launcher.Contains($token)) {
               throw "Missing origin/main recovery token: $token"
