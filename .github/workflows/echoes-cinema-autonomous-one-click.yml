@@ -112,16 +112,17 @@ jobs:
 
           git -C $client fetch origin main
           if ($LASTEXITCODE -ne 0) { throw 'Plain fetch fixture failed unexpectedly' }
-          git -C $client rev-parse --verify 'refs/remotes/origin/main^{commit}' 2>$null
-          $plainFetchCreatedTrackingRef = ($LASTEXITCODE -eq 0)
-          if ($plainFetchCreatedTrackingRef) {
+          $plainTrackingRef = git -C $client for-each-ref --format='%(refname)' refs/remotes/origin/main
+          if ($plainTrackingRef) {
             throw 'Regression fixture did not reproduce the missing origin/main state'
           }
 
           git -C $client fetch --no-tags origin $requiredRefspec
           if ($LASTEXITCODE -ne 0) { throw 'Explicit canonical ref fetch failed' }
-          git -C $client rev-parse --verify 'refs/remotes/origin/main^{commit}'
-          if ($LASTEXITCODE -ne 0) { throw 'origin/main was not created by the explicit refspec' }
+          $createdTrackingRef = git -C $client for-each-ref --format='%(refname)' refs/remotes/origin/main
+          if ($createdTrackingRef -ne 'refs/remotes/origin/main') {
+            throw 'origin/main was not created by the explicit refspec'
+          }
           $proof = git -C $client show 'refs/remotes/origin/main:scripts/one-click-echoes-cinema.ps1'
           if ($LASTEXITCODE -ne 0 -or $proof -notmatch 'regression-proof') {
             throw 'git show could not read the fetched orchestrator'
