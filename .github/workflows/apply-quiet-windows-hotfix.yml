@@ -4,18 +4,23 @@ on:
   push:
     branches:
       - feature/p0-use-real-input-audio-2026-07-24
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   apply-hotfix:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: feature/p0-use-real-input-audio-2026-07-24
 
       - name: Patch child process launches
         shell: pwsh
