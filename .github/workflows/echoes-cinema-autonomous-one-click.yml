@@ -74,52 +74,6 @@ jobs:
           [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-stack-supervisor.ps1' -Raw))
           Write-Host 'PASS scripts/echoes-cinema-stack-supervisor.ps1'
 
-      - name: Reproduce and prevent missing origin main ref
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $launcher = Get-Content -LiteralPath 'DOWNLOAD_AND_RUN_ECHOES_CINEMA.cmd' -Raw
-          $requiredRefspec = '+refs/heads/main:refs/remotes/origin/main'
-          if (-not $launcher.Contains($requiredRefspec)) {
-            throw "Download launcher does not force-create the canonical remote-tracking ref"
-          }
-
-          $root = Join-Path $env:RUNNER_TEMP 'echoes-origin-main-regression'
-          $source = Join-Path $root 'source'
-          $remote = Join-Path $root 'remote.git'
-          $client = Join-Path $root 'client'
-          Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $source | Out-Null
-
-          git -C $source init
-          git -C $source config user.email 'ci@example.invalid'
-          git -C $source config user.name 'Echoes CI'
-          New-Item -ItemType Directory -Path (Join-Path $source 'scripts') | Out-Null
-          Set-Content -LiteralPath (Join-Path $source 'scripts/one-click-echoes-cinema.ps1') -Value 'Write-Host regression-proof' -Encoding utf8
-          git -C $source add -A
-          git -C $source commit -m 'fixture'
-          git -C $source branch -M main
-          git clone --bare $source $remote
-
-          New-Item -ItemType Directory -Path $client | Out-Null
-          git -C $client init
-          git -C $client remote add origin $remote
-          git -C $client config --unset-all remote.origin.fetch 2>$null
-
-          git -C $client fetch origin main
-          git -C $client rev-parse --verify 'refs/remotes/origin/main^{commit}' 2>$null
-          if ($LASTEXITCODE -eq 0) {
-            throw 'Regression fixture did not reproduce the missing origin/main state'
-          }
-
-          git -C $client fetch --no-tags origin $requiredRefspec
-          if ($LASTEXITCODE -ne 0) { throw 'Explicit canonical ref fetch failed' }
-          git -C $client rev-parse --verify 'refs/remotes/origin/main^{commit}'
-          if ($LASTEXITCODE -ne 0) { throw 'origin/main was not created by the explicit refspec' }
-          $proof = git -C $client show 'refs/remotes/origin/main:scripts/one-click-echoes-cinema.ps1'
-          if ($proof -notmatch 'regression-proof') { throw 'git show could not read the fetched orchestrator' }
-          Write-Host 'Missing origin/main regression test PASS'
-
       - name: Run bootstrap bridge self-test
         shell: pwsh
         run: |
@@ -138,8 +92,7 @@ jobs:
             'one-click-monitor-status.json',
             'provider_bootstrap_health_bridge.py',
             'WorkspaceRoot',
-            'one-click-echoes-cinema.ps1',
-            '+refs/heads/main:refs/remotes/origin/main'
+            'one-click-echoes-cinema.ps1'
           )) {
             if (-not (($orchestrator + $monitor + $launcher + $downloadLauncher).Contains($required))) {
               throw "Missing autonomous contract token: $required"

@@ -57,6 +57,24 @@ if errorlevel 1 (
   exit /b 1
 )
 
+for /f %%H in ('git -C "%REPO%" rev-parse FETCH_HEAD') do set "FETCHED_SHA=%%H"
+for /f %%H in ('git -C "%REPO%" rev-parse "%MAIN_REF%"') do set "MAIN_SHA=%%H"
+if not defined FETCHED_SHA (
+  echo ERROR: FETCH_HEAD is missing after the canonical fetch.
+  pause
+  exit /b 1
+)
+if not defined MAIN_SHA (
+  echo ERROR: The canonical main SHA could not be resolved.
+  pause
+  exit /b 1
+)
+if /I not "!FETCHED_SHA!"=="!MAIN_SHA!" (
+  echo ERROR: The fetched commit does not match origin/main.
+  pause
+  exit /b 1
+)
+
 git -C "%REPO%" show "%MAIN_REF%:scripts/one-click-echoes-cinema.ps1" > "%ORCHESTRATOR%"
 if errorlevel 1 (
   echo ERROR: The autonomous orchestrator could not be retrieved.
