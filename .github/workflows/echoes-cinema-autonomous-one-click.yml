@@ -1,0 +1,80 @@
+name: Echoes Cinema Autonomous One Click
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  autonomous-one-click-contract:
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout one-click sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            START_ECHOES_CINEMA.cmd
+            STOP_ECHOES_CINEMA.cmd
+            scripts/one-click-echoes-cinema.ps1
+            scripts/one-click-echoes-cinema-monitor.ps1
+            scripts/echoes-cinema-provider-worker.ps1
+            scripts/echoes-cinema-stack-supervisor.ps1
+            providers/provider_bootstrap_health_bridge.py
+          sparse-checkout-cone-mode: false
+
+      - name: Run orchestrator self-test
+        shell: pwsh
+        run: |
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/one-click-echoes-cinema.ps1 -RepoRoot $PWD -WorkspaceRoot (Join-Path $PWD '.ci-workspace') -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Autonomous one-click self-test failed" }
+
+      - name: Parse monitor and launch chain
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+            'scripts/one-click-echoes-cinema.ps1',
+            'scripts/one-click-echoes-cinema-monitor.ps1',
+            'scripts/echoes-cinema-provider-worker.ps1',
+            'scripts/echoes-cinema-stack-supervisor.ps1'
+          )) {
+            [void][scriptblock]::Create((Get-Content -LiteralPath $path -Raw))
+            Write-Host "PASS $path"
+          }
+
+      - name: Verify autonomous and non-destructive contract
+        shell: pwsh
+        run: |
+          $orchestrator = Get-Content scripts/one-click-echoes-cinema.ps1 -Raw
+          $monitor = Get-Content scripts/one-click-echoes-cinema-monitor.ps1 -Raw
+          foreach ($required in @(
+            'origin/main',
+            'backups\one-click',
+            'one-click-monitor-status.json',
+            'provider_bootstrap_health_bridge.py',
+            'WorkspaceRoot',
+            'systemDriveWritesAllowed'
+          )) {
+            if (-not (($orchestrator + $monitor).Contains($required))) {
+              throw "Missing autonomous contract token: $required"
+            }
+          }
+          foreach ($forbidden in @(
+            ('reset ' + '--hard'),
+            ('clean ' + '-fdx'),
+            ('clean ' + '-xdf')
+          )) {
+            if (($orchestrator + $monitor).Contains($forbidden)) {
+              throw "Forbidden destructive command present: $forbidden"
+            }
+          }
+          Write-Host 'Autonomous non-destructive contract PASS'
