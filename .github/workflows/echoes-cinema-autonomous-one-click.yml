@@ -48,18 +48,29 @@ jobs:
             Write-Host "PASS $path"
           }
 
-      - name: Parse monitor and launch chain
+      - name: Parse one-click orchestrator
         shell: pwsh
         run: |
-          foreach ($path in @(
-            'scripts/one-click-echoes-cinema.ps1',
-            'scripts/one-click-echoes-cinema-monitor.ps1',
-            'scripts/echoes-cinema-provider-worker.ps1',
-            'scripts/echoes-cinema-stack-supervisor.ps1'
-          )) {
-            [void][scriptblock]::Create((Get-Content -LiteralPath $path -Raw))
-            Write-Host "PASS $path"
-          }
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/one-click-echoes-cinema.ps1' -Raw))
+          Write-Host 'PASS scripts/one-click-echoes-cinema.ps1'
+
+      - name: Parse one-click monitor
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/one-click-echoes-cinema-monitor.ps1' -Raw))
+          Write-Host 'PASS scripts/one-click-echoes-cinema-monitor.ps1'
+
+      - name: Parse provider worker
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-provider-worker.ps1' -Raw))
+          Write-Host 'PASS scripts/echoes-cinema-provider-worker.ps1'
+
+      - name: Parse stack supervisor
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-stack-supervisor.ps1' -Raw))
+          Write-Host 'PASS scripts/echoes-cinema-stack-supervisor.ps1'
 
       - name: Run bootstrap bridge self-test
         shell: pwsh
