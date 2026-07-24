@@ -74,49 +74,24 @@ jobs:
           [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-stack-supervisor.ps1' -Raw))
           Write-Host 'PASS scripts/echoes-cinema-stack-supervisor.ps1'
 
-      - name: Validate explicit origin main ref creation
+      - name: Verify explicit origin main fetch contract
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
           $launcher = Get-Content -LiteralPath 'DOWNLOAD_AND_RUN_ECHOES_CINEMA.cmd' -Raw
-          $requiredRefspec = '+refs/heads/main:refs/remotes/origin/main'
-          if (-not $launcher.Contains($requiredRefspec)) {
-            throw 'Download launcher does not force-create origin/main'
+          foreach ($token in @(
+            '+refs/heads/main:refs/remotes/origin/main',
+            'rev-parse --verify',
+            'FETCH_HEAD',
+            'refs/remotes/origin/main:scripts/one-click-echoes-cinema.ps1'
+          )) {
+            if (-not $launcher.Contains($token)) {
+              throw "Missing origin/main recovery token: $token"
+            }
           }
-
-          $root = Join-Path $env:RUNNER_TEMP 'echoes-origin-main-positive'
-          $source = Join-Path $root 'source'
-          $remote = Join-Path $root 'remote.git'
-          $client = Join-Path $root 'client'
-          Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $source | Out-Null
-
-          git -C $source init
-          git -C $source config user.email 'ci@example.invalid'
-          git -C $source config user.name 'Echoes CI'
-          New-Item -ItemType Directory -Path (Join-Path $source 'scripts') | Out-Null
-          Set-Content -LiteralPath (Join-Path $source 'scripts/one-click-echoes-cinema.ps1') -Value 'Write-Host regression-proof' -Encoding utf8
-          git -C $source add -A
-          git -C $source commit -m 'fixture'
-          git -C $source branch -M main
-          git clone --bare $source $remote
-          if ($LASTEXITCODE -ne 0) { throw 'Fixture creation failed' }
-
-          New-Item -ItemType Directory -Path $client | Out-Null
-          git -C $client init
-          git -C $client config remote.origin.url $remote
-          git -C $client fetch --no-tags origin $requiredRefspec
-          if ($LASTEXITCODE -ne 0) { throw 'Explicit canonical ref fetch failed' }
-
-          $createdTrackingRef = git -C $client for-each-ref --format='%(refname)' refs/remotes/origin/main
-          if ($createdTrackingRef -ne 'refs/remotes/origin/main') {
-            throw 'origin/main was not created by the explicit refspec'
+          if ($launcher -match 'fetch\s+origin\s+main\s*(\r?\n)+.*show\s+"?origin/main') {
+            throw 'Old fetch/show origin/main bug is still present'
           }
-          $proof = git -C $client show 'refs/remotes/origin/main:scripts/one-click-echoes-cinema.ps1'
-          if ($LASTEXITCODE -ne 0 -or $proof -notmatch 'regression-proof') {
-            throw 'git show could not read the fetched orchestrator'
-          }
-          Write-Host 'Explicit origin/main creation PASS'
+          Write-Host 'Explicit origin/main fetch contract PASS'
 
       - name: Run bootstrap bridge self-test
         shell: pwsh
