@@ -63,7 +63,7 @@ function Invoke-Git {
     param([string[]]$Arguments)
     & git @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "Git failed with exit code $LASTEXITCODE: git $($Arguments -join ' ')"
+        throw ("Git failed with exit code {0}: git {1}" -f $LASTEXITCODE, ($Arguments -join ' '))
     }
 }
 
