@@ -3,7 +3,8 @@ param(
     [string]$RepoRoot = "",
     [int]$StartupTimeoutSeconds = 120,
     [switch]$NoBrowser,
-    [string]$ProviderMode = ""
+    [string]$ProviderMode = "",
+    [switch]$PathNormalizationSelfTest
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,6 +27,22 @@ function Normalize-LauncherPath {
         throw "$Name contains illegal path characters after normalization: $normalized"
     }
     return $normalized
+}
+
+if ($PathNormalizationSelfTest) {
+    $cases = @(
+        @{ value = 'D:\A.I\EchoesEngine"'; expected = 'D:\A.I\EchoesEngine' },
+        @{ value = ' D:\A.I\EchoesEngine\ '; expected = 'D:\A.I\EchoesEngine' },
+        @{ value = 'D:\A.I\EchoesCinema/'; expected = 'D:\A.I\EchoesCinema' }
+    )
+    foreach ($case in $cases) {
+        $actual = Normalize-LauncherPath -Value $case.value -Name "SelfTestPath"
+        if ($actual -ne $case.expected) {
+            throw "Path normalization self-test failed. Input=$($case.value) Expected=$($case.expected) Actual=$actual"
+        }
+    }
+    Write-Host "Echoes Cinema path normalization PASS trailing-quote=removed trailing-separator=removed"
+    exit 0
 }
 
 if (-not $RepoRoot) {
