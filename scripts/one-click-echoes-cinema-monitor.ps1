@@ -32,6 +32,18 @@ function Read-JsonFile {
     try { return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json } catch { return $null }
 }
 
+function Get-ObjectProperty {
+    param(
+        [object]$Object,
+        [string]$Name,
+        [object]$DefaultValue = $null
+    )
+    if ($null -eq $Object) { return $DefaultValue }
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $DefaultValue }
+    return $property.Value
+}
+
 function Save-Evidence {
     param([string]$Reason)
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -71,8 +83,8 @@ $evidenceZip = $null
 
 while ((Get-Date) -lt $deadline) {
     $stack = Read-JsonFile -Path $statePath
-    $dashboardUrl = if ($stack -and $stack.dashboardUrl) { [string]$stack.dashboardUrl } else { "http://127.0.0.1:8090/" }
-    $providerPort = if ($stack -and $stack.providerPort) { [int]$stack.providerPort } else { 8081 }
+    $dashboardUrl = [string](Get-ObjectProperty -Object $stack -Name "dashboardUrl" -DefaultValue "http://127.0.0.1:8090/")
+    $providerPort = [int](Get-ObjectProperty -Object $stack -Name "providerPort" -DefaultValue 8081)
     $healthUrl = "http://127.0.0.1:$providerPort/health"
 
     try {
@@ -84,23 +96,32 @@ while ((Get-Date) -lt $deadline) {
         $lastError = $_.Exception.Message
     }
 
-    $realLoaded = $lastHealth -and $lastHealth.realModelLoaded -eq $true
-    $loadState = if ($lastHealth -and $lastHealth.loadState) { [string]$lastHealth.loadState } else { "CONNECTING" }
-    $failureClass = if ($lastHealth -and $lastHealth.failureClass) { [string]$lastHealth.failureClass } else { $null }
-    $operatorAction = if ($lastHealth -and $lastHealth.operatorAction) { [string]$lastHealth.operatorAction } else { "Automatic recovery is still running." }
+    $realLoaded = [bool](Get-ObjectProperty -Object $lastHealth -Name "realModelLoaded" -DefaultValue $false)
+    $loadState = [string](Get-ObjectProperty -Object $lastHealth -Name "loadState" -DefaultValue "CONNECTING")
+    $failureClass = Get-ObjectProperty -Object $lastHealth -Name "failureClass" -DefaultValue $null
+    $operatorAction = [string](Get-ObjectProperty -Object $lastHealth -Name "operatorAction" -DefaultValue "Automatic recovery is still running.")
+
+    $currentStatus = "PARTIAL"
+    if ($realLoaded) {
+        $currentStatus = "REAL"
+    } elseif ($loadState -eq "BLOCKED") {
+        $currentStatus = "BROKEN"
+    }
+    $connectionError = $null
+    if ($lastError) { $connectionError = $lastError }
 
     Write-AtomicJson -Path $monitorPath -Payload @{
         schema = "echoes.cinema-one-click-monitor.v1"
-        status = if ($realLoaded) { "REAL" } elseif ($loadState -eq "BLOCKED") { "BROKEN" } else { "PARTIAL" }
+        status = $currentStatus
         timestampUtc = [DateTime]::UtcNow.ToString("o")
         startedUtc = $startedUtc.ToString("o")
         dashboardUrl = $dashboardUrl
         providerHealthUrl = $healthUrl
-        realModelLoaded = [bool]$realLoaded
+        realModelLoaded = $realLoaded
         loadState = $loadState
         failureClass = $failureClass
         operatorAction = $operatorAction
-        lastConnectionError = if ($lastError) { $lastError } else { $null }
+        lastConnectionError = $connectionError
         evidenceZip = $evidenceZip
     }
 
@@ -121,6 +142,8 @@ if (-not $evidenceZip) {
     $evidenceZip = Save-Evidence -Reason "Automatic monitor reached its time limit while provider recovery remained incomplete."
 }
 
+$finalConnectionError = $null
+if ($lastError) { $finalConnectionError = $lastError }
 Write-AtomicJson -Path $monitorPath -Payload @{
     schema = "echoes.cinema-one-click-monitor.v1"
     status = $finalStatus
@@ -128,6 +151,6 @@ Write-AtomicJson -Path $monitorPath -Payload @{
     startedUtc = $startedUtc.ToString("o")
     completedUtc = [DateTime]::UtcNow.ToString("o")
     realModelLoaded = ($finalStatus -eq "REAL")
-    lastConnectionError = if ($lastError) { $lastError } else { $null }
+    lastConnectionError = $finalConnectionError
     evidenceZip = $evidenceZip
 }
