@@ -1,0 +1,13 @@
+{
+  "schema": "echoes.cinema-quiet-windows-repair.v1",
+  "status": "IN_PROGRESS",
+  "target": "Hide all long-lived child process windows without changing D-drive storage, caches, logs, provider recovery, or P0 resume behavior",
+  "branch": "feature/p0-use-real-input-audio-2026-07-24",
+  "truth": {
+    "repoRepair": "IN_PROGRESS",
+    "windowsCI": "PENDING",
+    "hpRuntime": "UNVERIFIED",
+    "realModelLoaded": false,
+    "firstRealMp4": "MISSING"
+  }
+}
