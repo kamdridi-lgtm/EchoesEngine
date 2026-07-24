@@ -1,0 +1,116 @@
+name: Echoes Cinema Autonomous One Click
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  autonomous-one-click-contract:
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout one-click sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            START_ECHOES_CINEMA.cmd
+            STOP_ECHOES_CINEMA.cmd
+            CLIQUE_ICI_ECHOES_CINEMA.cmd
+            scripts/one-click-echoes-cinema.ps1
+            scripts/one-click-echoes-cinema-monitor.ps1
+            scripts/echoes-cinema-provider-worker.ps1
+            scripts/echoes-cinema-stack-supervisor.ps1
+            providers/provider_bootstrap_health_bridge.py
+          sparse-checkout-cone-mode: false
+
+      - name: Verify required one-click files
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+            'START_ECHOES_CINEMA.cmd',
+            'STOP_ECHOES_CINEMA.cmd',
+            'CLIQUE_ICI_ECHOES_CINEMA.cmd',
+            'scripts/one-click-echoes-cinema.ps1',
+            'scripts/one-click-echoes-cinema-monitor.ps1',
+            'providers/provider_bootstrap_health_bridge.py'
+          )) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing: $path" }
+            Write-Host "PASS $path"
+          }
+
+      - name: Parse one-click orchestrator
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/one-click-echoes-cinema.ps1' -Raw))
+          Write-Host 'PASS scripts/one-click-echoes-cinema.ps1'
+
+      - name: Parse one-click monitor
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/one-click-echoes-cinema-monitor.ps1' -Raw))
+          Write-Host 'PASS scripts/one-click-echoes-cinema-monitor.ps1'
+
+      - name: Parse provider worker
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-provider-worker.ps1' -Raw))
+          Write-Host 'PASS scripts/echoes-cinema-provider-worker.ps1'
+
+      - name: Parse stack supervisor
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-stack-supervisor.ps1' -Raw))
+          Write-Host 'PASS scripts/echoes-cinema-stack-supervisor.ps1'
+
+      - name: Run bootstrap bridge self-test
+        shell: pwsh
+        run: |
+          python providers/provider_bootstrap_health_bridge.py --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Bootstrap bridge self-test failed" }
+
+      - name: Verify autonomous and non-destructive contract
+        shell: pwsh
+        run: |
+          $orchestrator = Get-Content scripts/one-click-echoes-cinema.ps1 -Raw
+          $monitor = Get-Content scripts/one-click-echoes-cinema-monitor.ps1 -Raw
+          $launcher = Get-Content CLIQUE_ICI_ECHOES_CINEMA.cmd -Raw
+          foreach ($required in @(
+            'origin/main',
+            'backups\one-click',
+            'one-click-monitor-status.json',
+            'provider_bootstrap_health_bridge.py',
+            'WorkspaceRoot',
+            'one-click-echoes-cinema.ps1'
+          )) {
+            if (-not (($orchestrator + $monitor + $launcher).Contains($required))) {
+              throw "Missing autonomous contract token: $required"
+            }
+          }
+          foreach ($forbidden in @(
+            ('reset ' + '--hard'),
+            ('clean ' + '-fdx'),
+            ('clean ' + '-xdf')
+          )) {
+            if (($orchestrator + $monitor + $launcher).Contains($forbidden)) {
+              throw "Forbidden destructive command present: $forbidden"
+            }
+          }
+          Write-Host 'Autonomous non-destructive contract PASS'
+
+      - name: Run orchestrator self-test
+        shell: pwsh
+        run: |
+          $repo = (Resolve-Path '.').Path
+          $workspace = Join-Path $repo '.ci-workspace'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/one-click-echoes-cinema.ps1 -RepoRoot $repo -WorkspaceRoot $workspace -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Autonomous one-click self-test failed with exit code $LASTEXITCODE" }

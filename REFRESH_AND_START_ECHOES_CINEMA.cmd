@@ -3,7 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 title Echoes Cinema - Refresh and Start
 
 set "REPO=%~dp0"
-set "BRANCH=feature/k-core-canonical-audit-2026-07-21"
+set "BRANCH=main"
 cd /d "%REPO%"
 
 echo.
