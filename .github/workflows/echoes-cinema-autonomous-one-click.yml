@@ -33,13 +33,20 @@ jobs:
             providers/provider_bootstrap_health_bridge.py
           sparse-checkout-cone-mode: false
 
-      - name: Run orchestrator self-test
+      - name: Verify required one-click files
         shell: pwsh
         run: |
-          $repo = (Resolve-Path '.').Path
-          $workspace = Join-Path $repo '.ci-workspace'
-          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/one-click-echoes-cinema.ps1 -RepoRoot $repo -WorkspaceRoot $workspace -SelfTest
-          if ($LASTEXITCODE -ne 0) { throw "Autonomous one-click self-test failed with exit code $LASTEXITCODE" }
+          foreach ($path in @(
+            'START_ECHOES_CINEMA.cmd',
+            'STOP_ECHOES_CINEMA.cmd',
+            'CLIQUE_ICI_ECHOES_CINEMA.cmd',
+            'scripts/one-click-echoes-cinema.ps1',
+            'scripts/one-click-echoes-cinema-monitor.ps1',
+            'providers/provider_bootstrap_health_bridge.py'
+          )) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing: $path" }
+            Write-Host "PASS $path"
+          }
 
       - name: Parse monitor and launch chain
         shell: pwsh
@@ -53,6 +60,12 @@ jobs:
             [void][scriptblock]::Create((Get-Content -LiteralPath $path -Raw))
             Write-Host "PASS $path"
           }
+
+      - name: Run bootstrap bridge self-test
+        shell: pwsh
+        run: |
+          python providers/provider_bootstrap_health_bridge.py --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Bootstrap bridge self-test failed" }
 
       - name: Verify autonomous and non-destructive contract
         shell: pwsh
@@ -82,3 +95,11 @@ jobs:
             }
           }
           Write-Host 'Autonomous non-destructive contract PASS'
+
+      - name: Run orchestrator self-test
+        shell: pwsh
+        run: |
+          $repo = (Resolve-Path '.').Path
+          $workspace = Join-Path $repo '.ci-workspace'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/one-click-echoes-cinema.ps1 -RepoRoot $repo -WorkspaceRoot $workspace -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Autonomous one-click self-test failed with exit code $LASTEXITCODE" }
