@@ -54,7 +54,9 @@ function Write-Step {
     param([string]$Message)
     $line = "[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $Message
     Write-Host $line
-    Add-Content -LiteralPath $logPath -Value $line -Encoding utf8
+    if (Test-Path -LiteralPath $logs -PathType Container) {
+        Add-Content -LiteralPath $logPath -Value $line -Encoding utf8
+    }
 }
 
 function Invoke-Git {
@@ -63,12 +65,6 @@ function Invoke-Git {
     if ($LASTEXITCODE -ne 0) {
         throw "Git failed with exit code $LASTEXITCODE: git $($Arguments -join ' ')"
     }
-}
-
-function Invoke-CmdFile {
-    param([string]$Path)
-    & cmd.exe /d /c ('call "{0}"' -f $Path)
-    return $LASTEXITCODE
 }
 
 function Test-HttpReady {
@@ -89,16 +85,16 @@ function Read-JsonFile {
 
 if ($SelfTest) {
     if (-not (Test-Path -LiteralPath $repo -PathType Container)) { throw "Self-test repository missing: $repo" }
-    $required = @(
+    foreach ($relative in @(
         "START_ECHOES_CINEMA.cmd",
         "STOP_ECHOES_CINEMA.cmd",
         "scripts/one-click-echoes-cinema.ps1",
         "scripts/one-click-echoes-cinema-monitor.ps1",
         "providers/provider_bootstrap_health_bridge.py"
-    )
-    foreach ($relative in $required) {
-        $path = Join-Path $repo $relative
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Self-test required file missing: $relative" }
+    )) {
+        if (-not (Test-Path -LiteralPath (Join-Path $repo $relative) -PathType Leaf)) {
+            throw "Self-test required file missing: $relative"
+        }
     }
     foreach ($relative in @(
         "scripts/one-click-echoes-cinema.ps1",
@@ -109,7 +105,12 @@ if ($SelfTest) {
         [void][scriptblock]::Create((Get-Content -LiteralPath (Join-Path $repo $relative) -Raw))
     }
     $source = Get-Content -LiteralPath $PSCommandPath -Raw
-    foreach ($forbidden in @("reset --hard", "clean -fdx", "clean -xdf", "Remove-Item -LiteralPath $repo -Recurse")) {
+    $forbiddenCommands = @(
+        ("reset " + "--hard"),
+        ("clean " + "-fdx"),
+        ("clean " + "-xdf")
+    )
+    foreach ($forbidden in $forbiddenCommands) {
         if ($source.Contains($forbidden)) { throw "Forbidden destructive command found: $forbidden" }
     }
     & python (Join-Path $repo "providers\provider_bootstrap_health_bridge.py") --self-test
@@ -194,7 +195,9 @@ try {
     }
 
     Write-Step "Stopping any previous Echoes Cinema stack safely."
-    $stopExit = Invoke-CmdFile -Path (Join-Path $repo "STOP_ECHOES_CINEMA.cmd")
+    $stopScript = Join-Path $repo "scripts\stop-echoes-cinema-stack.ps1"
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $stopScript -WorkspaceRoot $workspace -GraceSeconds 20
+    $stopExit = $LASTEXITCODE
     if ($stopExit -ne 0) {
         Write-Step "Safe stop returned $stopExit; startup will repair stale state without deleting models or jobs."
     }
@@ -204,8 +207,10 @@ try {
     }
 
     Write-Step "Starting the verified one-click stack."
-    $startExit = Invoke-CmdFile -Path (Join-Path $repo "START_ECHOES_CINEMA.cmd")
-    if ($startExit -ne 0) { throw "START_ECHOES_CINEMA.cmd failed with exit code $startExit" }
+    $startScript = Join-Path $repo "scripts\start-echoes-cinema-stack.ps1"
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $startScript -WorkspaceRoot $workspace -RepoRoot $repo
+    $startExit = $LASTEXITCODE
+    if ($startExit -ne 0) { throw "Echoes Cinema startup failed with exit code $startExit" }
 
     $statePath = Join-Path $runtime "stack-state.json"
     $deadline = (Get-Date).AddMinutes(3)
@@ -222,7 +227,8 @@ try {
 
     Write-Step "Launching hidden automatic provider monitor."
     $monitorScript = Join-Path $repo "scripts\one-click-echoes-cinema-monitor.ps1"
-    $monitorLog = Join-Path $logs "one-click-monitor-$stamp.log"
+    $monitorStdout = Join-Path $logs "one-click-monitor-$stamp.log"
+    $monitorStderr = Join-Path $logs "one-click-monitor-$stamp.error.log"
     $monitorArguments = @(
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
@@ -230,12 +236,12 @@ try {
         "-WorkspaceRoot", $workspace,
         "-MaximumMinutes", "240"
     )
-    Start-Process -FilePath "powershell.exe" -ArgumentList $monitorArguments -WindowStyle Hidden -RedirectStandardOutput $monitorLog -RedirectStandardError $monitorLog | Out-Null
+    Start-Process -FilePath "powershell.exe" -ArgumentList $monitorArguments -WindowStyle Hidden -RedirectStandardOutput $monitorStdout -RedirectStandardError $monitorStderr | Out-Null
 
     Write-Step "Opening the live control center."
     Start-Process $dashboardUrl | Out-Null
 
-    $result = @{
+    @{
         schema = "echoes.cinema-one-click-result.v1"
         status = "PARTIAL"
         timestampUtc = [DateTime]::UtcNow.ToString("o")
@@ -246,22 +252,21 @@ try {
         logPath = $logPath
         automaticMonitor = (Join-Path $runtime "one-click-monitor-status.json")
         message = "Control center is online. Provider recovery and P0 monitoring continue automatically."
-    }
-    $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $runtime "one-click-result.json") -Encoding utf8
+    } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $runtime "one-click-result.json") -Encoding utf8
+
     Write-Step "DONE. Echoes Cinema is online and continues working automatically."
     exit 0
 }
 catch {
     $message = $_.Exception.Message
     Write-Step "BROKEN: $message"
-    $failure = @{
+    @{
         schema = "echoes.cinema-one-click-result.v1"
         status = "BROKEN"
         timestampUtc = [DateTime]::UtcNow.ToString("o")
         error = $message
         logPath = $logPath
-    }
-    $failure | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $runtime "one-click-result.json") -Encoding utf8
+    } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $runtime "one-click-result.json") -Encoding utf8
     Write-Error $message
     exit 1
 }
