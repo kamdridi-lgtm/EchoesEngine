@@ -1,0 +1,46 @@
+name: Echoes Cinema Provider Port Handoff
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+      - fix/**
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  provider-port-handoff:
+    name: Provider port handoff (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Compile handoff proof and bridge
+        shell: bash
+        run: |
+          python -m py_compile \
+            tests/provider_bootstrap_handoff_test.py \
+            providers/provider_bootstrap_health_bridge.py
+
+      - name: Execute truthful same-port handoff proof
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python tests/provider_bootstrap_handoff_test.py
