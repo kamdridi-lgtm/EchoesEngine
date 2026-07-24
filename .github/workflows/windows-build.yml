@@ -1,0 +1,264 @@
+name: EchoesEngine Windows Build
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout minimal sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cmake/standalone
+            engine
+            app
+          sparse-checkout-cone-mode: true
+
+      - name: Verify minimal source layout
+        shell: pwsh
+        run: |
+          $required = @(
+            "cmake/standalone/CMakeLists.txt",
+            "engine/src/CoreAudioPipeline.cpp",
+            "engine/src/Engine.cpp",
+            "engine/opencl/opencl_context.cpp",
+            "engine/opencl/kernel_loader.cpp",
+            "app/standalone_processor.cpp"
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path $path)) {
+              throw "Required source missing: $path"
+            }
+            Write-Host "FOUND $path"
+          }
+          cmake --version
+
+      - name: Clean stale build cache
+        shell: pwsh
+        run: |
+          if (Test-Path build) {
+            Remove-Item build -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path build | Out-Null
+
+      - name: Configure minimal standalone build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          cmake -S cmake/standalone -B build -G "Visual Studio 17 2022" -A x64 2>&1 | Tee-Object -FilePath configure.log
+          $exitCode = $LASTEXITCODE
+          Get-Content configure.log
+          if ($exitCode -ne 0) {
+            throw "CMake configure failed with exit code $exitCode"
+          }
+
+      - name: Build Release
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          # Use one MSBuild worker. CoreAudioPipeline is a large translation unit and
+          # parallel CL.exe instances made the hosted runner less deterministic.
+          cmake --build build --config Release --target EchoesStandaloneCI -- /m:1 /v:minimal 2>&1 | Tee-Object -FilePath build.log
+          $exitCode = $LASTEXITCODE
+          Get-Content build.log
+          if ($exitCode -ne 0) {
+            throw "Build failed with exit code $exitCode"
+          }
+
+      - name: Verify executable launch
+        shell: pwsh
+        run: |
+          $exe = "build\Release\EchoesEngine.exe"
+          if (-not (Test-Path $exe)) {
+            $exe = "build\bin\Release\EchoesEngine.exe"
+          }
+          if (-not (Test-Path $exe)) {
+            Get-ChildItem build -Recurse -Filter EchoesEngine.exe | Format-Table FullName
+            throw "EchoesEngine.exe was not produced"
+          }
+
+          Write-Host "Verified file: $exe"
+          $stdoutPath = Join-Path $PWD "runtime-stdout.log"
+          $stderrPath = Join-Path $PWD "runtime-stderr.log"
+          $startProcessArgs = @{
+            FilePath = (Resolve-Path $exe).Path
+            NoNewWindow = $true
+            Wait = $true
+            PassThru = $true
+            RedirectStandardOutput = $stdoutPath
+            RedirectStandardError = $stderrPath
+          }
+          $process = Start-Process @startProcessArgs
+
+          $runtimeExit = $process.ExitCode
+          $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { "" }
+          $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { "" }
+          $runtimeText = ($stdout + "`n" + $stderr)
+          $runtimeText | Set-Content -Path runtime.log
+          Write-Host $runtimeText
+
+          # The current standalone CLI prints usage and intentionally returns 1 when
+          # launched without input/output WAV arguments. That still proves the PE
+          # executable starts and reaches its own argument parser.
+          if ($runtimeExit -ne 1) {
+            throw "Unexpected no-argument exit code: $runtimeExit"
+          }
+          if ($runtimeText -notmatch "Usage: EchoesEngine") {
+            throw "Executable launched but did not print the expected usage contract"
+          }
+          Write-Host "Executable launch contract PASS"
+
+      - name: Generate deterministic PCM16 audio fixture
+        shell: python
+        run: |
+          import math
+          import struct
+          import wave
+
+          sample_rate = 44100
+          duration_seconds = 0.50
+          frames = int(sample_rate * duration_seconds)
+          with wave.open("audio-input.wav", "wb") as output:
+              output.setnchannels(2)
+              output.setsampwidth(2)
+              output.setframerate(sample_rate)
+              samples = bytearray()
+              for frame in range(frames):
+                  t = frame / sample_rate
+                  left = 0.22 * math.sin(2.0 * math.pi * 220.0 * t)
+                  right = 0.18 * math.sin(2.0 * math.pi * 330.0 * t)
+                  samples.extend(struct.pack("<hh", int(left * 32767), int(right * 32767)))
+              output.writeframes(samples)
+          print(f"Generated PCM16 fixture frames={frames} sampleRate={sample_rate}")
+
+      - name: Process WAV through EchoesEngine
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "build\Release\EchoesEngine.exe").Path
+          $engineArgs = @(
+            "audio-input.wav",
+            "audio-output.wav",
+            "--input-gain", "3",
+            "--output-gain", "-1",
+            "--no-gate",
+            "--no-comp",
+            "--no-eq",
+            "--verbose"
+          )
+          $output = & $exe @engineArgs 2>&1
+          $exitCode = $LASTEXITCODE
+          $output | Tee-Object -FilePath audio-runtime.log
+          if ($exitCode -ne 0) {
+            throw "Audio processing failed with exit code $exitCode"
+          }
+          if (-not (Test-Path "audio-output.wav")) {
+            throw "EchoesEngine did not produce audio-output.wav"
+          }
+
+      - name: Validate processed float WAV
+        shell: python
+        run: |
+          import hashlib
+          import json
+          import math
+          import struct
+          from pathlib import Path
+
+          path = Path("audio-output.wav")
+          data = path.read_bytes()
+          if len(data) <= 44 or data[:4] != b"RIFF" or data[8:12] != b"WAVE":
+              raise SystemExit("processed output is not a valid RIFF/WAVE file")
+
+          cursor = 12
+          fmt = None
+          pcm = None
+          while cursor + 8 <= len(data):
+              chunk_id = data[cursor:cursor + 4]
+              chunk_size = struct.unpack_from("<I", data, cursor + 4)[0]
+              chunk_start = cursor + 8
+              chunk_end = chunk_start + chunk_size
+              if chunk_end > len(data):
+                  raise SystemExit("WAV chunk exceeds file size")
+              if chunk_id == b"fmt ":
+                  fmt = struct.unpack_from("<HHIIHH", data, chunk_start)
+              elif chunk_id == b"data":
+                  pcm = data[chunk_start:chunk_end]
+              cursor = chunk_end + (chunk_size & 1)
+
+          if fmt is None or pcm is None:
+              raise SystemExit("processed WAV is missing fmt or data chunk")
+          audio_format, channels, sample_rate, byte_rate, block_align, bits = fmt
+          if audio_format != 3 or channels != 2 or sample_rate != 44100 or bits != 32:
+              raise SystemExit(f"unexpected output format: {fmt}")
+          if len(pcm) == 0 or len(pcm) % 4 != 0:
+              raise SystemExit("processed WAV contains invalid float sample data")
+
+          sample_count = len(pcm) // 4
+          samples = struct.unpack(f"<{sample_count}f", pcm)
+          if not all(math.isfinite(value) for value in samples):
+              raise SystemExit("processed WAV contains non-finite samples")
+          peak = max(abs(value) for value in samples)
+          rms = math.sqrt(sum(value * value for value in samples) / sample_count)
+          if peak <= 1e-6 or rms <= 1e-7:
+              raise SystemExit("processed WAV is silent")
+          if peak > 8.0:
+              raise SystemExit(f"processed WAV peak is implausible: {peak}")
+
+          qc = {
+              "schema": "echoes.audio-qc.v1",
+              "status": "PASS",
+              "format": "ieee-float32",
+              "channels": channels,
+              "sampleRate": sample_rate,
+              "bitsPerSample": bits,
+              "sampleCount": sample_count,
+              "durationSeconds": sample_count / channels / sample_rate,
+              "peak": peak,
+              "rms": rms,
+              "sizeBytes": path.stat().st_size,
+              "sha256": hashlib.sha256(data).hexdigest(),
+          }
+          Path("audio-qc.json").write_text(json.dumps(qc, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(qc, indent=2))
+
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: EchoesEngine-windows-diagnostics
+          path: |
+            configure.log
+            build.log
+            runtime.log
+            runtime-stdout.log
+            runtime-stderr.log
+            audio-runtime.log
+            audio-qc.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload executable and audio proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: EchoesEngine-windows-release
+          path: |
+            build/**/EchoesEngine.exe
+            audio-input.wav
+            audio-output.wav
+            audio-qc.json
+          if-no-files-found: error
+          retention-days: 14

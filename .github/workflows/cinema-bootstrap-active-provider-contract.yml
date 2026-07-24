@@ -1,0 +1,133 @@
+name: Echoes Cinema Active Provider Bootstrap
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  active-provider-bootstrap-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout active bootstrap sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/bootstrap-cinema-ai.ps1
+            providers/modelscope_low_vram_provider.py
+            providers/modelscope_low_vram_provider_v2.py
+            providers/modelscope_resilient_provider.py
+            tools/cinema_p0_preflight.py
+          sparse-checkout-cone-mode: false
+
+      - name: Parse bootstrap PowerShell
+        shell: pwsh
+        run: |
+          $content = Get-Content "scripts/bootstrap-cinema-ai.ps1" -Raw
+          [void][scriptblock]::Create($content)
+          Write-Host "Cinema bootstrap PowerShell syntax PASS"
+
+      - name: Compile active provider and preflight
+        run: |
+          python3 -m py_compile \
+            providers/modelscope_low_vram_provider.py \
+            providers/modelscope_low_vram_provider_v2.py \
+            providers/modelscope_resilient_provider.py \
+            tools/cinema_p0_preflight.py
+
+      - name: Run active provider and preflight self-tests
+        run: |
+          python3 providers/modelscope_low_vram_provider.py --self-test
+          python3 tools/cinema_p0_preflight.py --self-test
+
+      - name: Verify health stays online while a permanent blocker stops retry loops
+        shell: bash
+        run: |
+          export ECHOES_RENDER_TOKEN=contract-recovery-token
+          python3 providers/modelscope_low_vram_provider.py \
+            --host 127.0.0.1 \
+            --port 18082 \
+            --retry-base-seconds 1 \
+            --minimum-free-gib 0 \
+            > /tmp/resilient-provider.log 2>&1 &
+          provider_pid=$!
+          trap 'kill "$provider_pid" 2>/dev/null || true; wait "$provider_pid" 2>/dev/null || true' EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent \
+              -H 'Authorization: Bearer contract-recovery-token' \
+              http://127.0.0.1:18082/health > /tmp/resilient-health.json; then
+              state=$(python3 -c "import json; print(json.load(open('/tmp/resilient-health.json'))['loadState'])")
+              if [ "$state" = "BLOCKED" ]; then break; fi
+            fi
+            sleep 1
+          done
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          health = json.loads(Path('/tmp/resilient-health.json').read_text(encoding='utf-8'))
+          assert health['schema'] == 'echoes.render-provider-health.v1'
+          assert health['recoverySchema'] == 'echoes.modelscope-provider-recovery.v1'
+          assert health['realModelLoaded'] is False
+          assert health['loadState'] == 'BLOCKED'
+          assert health['automaticRetry'] is False
+          assert health['operatorRestartRequired'] is True
+          assert health['retryable'] is False
+          assert health['failureClass'] == 'PYTHON_RUNTIME_BLOCKER'
+          assert health['loadError']
+          assert health['operatorAction']
+          assert 'workspaceFreeGiB' in health
+          print('Resilient provider permanent-blocker health PASS class=', health['failureClass'])
+          PY
+
+      - name: Verify local bootstrap uses the active P0 path
+        shell: python
+        run: |
+          from pathlib import Path
+
+          bootstrap = Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8")
+          entry = Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8")
+          resilient = Path("providers/modelscope_resilient_provider.py").read_text(encoding="utf-8")
+          required = [
+              '$lowVramProvider = Join-Path $repoRoot "providers\\modelscope_low_vram_provider.py"',
+              '$p0Preflight = Join-Path $repoRoot "tools\\cinema_p0_preflight.py"',
+              '& $python -m py_compile $provider $proofProvider $lowVramProvider $p0Preflight $service $runner',
+              '& $python $lowVramProvider --self-test',
+              'throw "Active low-VRAM provider self-test failed"',
+              '& $python $p0Preflight --self-test',
+              'throw "Cinema P0 preflight self-test failed"',
+              r'D:\A.I\EchoesCinema\.venv-cinema',
+              r'D:\A.I\Python310',
+          ]
+          for token in required:
+              assert token in bootstrap, f"bootstrap missing active P0 token: {token}"
+          assert "modelscope_resilient_provider" in entry
+          for token in [
+              "classify_load_error",
+              "TRANSIENT_NETWORK",
+              "PYTHON_RUNTIME_BLOCKER",
+              "WAITING_STORAGE",
+              "BLOCKED",
+              "automaticRetry",
+              "operatorRestartRequired",
+              "operatorAction",
+              "workspaceFreeGiB",
+              "minimumFreeGiB",
+              "recoverySchema",
+          ]:
+              assert token in resilient, f"resilient provider missing recovery token: {token}"
+          assert "Visual Studio 17 2022" not in bootstrap
+          assert "Join-Path $env:USERPROFILE" not in bootstrap
+          print("Active low-VRAM bootstrap, transient retry, storage pause, and permanent blocker contract PASS")

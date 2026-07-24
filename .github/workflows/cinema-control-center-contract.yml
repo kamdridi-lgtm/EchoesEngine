@@ -1,0 +1,191 @@
+name: Echoes Cinema Control Center
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  control-center-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout control center stack
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            START_ECHOES_CINEMA.cmd
+            STOP_ECHOES_CINEMA.cmd
+            scripts/echoes-cinema-provider-worker.ps1
+            scripts/echoes-cinema-stack-supervisor.ps1
+            scripts/start-echoes-cinema-stack.ps1
+            scripts/stop-echoes-cinema-stack.ps1
+            tests/fixtures/first_real_clip_sections.csv
+            tests/mock_render_provider.py
+            tools/assemble_render.py
+            tools/cinema_control_center.py
+            tools/cinema_job_ledger.py
+            tools/cinema_job_runner.py
+            tools/cinema_job_scheduler.py
+            tools/cinema_job_service.py
+            tools/cinema_job_service_durable.py
+            tools/cinema_p0_autopilot.py
+            tools/cinema_p0_evidence_bundle.py
+            tools/http_render_worker.py
+            tools/python_render_manifest.py
+            tools/render_capabilities.py
+            tools/render_resume.py
+            tools/resumable_http_render_worker.py
+          sparse-checkout-cone-mode: false
+
+      - name: Compile control center stack
+        run: |
+          python3 -m py_compile \
+            tools/cinema_control_center.py \
+            tools/cinema_job_service.py \
+            tools/cinema_job_service_durable.py \
+            tools/cinema_job_ledger.py \
+            tools/cinema_job_scheduler.py \
+            tools/cinema_p0_autopilot.py \
+            tools/cinema_p0_evidence_bundle.py \
+            tools/render_capabilities.py \
+            tests/mock_render_provider.py
+
+      - name: Run control center and P0 autopilot self-tests
+        run: |
+          PYTHONPATH=tools python3 -c "import cinema_control_center as c; raise SystemExit(c.self_test())"
+          PYTHONPATH=tools python3 tools/cinema_p0_autopilot.py
+
+      - name: Parse all Windows stack scripts
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+            "scripts/echoes-cinema-provider-worker.ps1",
+            "scripts/echoes-cinema-stack-supervisor.ps1",
+            "scripts/start-echoes-cinema-stack.ps1",
+            "scripts/stop-echoes-cinema-stack.ps1"
+          )) {
+            [void][scriptblock]::Create((Get-Content $path -Raw))
+            Write-Host "PowerShell syntax PASS: $path"
+          }
+
+      - name: Start mock provider and browser control center
+        shell: bash
+        env:
+          ECHOES_CINEMA_SERVICE_TOKEN: service-contract-token
+          ECHOES_RENDER_TOKEN: ci-token
+          ECHOES_RENDER_ENDPOINT: http://127.0.0.1:18081/v1/render
+          ECHOES_RENDER_HEALTH_URL: http://127.0.0.1:18081/health
+          ECHOES_RENDER_HOST_ALLOWLIST: 127.0.0.1,localhost
+          ECHOES_CINEMA_STORAGE_RESERVE_GIB: "0"
+          ECHOES_CINEMA_DEFAULT_JOB_GIB: "0.0625"
+          ECHOES_CINEMA_MAX_JOB_GIB: "1"
+          ECHOES_CINEMA_PROVIDER_MODE: mock-contract
+        run: |
+          mkdir -p /tmp/echoes-control-center/audio /tmp/echoes-control-center/jobs
+          python3 tests/mock_render_provider.py --host 127.0.0.1 --port 18081 > /tmp/mock-provider.log 2>&1 &
+          echo $! > /tmp/mock-provider.pid
+          PYTHONPATH=tools python3 tools/cinema_control_center.py \
+            --host 127.0.0.1 \
+            --port 18090 \
+            --sections-root tests/fixtures \
+            --audio-root /tmp/echoes-control-center/audio \
+            --output-root /tmp/echoes-control-center/jobs \
+            --provider-timeout 5 \
+            --max-workers 1 \
+            > /tmp/control-center.log 2>&1 &
+          echo $! > /tmp/control-center.pid
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18090/ > /tmp/dashboard.html; then break; fi
+            sleep 1
+          done
+          grep -q "ECHOES CINEMA" /tmp/dashboard.html
+          curl --fail --silent http://127.0.0.1:18090/v1/control-center/status > /tmp/status.json
+
+      - name: Verify localhost works and protected APIs stay protected
+        shell: python
+        run: |
+          import json
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          html = Path("/tmp/dashboard.html").read_text(encoding="utf-8")
+          status = json.loads(Path("/tmp/status.json").read_text(encoding="utf-8"))
+
+          assert "ECHOES CINEMA" in html
+          assert "localhost stays online" in html
+          assert "Model recovery" in html
+          assert status["schema"] == "echoes.cinema-control-center.v1"
+          assert status["status"] in {"PASS", "PARTIAL"}
+          assert status["service"]["port"] == 18090
+          assert status["provider"]["status"] == "PARTIAL"
+          assert status["provider"]["loadState"] in {"CONNECTING", "LOADING"}
+          assert status["provider"]["automaticRetry"] is True
+          assert status["acceptingRealJobs"] is False
+          assert "control center is online" in status["nextAction"].lower()
+
+          try:
+              urllib.request.urlopen("http://127.0.0.1:18090/health", timeout=3)
+          except urllib.error.HTTPError as error:
+              assert error.code == 401
+          else:
+              raise AssertionError("protected /health unexpectedly allowed anonymous access")
+          print("Local dashboard reachable, recovery visible, and authenticated API boundary PASS")
+
+      - name: Verify no dead-localhost or secret persistence path remains
+        shell: python
+        run: |
+          from pathlib import Path
+
+          files = {
+              "start_cmd": Path("START_ECHOES_CINEMA.cmd").read_text(encoding="utf-8"),
+              "stop_cmd": Path("STOP_ECHOES_CINEMA.cmd").read_text(encoding="utf-8"),
+              "launcher": Path("scripts/start-echoes-cinema-stack.ps1").read_text(encoding="utf-8"),
+              "supervisor": Path("scripts/echoes-cinema-stack-supervisor.ps1").read_text(encoding="utf-8"),
+              "worker": Path("scripts/echoes-cinema-provider-worker.ps1").read_text(encoding="utf-8"),
+              "stop": Path("scripts/stop-echoes-cinema-stack.ps1").read_text(encoding="utf-8"),
+              "center": Path("tools/cinema_control_center.py").read_text(encoding="utf-8"),
+              "autopilot": Path("tools/cinema_p0_autopilot.py").read_text(encoding="utf-8"),
+          }
+          required = {
+              "start_cmd": ["start-echoes-cinema-stack.ps1", "browser opens only after localhost is truly reachable"],
+              "launcher": ["Test-Dashboard", "Start-Process", "did not open a dead localhost page", "echoes-cinema-stack-supervisor.ps1"],
+              "supervisor": ["Test-DashboardReady", "Start-ControlCenterProcess", "Start-ProviderWorkerProcess", "being restarted automatically", "secretsPersisted = $false", "systemDriveWritesAllowed = $false"],
+              "worker": ["BOOTSTRAPPING", "MODEL_LOADING", "provider.pid", "systemDriveWritesAllowed = $false"],
+              "stop": ["Stop-VerifiedProcess", "Refusing to stop PID", "echoes-cinema-stack-supervisor.ps1"],
+              "center": ["PUBLIC_PATHS", "public dashboard is loopback-only", "Protected render APIs still require authentication", "v1/control-center/status", "Model recovery", "lastLoadError", "modelCacheGiB"],
+              "autopilot": ["--resume", "verified_proof", "latest-p0-evidence.zip", "secretsPersisted", "WAITING_PROVIDER", "RENDERING"],
+          }
+          for name, tokens in required.items():
+              for token in tokens:
+                  assert token.lower() in files[name].lower(), f"{name} missing contract token: {token}"
+
+          assert '"--token", $env:ECHOES_CINEMA_SERVICE_TOKEN' not in files["supervisor"]
+          assert '"--token", $serviceToken' not in files["supervisor"]
+          assert "serviceToken =" not in files["supervisor"]
+          assert "providerToken =" not in files["supervisor"]
+          assert "Start-Process ([string]$lastState.dashboardUrl)" in files["launcher"]
+          assert files["launcher"].index("Test-Dashboard") < files["launcher"].index("Start-Process ([string]$lastState.dashboardUrl)")
+          print("No dead localhost launch, no persisted secret, and recovery telemetry contract PASS")
+
+      - name: Stop contract processes
+        if: always()
+        shell: bash
+        run: |
+          test ! -f /tmp/control-center.pid || kill $(cat /tmp/control-center.pid) 2>/dev/null || true
+          test ! -f /tmp/mock-provider.pid || kill $(cat /tmp/mock-provider.pid) 2>/dev/null || true
+          echo "--- control center log ---"
+          cat /tmp/control-center.log 2>/dev/null || true
+          echo "--- provider log ---"
+          cat /tmp/mock-provider.log 2>/dev/null || true

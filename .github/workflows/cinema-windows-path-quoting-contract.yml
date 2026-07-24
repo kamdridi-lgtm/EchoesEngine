@@ -1,0 +1,82 @@
+name: Echoes Cinema Windows Path Quoting Contract
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+      - qwen/**
+  pull_request:
+    branches:
+      - main
+      - feature/**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  path-quoting-regression:
+    runs-on: windows-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout launcher path sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            START_ECHOES_CINEMA.cmd
+            STOP_ECHOES_CINEMA.cmd
+            scripts/start-echoes-cinema-stack.ps1
+            scripts/stop-echoes-cinema-stack.ps1
+          sparse-checkout-cone-mode: false
+
+      - name: Parse PowerShell launchers
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+            'scripts/start-echoes-cinema-stack.ps1',
+            'scripts/stop-echoes-cinema-stack.ps1'
+          )) {
+            [void][scriptblock]::Create((Get-Content $path -Raw))
+            Write-Host "PowerShell syntax PASS: $path"
+          }
+
+      - name: Verify malformed path normalization
+        shell: pwsh
+        run: |
+          & .\scripts\start-echoes-cinema-stack.ps1 -PathNormalizationSelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Path normalization self-test failed" }
+
+      - name: Verify start launcher trailing-backslash guard
+        shell: pwsh
+        run: |
+          $cmd = Get-Content START_ECHOES_CINEMA.cmd -Raw
+          if ($cmd -match '-RepoRoot\s+"%~dp0"') {
+            throw 'Regression: %~dp0 ends with a backslash and can escape the final quote.'
+          }
+          foreach ($token in @(
+            'set "REPO_ROOT=%~dp0"',
+            'if "%REPO_ROOT:~-1%"=="\" set "REPO_ROOT=%REPO_ROOT:~0,-1%"',
+            '-RepoRoot "%REPO_ROOT%"'
+          )) {
+            if (-not $cmd.Contains($token)) { throw "Start launcher missing quoting guard: $token" }
+          }
+          Write-Host "Start launcher trailing-backslash quoting guard PASS"
+
+      - name: Verify stop launcher trailing-backslash guard
+        shell: pwsh
+        run: |
+          $cmd = Get-Content STOP_ECHOES_CINEMA.cmd -Raw
+          if ($cmd -match '-File\s+"%~dp0') {
+            throw 'Regression: stop launcher passes a raw %~dp0-derived path directly to PowerShell.'
+          }
+          foreach ($token in @(
+            'set "REPO_ROOT=%~dp0"',
+            'if "%REPO_ROOT:~-1%"=="\" set "REPO_ROOT=%REPO_ROOT:~0,-1%"',
+            'set "STOP_SCRIPT=%REPO_ROOT%\scripts\stop-echoes-cinema-stack.ps1"',
+            '-File "%STOP_SCRIPT%"'
+          )) {
+            if (-not $cmd.Contains($token)) { throw "Stop launcher missing quoting guard: $token" }
+          }
+          Write-Host "Stop launcher trailing-backslash quoting guard PASS"

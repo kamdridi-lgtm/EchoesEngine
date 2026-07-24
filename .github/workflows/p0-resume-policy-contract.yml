@@ -1,0 +1,103 @@
+name: Echoes Cinema P0 Resume Policy
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p0-resume-policy-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout P0 resume sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/run-first-real-ai-clip.ps1
+            tools/cinema_p0_resume_policy.py
+            tools/cinema_p0_evidence_bundle.py
+            tools/cinema_job_runner.py
+          sparse-checkout-cone-mode: false
+
+      - name: Compile resume and evidence tools
+        run: |
+          python3 -m py_compile \
+            tools/cinema_p0_resume_policy.py \
+            tools/cinema_p0_evidence_bundle.py \
+            tools/cinema_job_runner.py
+
+      - name: Run resume and evidence self-tests
+        run: |
+          python3 tools/cinema_p0_resume_policy.py --self-test
+          python3 tools/cinema_p0_evidence_bundle.py --self-test
+
+      - name: Parse Windows P0 launcher
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content "scripts/run-first-real-ai-clip.ps1" -Raw))
+          Write-Host "P0 resumable launcher PowerShell syntax PASS"
+
+      - name: Verify incomplete work survives and real proof archives
+        shell: python
+        run: |
+          from pathlib import Path
+
+          launcher = Path("scripts/run-first-real-ai-clip.ps1").read_text(encoding="utf-8")
+          policy = Path("tools/cinema_p0_resume_policy.py").read_text(encoding="utf-8")
+          evidence = Path("tools/cinema_p0_evidence_bundle.py").read_text(encoding="utf-8")
+          runner = Path("tools/cinema_job_runner.py").read_text(encoding="utf-8")
+
+          launcher_tokens = [
+              "cinema_p0_resume_policy.py",
+              "Preserving incomplete work and archiving only completed REAL proofs",
+              "--output-root",
+              "--archive-root",
+              "--resume",
+              "run-failure.txt",
+              "Evidence-validated resume was not recorded",
+              "[1/8]",
+              "[8/8]",
+          ]
+          policy_tokens = [
+              "echoes.cinema-p0-resume-policy.v1",
+              "PRESERVED_INCOMPLETE_FOR_RESUME",
+              "ARCHIVED_COMPLETED_REAL",
+              "render-state.json",
+              "render-output",
+              "atomic_write_json",
+              "systemDriveWritesAllowed",
+          ]
+          evidence_tokens = [
+              "run-failure.txt",
+              "resume-policy.json",
+              "current_run_failure",
+              'return "FAILED", run_failure',
+          ]
+          runner_tokens = [
+              'parser.add_argument(',
+              '"--resume"',
+              'http_worker = "resumable_http_render_worker.py" if args.resume else "http_render_worker.py"',
+          ]
+          for token in launcher_tokens:
+              assert token in launcher, f"launcher missing token: {token}"
+          for token in policy_tokens:
+              assert token in policy, f"policy missing token: {token}"
+          for token in evidence_tokens:
+              assert token in evidence, f"evidence missing token: {token}"
+          for token in runner_tokens:
+              assert token in runner, f"runner missing token: {token}"
+
+          assert "Prepare-FreshProofDirectory" not in launcher
+          assert "Move-Item -LiteralPath $outputRoot" not in launcher
+          assert "%USERPROFILE%" not in launcher
+          print("P0 evidence-validated resume integration PASS")

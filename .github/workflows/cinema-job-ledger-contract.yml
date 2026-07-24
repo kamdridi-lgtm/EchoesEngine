@@ -1,0 +1,190 @@
+name: Echoes Cinema Durable Job Ledger
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  durable-ledger-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout durable service sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/cleanup-cinema-storage.ps1
+            scripts/start-cinema-job-service.ps1
+            tools/cinema_job_ledger.py
+            tools/cinema_job_runner.py
+            tools/cinema_job_scheduler.py
+            tools/cinema_job_service.py
+            tools/cinema_job_service_durable.py
+            tools/cinema_storage_janitor.py
+            tools/render_capabilities.py
+            tools/render_resume.py
+            tools/resumable_http_render_worker.py
+          sparse-checkout-cone-mode: false
+
+      - name: Compile ledger, scheduler, janitor, durable service, runner, and resume worker
+        run: |
+          python3 -m py_compile \
+            tools/cinema_job_ledger.py \
+            tools/cinema_job_runner.py \
+            tools/cinema_job_scheduler.py \
+            tools/cinema_job_service.py \
+            tools/cinema_job_service_durable.py \
+            tools/cinema_storage_janitor.py \
+            tools/render_capabilities.py \
+            tools/render_resume.py \
+            tools/resumable_http_render_worker.py
+
+      - name: Parse Windows durable-service and cleanup launchers
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+            "scripts/start-cinema-job-service.ps1",
+            "scripts/cleanup-cinema-storage.ps1"
+          )) {
+            $content = Get-Content $path -Raw
+            [void][scriptblock]::Create($content)
+            Write-Host "PowerShell syntax PASS: $path"
+          }
+
+      - name: Verify atomic persistence and restart recovery
+        run: python3 tools/cinema_job_ledger.py --self-test
+
+      - name: Verify priority, bounded concurrency, and storage admission
+        run: python3 tools/cinema_job_scheduler.py --self-test
+
+      - name: Verify safe terminal-job lifecycle cleanup
+        run: python3 tools/cinema_storage_janitor.py --self-test
+
+      - name: Verify fail-closed durable scheduler, retention, and resume service contract
+        shell: python
+        run: |
+          from pathlib import Path
+
+          ledger = Path("tools/cinema_job_ledger.py").read_text(encoding="utf-8")
+          scheduler = Path("tools/cinema_job_scheduler.py").read_text(encoding="utf-8")
+          service = Path("tools/cinema_job_service_durable.py").read_text(encoding="utf-8")
+          runner = Path("tools/cinema_job_runner.py").read_text(encoding="utf-8")
+          resume_worker = Path("tools/resumable_http_render_worker.py").read_text(encoding="utf-8")
+          janitor = Path("tools/cinema_storage_janitor.py").read_text(encoding="utf-8")
+          cleanup = Path("scripts/cleanup-cinema-storage.ps1").read_text(encoding="utf-8")
+          launcher = Path("scripts/start-cinema-job-service.ps1").read_text(encoding="utf-8")
+
+          required = {
+            "ledger": [
+              'SCHEMA = "echoes.cinema-job-ledger.v1"',
+              'EVENT_SCHEMA = "echoes.cinema-job-ledger-event.v1"',
+              'os.replace(temp_path, path)',
+              'os.fsync(handle.fileno())',
+              '"RECOVERABLE"',
+              'service restarted before a terminal result was recorded',
+              'invalid Cinema job transition',
+              'Cinema job ledger is unreadable or corrupt',
+              'TERMINAL_STATUSES = {"PASS", "FAILED", "BROKEN"}',
+            ],
+            "scheduler": [
+              'class StorageAdmissionError',
+              'class StorageBudget',
+              'class PriorityJobScheduler',
+              'queue.PriorityQueue',
+              'sort_key=(-parsed_priority, sequence)',
+              'minimumFreeBytes',
+              'projectedFreeBytes',
+              'insufficient storage for Cinema job',
+              'recentWorkerFailures',
+              'maxWorkers',
+              'CinemaJobScheduler PASS',
+            ],
+            "service": [
+              'class DurableJobRegistry(base.JobRegistry)',
+              'PriorityJobScheduler',
+              'resumeRecovered',
+              'actionRequired',
+              '"/v1/cinema/jobs"',
+              '"/v1/cinema/scheduler"',
+              'job-ledger.json',
+              'self.ledger.transition',
+              'terminal_fields.pop(reserved, None)',
+              'self.resume_requested: set[str]',
+              'def _run_resume_job',
+              '"--resume"',
+              'resumeRequested=resume_existing',
+              'request_priority',
+              'estimatedOutputBytes',
+              'reserve_storage',
+              'submit_reserved',
+              'ECHOES_CINEMA_STORAGE_RESERVE_GIB',
+              'ECHOES_CINEMA_DEFAULT_JOB_GIB',
+              'ECHOES_CINEMA_MAX_JOB_GIB',
+            ],
+            "runner": ['resumable_http_render_worker.py', '"--resume"'],
+            "resume_worker": [
+              'REUSED_VALIDATED',
+              'SHA256_AND_MEDIA_QC_VALIDATED',
+              'os.replace(temp_path, path)',
+            ],
+            "janitor": [
+              'echoes.cinema-storage-janitor-report.v1',
+              'PROTECTED_STATUSES = {"QUEUED", "RUNNING", "RECOVERABLE"}',
+              'TERMINAL_STATUSES = {"PASS", "FAILED", "BROKEN"}',
+              'newest-terminal-protection',
+              'ledger-pinned',
+              'keep-marker',
+              'final MP4 files',
+              'job-result.json',
+              'render-state.json',
+              'video-qc.json',
+              'DEFAULT_DISPOSABLE_RELATIVE_PATHS',
+              'os.replace(temp_path, path)',
+              'os.fsync(handle.fileno())',
+            ],
+            "cleanup": [
+              'cinema_storage_janitor.py',
+              'JobRetentionDays = 3',
+              'KeepNewestTerminalJobs = 3',
+              'jobs in QUEUED, RUNNING, or RECOVERABLE state',
+              'pinned jobs and .keep jobs',
+              'final MP4 files, JSON evidence, and logs',
+              'echoes.cinema-cleanup-report.v2',
+            ],
+            "launcher": [
+              'D:\\A.I\\EchoesCinema\\jobs',
+              'D:\\A.I\\EchoesCinema\\.venv-cinema\\Scripts\\python.exe',
+              'cinema_job_service_durable.py',
+              'Cinema job output must not use drive C:',
+              'compiler-free Python',
+              'job-ledger.json',
+              'StorageReserveGiB',
+              'DefaultJobGiB',
+              'MaxJobGiB',
+              'ECHOES_CINEMA_STORAGE_RESERVE_GIB',
+            ],
+          }
+          sources = {
+            "ledger": ledger,
+            "scheduler": scheduler,
+            "service": service,
+            "runner": runner,
+            "resume_worker": resume_worker,
+            "janitor": janitor,
+            "cleanup": cleanup,
+            "launcher": launcher,
+          }
+          for name, tokens in required.items():
+            for token in tokens:
+              assert token in sources[name], f"{name} missing durable retention token: {token}"
+          print("Durable Cinema priority, storage admission, safe retention, evidence resume, restart safety, and D-drive contract PASS")

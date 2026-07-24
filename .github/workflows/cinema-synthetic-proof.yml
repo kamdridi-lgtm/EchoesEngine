@@ -1,0 +1,229 @@
+name: Echoes Cinema Synthetic MP4 Proof
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Cinema proof sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cmake/prompt_director
+            ai_prompt
+            tests
+            tools
+          sparse-checkout-cone-mode: true
+
+      - name: Ensure FFmpeg tools
+        shell: bash
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
+      - name: Configure render manifest tools
+        shell: bash
+        run: |
+          rm -rf build-cinema-proof
+          cmake -S cmake/prompt_director -B build-cinema-proof
+
+      - name: Build render manifest CLI
+        shell: bash
+        run: cmake --build build-cinema-proof --config Release --target RenderManifestCli
+
+      - name: Generate render manifest
+        shell: bash
+        env:
+          ECHOES_CONTINUITY_SUBJECT_ID: cinema-proof-subject
+          ECHOES_CONTINUITY_STYLE_ID: echoes-cinema-proof-style
+          ECHOES_CONTINUITY_REFERENCE_ASSET: assets/reference/cinema-proof.png
+          ECHOES_CONTINUITY_STRENGTH: "0.90"
+        run: |
+          ./build-cinema-proof/RenderManifestCli \
+            tests/fixtures/cinema_proof_sections.csv \
+            build-cinema-proof/render-manifest.json \
+            echoes-cinema-synthetic-proof \
+            4242 \
+            clips
+
+      - name: Render real synthetic H264 clips
+        shell: bash
+        run: |
+          python3 tools/synthetic_render_worker.py \
+            build-cinema-proof/render-manifest.json \
+            build-cinema-proof/render-output \
+            --state build-cinema-proof/render-state.json \
+            --width 320 \
+            --height 180 \
+            --fps 12
+
+      - name: Assemble final MP4 and QC
+        shell: bash
+        run: |
+          python3 tools/assemble_render.py \
+            build-cinema-proof/render-state.json \
+            build-cinema-proof/render-output \
+            build-cinema-proof/echoes-cinema-synthetic-proof.mp4 \
+            --qc build-cinema-proof/video-qc.json
+
+      - name: Verify proof artifacts
+        shell: python
+        run: |
+          import json
+          import pathlib
+
+          root = pathlib.Path("build-cinema-proof")
+          manifest = json.loads((root / "render-manifest.json").read_text(encoding="utf-8"))
+          state = json.loads((root / "render-state.json").read_text(encoding="utf-8"))
+          qc = json.loads((root / "video-qc.json").read_text(encoding="utf-8"))
+          final_mp4 = root / "echoes-cinema-synthetic-proof.mp4"
+
+          assert manifest["schema"] == "echoes.render-manifest.v1"
+          assert state["schema"] == "echoes.render-state.v1"
+          assert state["status"] == "PASS"
+          assert state["backend"] == "synthetic-ci"
+          assert qc["schema"] == "echoes.video-qc.v1"
+          assert qc["status"] == "PASS"
+          assert qc["probe"]["codec"] == "h264"
+          assert qc["probe"]["pixelFormat"] == "yuv420p"
+          assert qc["probe"]["audio"] is None
+          assert qc["probe"]["durationSeconds"] >= 4.0
+          assert final_mp4.is_file() and final_mp4.stat().st_size > 0
+          assert len(state["tasks"]) == len(manifest["tasks"])
+
+          for index, task in enumerate(manifest["tasks"]):
+              continuity = task.get("continuity") or {}
+              assert continuity.get("subjectId") == "cinema-proof-subject", index
+              assert continuity.get("styleId") == "echoes-cinema-proof-style", index
+              assert continuity.get("referenceAsset") == "assets/reference/cinema-proof.png", index
+              assert abs(float(continuity.get("strength", 0.0)) - 0.90) < 0.001, index
+
+          print(
+              f"Verified real synthetic MP4: clips={qc['clipCount']} "
+              f"duration={qc['probe']['durationSeconds']} size={final_mp4.stat().st_size}"
+          )
+
+      - name: Generate source audio for mux proof
+        shell: python
+        run: |
+          import math
+          import struct
+          import wave
+
+          path = "build-cinema-proof/proof-audio.wav"
+          sample_rate = 44100
+          duration_seconds = 4.5
+          frames = int(sample_rate * duration_seconds)
+          with wave.open(path, "wb") as output:
+              output.setnchannels(2)
+              output.setsampwidth(2)
+              output.setframerate(sample_rate)
+              samples = bytearray()
+              for frame in range(frames):
+                  t = frame / sample_rate
+                  envelope = min(1.0, t / 0.10, (duration_seconds - t) / 0.10)
+                  left = envelope * 0.18 * math.sin(2.0 * math.pi * 110.0 * t)
+                  right = envelope * 0.16 * math.sin(2.0 * math.pi * 165.0 * t)
+                  samples.extend(struct.pack("<hh", int(left * 32767), int(right * 32767)))
+              output.writeframes(samples)
+          print(f"Generated synchronized audio fixture frames={frames} duration={duration_seconds}")
+
+      - name: Run one-command Cinema job with audio
+        shell: bash
+        env:
+          ECHOES_CONTINUITY_SUBJECT_ID: cinema-job-subject
+          ECHOES_CONTINUITY_STYLE_ID: echoes-one-command-style
+          ECHOES_CONTINUITY_REFERENCE_ASSET: assets/reference/cinema-job.png
+          ECHOES_CONTINUITY_STRENGTH: "0.92"
+        run: |
+          python3 tools/cinema_job_runner.py \
+            tests/fixtures/cinema_proof_sections.csv \
+            build-cinema-proof/one-command \
+            --manifest-cli build-cinema-proof/RenderManifestCli \
+            --job-id echoes-cinema-one-command \
+            --seed 7331 \
+            --backend synthetic \
+            --audio build-cinema-proof/proof-audio.wav \
+            --width 320 \
+            --height 180 \
+            --fps 12
+
+      - name: Verify one-command audiovisual job result
+        shell: python
+        run: |
+          import json
+          import pathlib
+          import subprocess
+
+          root = pathlib.Path("build-cinema-proof/one-command")
+          result = json.loads((root / "job-result.json").read_text(encoding="utf-8"))
+          assert result["schema"] == "echoes.cinema-job-result.v1"
+          assert result["status"] == "PASS"
+          assert result["backendUsed"] == "synthetic-ci"
+          assert result["backendStatus"] == "MOCK"
+          assert result["audioStatus"] == "REAL"
+          assert result["taskCount"] == 3
+          assert len(result["stages"]) == 3
+          assert all(stage["status"] == "PASS" for stage in result["stages"])
+          assert result["qc"]["audio"]["codec"] == "aac"
+          assert result["qc"]["audio"]["sampleRate"] == 44100
+          assert result["qc"]["audio"]["channels"] == 2
+
+          output = root / "echoes-cinema-one-command.mp4"
+          assert output.is_file() and output.stat().st_size > 0
+          probe = subprocess.run(
+              [
+                  "ffprobe", "-v", "error",
+                  "-show_entries", "stream=codec_type,codec_name",
+                  "-of", "json", str(output),
+              ],
+              check=True,
+              text=True,
+              capture_output=True,
+          )
+          streams = json.loads(probe.stdout)["streams"]
+          assert any(stream.get("codec_type") == "video" and stream.get("codec_name") == "h264" for stream in streams)
+          assert any(stream.get("codec_type") == "audio" and stream.get("codec_name") == "aac" for stream in streams)
+          print(
+              f"One-command audiovisual Cinema job PASS tasks={result['taskCount']} "
+              f"duration={result['durationSeconds']} size={output.stat().st_size}"
+          )
+
+      - name: Upload Cinema proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-cinema-synthetic-mp4-proof
+          path: |
+            build-cinema-proof/render-manifest.json
+            build-cinema-proof/render-state.json
+            build-cinema-proof/video-qc.json
+            build-cinema-proof/echoes-cinema-synthetic-proof.mp4
+            build-cinema-proof/render-output/clips/*.mp4
+            build-cinema-proof/proof-audio.wav
+            build-cinema-proof/one-command/job-result.json
+            build-cinema-proof/one-command/render-manifest.json
+            build-cinema-proof/one-command/render-state.json
+            build-cinema-proof/one-command/video-qc.json
+            build-cinema-proof/one-command/echoes-cinema-one-command.mp4
+            build-cinema-proof/one-command/*.log
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,219 @@
+name: Echoes Cinema Windows Control Center Smoke
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-one-click-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Windows control center stack
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/echoes-cinema-provider-worker.ps1
+            scripts/echoes-cinema-stack-supervisor.ps1
+            scripts/start-echoes-cinema-stack.ps1
+            scripts/stop-echoes-cinema-stack.ps1
+            tests/fixtures/first_real_clip_sections.csv
+            tests/mock_health_provider.py
+            tools/assemble_render.py
+            tools/cinema_control_center.py
+            tools/cinema_p0_autopilot.py
+            tools/cinema_job_ledger.py
+            tools/cinema_job_runner.py
+            tools/cinema_job_scheduler.py
+            tools/cinema_job_service.py
+            tools/cinema_job_service_durable.py
+            tools/http_render_worker.py
+            tools/python_render_manifest.py
+            tools/render_capabilities.py
+            tools/render_resume.py
+            tools/resumable_http_render_worker.py
+          sparse-checkout-cone-mode: false
+
+      - name: Create D-only Python environment
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "D:\")) {
+            $target = Join-Path $env:RUNNER_TEMP "echoes-d"
+            New-Item -ItemType Directory -Path $target -Force | Out-Null
+            subst D: $target
+            Set-Content -LiteralPath (Join-Path $env:RUNNER_TEMP "echoes-subst-created.txt") -Value "true"
+          }
+          python -m venv D:\A.I\EchoesCinema\.venv-cinema
+          if (-not (Test-Path D:\A.I\EchoesCinema\.venv-cinema\Scripts\python.exe)) {
+            throw "D-drive venv was not created"
+          }
+
+      - name: Exercise the Windows stack and preserve exact stage evidence
+        shell: pwsh
+        run: |
+          $diagnostics = Join-Path $env:RUNNER_TEMP "echoes-stack-diagnostics"
+          New-Item -ItemType Directory -Path $diagnostics -Force | Out-Null
+          $env:RUNNER_TRACKING_ID = ""
+          $failure = $null
+          try {
+            try {
+              & .\scripts\start-echoes-cinema-stack.ps1 `
+                -WorkspaceRoot "D:\A.I\EchoesCinema" `
+                -RepoRoot $PWD.Path `
+                -StartupTimeoutSeconds 90 `
+                -ProviderMode "mock-contract" `
+                -NoBrowser
+              if ($LASTEXITCODE -ne 0) { throw "Windows stack launcher failed" }
+              Set-Content (Join-Path $diagnostics "01-start.pass") "PASS"
+            } catch {
+              $failure = "START: $($_.Exception.Message)"
+            }
+
+            if (-not $failure) {
+              try {
+                $statePath = "D:\A.I\EchoesCinema\runtime\stack-state.json"
+                if (-not (Test-Path $statePath)) { throw "stack-state.json is missing" }
+                $rawState = Get-Content $statePath -Raw
+                $state = $rawState | ConvertFrom-Json
+                Copy-Item $statePath (Join-Path $diagnostics "stack-state.json") -Force
+                if ($state.schema -ne "echoes.cinema-stack-state.v1") { throw "stack state schema mismatch: $($state.schema)" }
+                if ($state.status -notin @("RUNNING", "PARTIAL")) { throw "stack state is not running: $($state.status)" }
+                if (-not $state.dashboardUrl) { throw "dashboardUrl is missing" }
+                if (-not $state.servicePid) { throw "service PID is missing" }
+                if ($state.providerMode -ne "mock-contract") { throw "providerMode mismatch: $($state.providerMode)" }
+                if ($state.secretsPersisted -ne $false) { throw "secretsPersisted must be false; actual=$($state.secretsPersisted)" }
+                if ($state.systemDriveWritesAllowed -ne $false) { throw "systemDriveWritesAllowed must be false; actual=$($state.systemDriveWritesAllowed)" }
+                Set-Content (Join-Path $diagnostics "02-state.pass") "PASS"
+              } catch {
+                $failure = "STATE: $($_.Exception.Message)"
+              }
+            }
+
+            if (-not $failure) {
+              try {
+                $statusUrl = ([string]$state.dashboardUrl).TrimEnd('/') + '/v1/control-center/status'
+                Invoke-WebRequest -Uri ([string]$state.dashboardUrl) -UseBasicParsing -TimeoutSec 10 -OutFile (Join-Path $diagnostics "dashboard.html")
+                Invoke-WebRequest -Uri $statusUrl -UseBasicParsing -TimeoutSec 10 -OutFile (Join-Path $diagnostics "status.json")
+                $dashboard = Get-Content (Join-Path $diagnostics "dashboard.html") -Raw
+                $status = Get-Content (Join-Path $diagnostics "status.json") -Raw | ConvertFrom-Json
+                if ($dashboard -notlike "*ECHOES CINEMA*") { throw "localhost dashboard HTML is missing" }
+                if ($status.schema -ne "echoes.cinema-control-center.v1") { throw "control center schema mismatch: $($status.schema)" }
+                if ($status.service.backend -ne "cinema-durable-control-center") { throw "control center backend mismatch: $($status.service.backend)" }
+                if ($status.autopilot.status -ne "DORMANT") { throw "mock-contract autopilot must be DORMANT: $($status.autopilot.status)" }
+                Set-Content (Join-Path $diagnostics "03-dashboard.pass") "PASS"
+              } catch {
+                $failure = "DASHBOARD: $($_.Exception.Message)"
+              }
+            }
+
+            if (-not $failure) {
+              try {
+                $workerStatusPath = "D:\A.I\EchoesCinema\runtime\provider-worker-status.json"
+                $workerDeadline = (Get-Date).AddSeconds(30)
+                $worker = $null
+                while ((Get-Date) -lt $workerDeadline) {
+                  if (Test-Path $workerStatusPath) {
+                    $worker = Get-Content $workerStatusPath -Raw | ConvertFrom-Json
+                    if ($worker.status -eq "RUNNING") { break }
+                    if ($worker.status -eq "BROKEN") { throw "provider worker broken: $($worker.error)" }
+                  }
+                  Start-Sleep -Milliseconds 500
+                }
+                if (-not $worker -or $worker.status -ne "RUNNING") { throw "provider worker did not become RUNNING" }
+                if ($worker.providerMode -ne "mock-contract") { throw "worker providerMode mismatch: $($worker.providerMode)" }
+                Copy-Item $workerStatusPath (Join-Path $diagnostics "provider-worker-status.json") -Force
+                Set-Content (Join-Path $diagnostics "04-provider.pass") "PASS"
+              } catch {
+                $failure = "PROVIDER: $($_.Exception.Message)"
+              }
+            }
+
+            if (-not $failure) {
+              try {
+                if ($rawState -match '(?i)"(?:token|serviceToken|providerToken)"\s*:' -or $rawState -match '(?i)Bearer\s+[A-Za-z0-9._~+\-/=]{16,}') {
+                  throw "stack state contains a secret value"
+                }
+                Set-Content (Join-Path $diagnostics "05-secret.pass") "PASS"
+              } catch {
+                $failure = "SECRET: $($_.Exception.Message)"
+              }
+            }
+
+            Copy-Item "D:\A.I\EchoesCinema\logs\*" $diagnostics -Force -ErrorAction SilentlyContinue
+            if ($failure) {
+              Set-Content (Join-Path $diagnostics "failure.txt") $failure
+              Write-Host "EXACT WINDOWS STACK FAILURE: $failure"
+            } else {
+              Set-Content (Join-Path $diagnostics "06-all.pass") "PASS"
+              Write-Host "Windows localhost dashboard PASS url=$($state.dashboardUrl) status=$($status.status) provider=$($worker.status)"
+            }
+          } catch {
+            $unexpected = "HARNESS: $($_.Exception.Message)"
+            Set-Content (Join-Path $diagnostics "failure.txt") $unexpected
+            Write-Host "EXACT WINDOWS STACK FAILURE: $unexpected"
+          } finally {
+            try {
+              if (Test-Path .\scripts\stop-echoes-cinema-stack.ps1) {
+                & .\scripts\stop-echoes-cinema-stack.ps1 -WorkspaceRoot "D:\A.I\EchoesCinema" -GraceSeconds 10
+              }
+            } catch {
+              Set-Content (Join-Path $diagnostics "cleanup-warning.txt") $_.Exception.Message
+            }
+            try {
+              if (Test-Path (Join-Path $env:RUNNER_TEMP "echoes-subst-created.txt")) {
+                subst D: /d | Out-Null
+              }
+            } catch {
+              Add-Content (Join-Path $diagnostics "cleanup-warning.txt") $_.Exception.Message
+            }
+          }
+          exit 0
+
+      - name: Verify Windows stack startup marker
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP "echoes-stack-diagnostics"
+          if (-not (Test-Path (Join-Path $root "01-start.pass"))) { throw (Get-Content (Join-Path $root "failure.txt") -Raw) }
+
+      - name: Verify Windows stack state marker
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP "echoes-stack-diagnostics"
+          if (-not (Test-Path (Join-Path $root "02-state.pass"))) { throw (Get-Content (Join-Path $root "failure.txt") -Raw) }
+
+      - name: Verify Windows localhost dashboard marker
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP "echoes-stack-diagnostics"
+          if (-not (Test-Path (Join-Path $root "03-dashboard.pass"))) { throw (Get-Content (Join-Path $root "failure.txt") -Raw) }
+
+      - name: Verify Windows provider worker marker
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP "echoes-stack-diagnostics"
+          if (-not (Test-Path (Join-Path $root "04-provider.pass"))) { throw (Get-Content (Join-Path $root "failure.txt") -Raw) }
+
+      - name: Verify Windows secret guard marker
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP "echoes-stack-diagnostics"
+          if (-not (Test-Path (Join-Path $root "05-secret.pass"))) { throw (Get-Content (Join-Path $root "failure.txt") -Raw) }
+
+      - name: Upload Windows stack evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-windows-control-center-diagnostics
+          path: ${{ runner.temp }}/echoes-stack-diagnostics
+          if-no-files-found: warn
+          retention-days: 3

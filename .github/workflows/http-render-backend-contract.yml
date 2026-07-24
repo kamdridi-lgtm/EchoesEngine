@@ -1,0 +1,266 @@
+name: Echoes Cinema HTTP Backend Contract
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  http-provider-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ECHOES_RENDER_TOKEN: ci-token
+      ECHOES_RENDER_ENDPOINT: http://127.0.0.1:18081/v1/render
+      ECHOES_RENDER_HEALTH_URL: http://127.0.0.1:18081/health
+      ECHOES_RENDER_HOST_ALLOWLIST: 127.0.0.1,localhost
+
+    steps:
+      - name: Checkout HTTP render sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cmake/prompt_director
+            ai_prompt
+            tests
+            tools
+          sparse-checkout-cone-mode: true
+
+      - name: Ensure FFmpeg tools
+        shell: bash
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
+      - name: Configure render manifest tools
+        shell: bash
+        run: |
+          rm -rf build-http-contract
+          cmake -S cmake/prompt_director -B build-http-contract
+
+      - name: Build render manifest CLI
+        shell: bash
+        run: cmake --build build-http-contract --config Release --target RenderManifestCli
+
+      - name: Generate render manifest
+        shell: bash
+        run: |
+          ./build-http-contract/RenderManifestCli \
+            tests/fixtures/cinema_proof_sections.csv \
+            build-http-contract/render-manifest.json \
+            echoes-cinema-http-contract \
+            4242 \
+            clips
+
+      - name: Start local provider fixture
+        shell: bash
+        run: |
+          python3 tests/mock_render_provider.py \
+            --port 18081 \
+            --token "$ECHOES_RENDER_TOKEN" \
+            --width 320 \
+            --height 180 \
+            --fps 12 \
+            > build-http-contract/provider.log 2>&1 &
+          echo $! > build-http-contract/provider.pid
+          python3 - <<'PY'
+          import json
+          import time
+          import urllib.request
+
+          url = "http://127.0.0.1:18081/health"
+          for attempt in range(60):
+              try:
+                  with urllib.request.urlopen(url, timeout=1) as response:
+                      payload = json.loads(response.read().decode("utf-8"))
+                  if payload.get("status") == "PASS":
+                      assert payload.get("schema") == "echoes.render-provider-health.v1"
+                      assert payload.get("realModelLoaded") is False
+                      print("Provider health PASS; real model correctly reported as absent")
+                      break
+              except Exception:
+                  time.sleep(0.25)
+          else:
+              raise SystemExit("mock render provider did not become healthy")
+          PY
+
+      - name: Prove real-model gate rejects the mock provider
+        shell: bash
+        run: |
+          if python3 tools/http_render_worker.py \
+            build-http-contract/render-manifest.json \
+            build-http-contract/real-model-gate-output \
+            --state build-http-contract/real-model-gate-state.json \
+            --timeout 30 \
+            --require-real-model; then
+            echo "real-model gate unexpectedly accepted the mock provider" >&2
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          import pathlib
+
+          state = json.loads(pathlib.Path("build-http-contract/real-model-gate-state.json").read_text(encoding="utf-8"))
+          assert state["status"] == "FAILED"
+          assert "no verified real model loaded" in state["error"]
+          assert state["tasks"] == []
+          print("Real-model gate correctly blocked rendering")
+          PY
+
+      - name: Execute complete manifest through HTTP provider
+        shell: bash
+        run: |
+          python3 tools/http_render_worker.py \
+            build-http-contract/render-manifest.json \
+            build-http-contract/render-output \
+            --state build-http-contract/render-state.json \
+            --timeout 30
+
+      - name: Simulate one damaged clip after interruption
+        shell: python
+        run: |
+          import json
+          import pathlib
+          import shutil
+
+          root = pathlib.Path("build-http-contract")
+          manifest = json.loads((root / "render-manifest.json").read_text(encoding="utf-8"))
+          state = json.loads((root / "render-state.json").read_text(encoding="utf-8"))
+          assert len(manifest["tasks"]) >= 2
+          shutil.copy2(root / "render-state.json", root / "initial-render-state.json")
+          damaged = root / "render-output" / manifest["tasks"][1]["outputFile"]
+          damaged.write_bytes(b"damaged-clip-must-not-be-reused")
+          print(f"Damaged task={manifest['tasks'][1]['id']} path={damaged}")
+
+      - name: Resume and rerender only the damaged task
+        shell: bash
+        run: |
+          python3 tools/resumable_http_render_worker.py \
+            build-http-contract/render-manifest.json \
+            build-http-contract/render-output \
+            --state build-http-contract/render-state.json \
+            --timeout 30
+
+      - name: Verify evidence-validated resume
+        shell: python
+        run: |
+          import json
+          import pathlib
+          import time
+
+          root = pathlib.Path("build-http-contract")
+          manifest = json.loads((root / "render-manifest.json").read_text(encoding="utf-8"))
+          initial = json.loads((root / "initial-render-state.json").read_text(encoding="utf-8"))
+          resumed = json.loads((root / "render-state.json").read_text(encoding="utf-8"))
+          damaged_id = str(manifest["tasks"][1]["id"])
+          initial_by_id = {str(task["taskId"]): task for task in initial["tasks"]}
+          resumed_by_id = {str(task["taskId"]): task for task in resumed["tasks"]}
+
+          assert resumed["status"] == "PASS"
+          assert resumed["resumeRequested"] is True
+          assert resumed["priorStateFound"] is True
+          assert resumed["reuseCompatible"] is True
+          assert resumed["reuseBlocker"] is None
+          assert resumed["reusedTaskCount"] == len(manifest["tasks"]) - 1
+          assert resumed["renderedTaskCount"] == 1
+          assert resumed_by_id[damaged_id]["resumeStatus"] == "RENDERED"
+          for task_id, record in resumed_by_id.items():
+              assert record["status"] == "PASS"
+              if task_id != damaged_id:
+                  assert record["resumeStatus"] == "REUSED_VALIDATED"
+                  assert record["sha256"] == initial_by_id[task_id]["sha256"]
+
+          for _ in range(20):
+              log = (root / "provider.log").read_text(encoding="utf-8", errors="replace")
+              post_count = log.count('"POST /v1/render HTTP/1.1" 200')
+              if post_count == len(manifest["tasks"]) + 1:
+                  break
+              time.sleep(0.1)
+          assert post_count == len(manifest["tasks"]) + 1, (post_count, log)
+          print(
+              f"Evidence resume PASS reused={resumed['reusedTaskCount']} "
+              f"rendered={resumed['renderedTaskCount']} providerPosts={post_count}"
+          )
+
+      - name: Assemble resumed provider clips and QC
+        shell: bash
+        run: |
+          python3 tools/assemble_render.py \
+            build-http-contract/render-state.json \
+            build-http-contract/render-output \
+            build-http-contract/echoes-cinema-http-contract.mp4 \
+            --qc build-http-contract/video-qc.json
+
+      - name: Verify provider contract proof
+        shell: python
+        run: |
+          import json
+          import pathlib
+
+          root = pathlib.Path("build-http-contract")
+          manifest = json.loads((root / "render-manifest.json").read_text(encoding="utf-8"))
+          state = json.loads((root / "render-state.json").read_text(encoding="utf-8"))
+          qc = json.loads((root / "video-qc.json").read_text(encoding="utf-8"))
+          output = root / "echoes-cinema-http-contract.mp4"
+
+          assert manifest["schema"] == "echoes.render-manifest.v1"
+          assert state["schema"] == "echoes.render-state.v1"
+          assert state["status"] == "PASS"
+          assert state["backend"] == "http-provider"
+          assert state["providerProtocol"] == "echoes.render-request.v1"
+          assert state["providerEndpoint"] == "http://127.0.0.1:18081/v1/render"
+          assert state["providerHealthUrl"] == "http://127.0.0.1:18081/health"
+          assert state["providerHealth"]["status"] == "PASS"
+          assert state["providerHealth"]["realModelLoaded"] is False
+          assert state["realModelRequired"] is False
+          assert len(state["tasks"]) == len(manifest["tasks"])
+          assert all(task["status"] == "PASS" for task in state["tasks"])
+          assert all(task["providerMode"] == "direct-mp4" for task in state["tasks"])
+          assert qc["status"] == "PASS"
+          assert qc["backend"] == "http-provider"
+          assert qc["probe"]["codec"] == "h264"
+          assert qc["probe"]["pixelFormat"] == "yuv420p"
+          assert qc["probe"]["durationSeconds"] >= 4.0
+          assert output.is_file() and output.stat().st_size > 0
+          print(
+              f"HTTP backend contract PASS tasks={len(state['tasks'])} "
+              f"reused={state['reusedTaskCount']} rendered={state['renderedTaskCount']} "
+              f"duration={qc['probe']['durationSeconds']} size={output.stat().st_size}"
+          )
+
+      - name: Stop provider fixture
+        if: always()
+        shell: bash
+        run: |
+          if [ -f build-http-contract/provider.pid ]; then
+            kill "$(cat build-http-contract/provider.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload HTTP backend proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-cinema-http-backend-contract
+          path: |
+            build-http-contract/render-manifest.json
+            build-http-contract/initial-render-state.json
+            build-http-contract/render-state.json
+            build-http-contract/real-model-gate-state.json
+            build-http-contract/video-qc.json
+            build-http-contract/echoes-cinema-http-contract.mp4
+            build-http-contract/render-output/clips/*.mp4
+            build-http-contract/provider.log
+          if-no-files-found: warn
+          retention-days: 14

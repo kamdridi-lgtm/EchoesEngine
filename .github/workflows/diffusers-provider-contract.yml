@@ -1,0 +1,177 @@
+name: Echoes Diffusers Provider Contract
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fail-closed-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout provider contract sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            RUN_FIRST_REAL_AI_CLIP.cmd
+            RUN_ECHOES_CINEMA_PREFLIGHT_ONLY.cmd
+            providers
+            scripts/bootstrap-cinema-ai.ps1
+            scripts/cleanup-cinema-storage.ps1
+            scripts/ensure-python-on-d.ps1
+            scripts/run-first-real-ai-clip.ps1
+            tools/assemble_render.py
+            tools/cinema_job_service.py
+            tools/cinema_job_runner.py
+            tools/cinema_p0_evidence_bundle.py
+            tools/cinema_p0_preflight.py
+            tools/http_render_worker.py
+            tools/provider_selector.py
+            tools/python_render_manifest.py
+            tools/render_capabilities.py
+            tools/render_resume.py
+            tools/resumable_http_render_worker.py
+            tests/test_diffusers_provider_fail_closed.py
+            tests/test_cinema_job_service_fail_closed.py
+          sparse-checkout-cone-mode: false
+
+      - name: Compile provider, evidence, preflight, selection, resume, QC, manifest, and service modules
+        run: |
+          python3 -m py_compile \
+            providers/cogvideox_commercial_provider.py \
+            providers/diffusers_video_provider.py \
+            providers/modelscope_proof_provider.py \
+            providers/modelscope_low_vram_provider.py \
+            providers/modelscope_low_vram_provider_v2.py \
+            providers/modelscope_resilient_provider.py \
+            tools/assemble_render.py \
+            tools/cinema_job_service.py \
+            tools/cinema_job_runner.py \
+            tools/cinema_p0_evidence_bundle.py \
+            tools/cinema_p0_preflight.py \
+            tools/http_render_worker.py \
+            tools/provider_selector.py \
+            tools/python_render_manifest.py \
+            tools/render_capabilities.py \
+            tools/render_resume.py \
+            tools/resumable_http_render_worker.py \
+            tests/test_diffusers_provider_fail_closed.py \
+            tests/test_cinema_job_service_fail_closed.py
+
+      - name: Verify compiler-free manifest, P0 evidence, preflight, capabilities, selection, and resume planner
+        run: |
+          python3 tools/python_render_manifest.py --self-test
+          python3 tools/cinema_p0_evidence_bundle.py --self-test
+          python3 tools/cinema_p0_preflight.py --self-test
+          python3 tools/render_capabilities.py
+          python3 tools/provider_selector.py --self-test
+          python3 tools/render_resume.py --self-test
+
+      - name: Verify pinned safe low-VRAM recovery and commercial provider boundaries
+        run: |
+          python3 providers/modelscope_low_vram_provider.py --self-test
+          python3 providers/cogvideox_commercial_provider.py --self-test
+          python3 tests/test_diffusers_provider_fail_closed.py
+
+      - name: Verify proof provider is fail-closed and non-commercial
+        env:
+          ECHOES_RENDER_TOKEN: contract-token
+        run: python3 providers/modelscope_proof_provider.py --self-test
+
+      - name: Parse Windows PowerShell launchers
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+            "scripts/bootstrap-cinema-ai.ps1",
+            "scripts/cleanup-cinema-storage.ps1",
+            "scripts/ensure-python-on-d.ps1",
+            "scripts/run-first-real-ai-clip.ps1"
+          )) {
+            [void][scriptblock]::Create((Get-Content $path -Raw))
+            Write-Host "PowerShell syntax PASS: $path"
+          }
+
+      - name: Verify D-drive, evidence ZIP, pinned model, automatic recovery, P0 preflight, resume, licensing, and QC contract
+        shell: python
+        run: |
+          from pathlib import Path
+
+          files = {
+              "launcher": Path("RUN_FIRST_REAL_AI_CLIP.cmd").read_text(encoding="utf-8"),
+              "preflight_launcher": Path("RUN_ECHOES_CINEMA_PREFLIGHT_ONLY.cmd").read_text(encoding="utf-8"),
+              "runner_ps": Path("scripts/run-first-real-ai-clip.ps1").read_text(encoding="utf-8"),
+              "cleanup": Path("scripts/cleanup-cinema-storage.ps1").read_text(encoding="utf-8"),
+              "bootstrap": Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8"),
+              "ensure_python": Path("scripts/ensure-python-on-d.ps1").read_text(encoding="utf-8"),
+              "runner": Path("tools/cinema_job_runner.py").read_text(encoding="utf-8"),
+              "evidence": Path("tools/cinema_p0_evidence_bundle.py").read_text(encoding="utf-8"),
+              "preflight": Path("tools/cinema_p0_preflight.py").read_text(encoding="utf-8"),
+              "service": Path("tools/cinema_job_service.py").read_text(encoding="utf-8"),
+              "http": Path("tools/http_render_worker.py").read_text(encoding="utf-8"),
+              "resumable": Path("tools/resumable_http_render_worker.py").read_text(encoding="utf-8"),
+              "assemble": Path("tools/assemble_render.py").read_text(encoding="utf-8"),
+              "capabilities": Path("tools/render_capabilities.py").read_text(encoding="utf-8"),
+              "selector": Path("tools/provider_selector.py").read_text(encoding="utf-8"),
+              "resume": Path("tools/render_resume.py").read_text(encoding="utf-8"),
+              "manifest": Path("tools/python_render_manifest.py").read_text(encoding="utf-8"),
+              "low_vram": Path("providers/modelscope_low_vram_provider_v2.py").read_text(encoding="utf-8"),
+              "low_vram_entry": Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8"),
+              "resilient": Path("providers/modelscope_resilient_provider.py").read_text(encoding="utf-8"),
+              "commercial": Path("providers/cogvideox_commercial_provider.py").read_text(encoding="utf-8"),
+          }
+
+          required_tokens = {
+              "launcher": [r"D:\A.I\EchoesCinema", "cleanup-cinema-storage.ps1", "-AfterRun", "cinema_p0_evidence_bundle.py", "latest-p0-evidence.zip", "Collecting one portable P0 evidence ZIP", "the evidence ZIP contains the first blocker and logs"],
+              "preflight_launcher": [r"D:\A.I\EchoesCinema", r".venv-cinema\Scripts\python.exe", "cinema_p0_preflight.py", "p0-preflight-only-report.json", "No model load. No package reinstall. D drive only.", "cleanup-cinema-storage.ps1", "-AfterRun", "--require-cuda"],
+              "runner_ps": [r"D:\A.I\EchoesCinema", "systemDriveWritesAllowed = $false", "modelscope_low_vram_provider.py", "cinema_p0_preflight.py", "preflight-report.json", '"--width", "384"', '"--height", "216"', '"--fps", "4"', '"--max-frames", "16"'],
+              "cleanup": ["cache\\pip", "cache\\huggingface", '".venv-cinema"', '"proofs\\first-real-ai-clip"', "KeepProofArchives = 2", "build-first-real-cli"],
+              "bootstrap": [r"D:\A.I\EchoesCinema\.venv-cinema", r"D:\A.I\Python310", '"systemDriveWritesAllowed": False', "ensure-python-on-d.ps1", "Test-PythonModuleImport"],
+              "ensure_python": [r"D:\A.I\Python310", '[string]$PythonVersion = "3.10.11"', "Get-AuthenticodeSignature", "Python Software Foundation", "Get-FileHash", "Include_launcher=0"],
+              "runner": ["--resume", "resumable_http_render_worker.py", "artifactEvidence", "--require-commercial-use", "reusedTaskCount", "renderedTaskCount"],
+              "evidence": ["echoes.cinema-p0-evidence-bundle.v1", "READ_ME_FIRST.txt", "evidence-index.json", "truthStatus", "firstBlocker", "missingExpectedProofFiles", "sha256_file", "os.replace", "[REDACTED]", "systemDriveWritesAllowed"],
+              "preflight": ["echoes.cinema-p0-preflight.v1", "atomic_write_json", "REQUIRED_PACKAGES", "STORAGE_ENV_VARS", "workspace-free-space", "storage-redirection", "provider-port", "nvidia-smi", "systemDriveWritesAllowed", "--require-cuda", "CinemaP0Preflight PASS"],
+              "service": ["manifest_cli: Path | None", "acceptingCommercialJobs", "commercialUseRequired"],
+              "http": ["validate_provider_health", "--require-commercial-use", "requiredCapabilities", '"sha256": sha256_file(output_path)'],
+              "resumable": ["atomic_write_json", "build_plan", "provider_identity", "REUSED_VALIDATED", "SHA256_AND_MEDIA_QC_VALIDATED", "reusedTaskCount", "renderedTaskCount", "provider identity, model revision, license, or capabilities changed", "os.replace(temp_path, path)", "os.fsync(handle.fileno())"],
+              "assemble": ["MAX_AV_DRIFT_SECONDS", "avDriftSeconds", "sha256_file"],
+              "capabilities": ["task_requirements", "referenceImage", "subjectIdentity", "commercialUseAllowed"],
+              "selector": ['"classification": "CANDIDATE_ONLY"', '"realModelLoaded": False', '"decision": "LOCAL_PROOF_CANDIDATE"', '"decision": "REMOTE_COMMERCIAL_REQUIRED"'],
+              "resume": ["echoes.render-resume-plan.v1", '"classification": "EVIDENCE_VALIDATED"', "sha256_file", "probe_mp4", "SHA-256 evidence missing or changed"],
+              "manifest": ["echoes.render-manifest.v1", "python-render-manifest-v1"],
+              "low_vram": ["DEFAULT_MODEL_REVISION", "safe_load_attempts", "use_safetensors", "modelSourcePinned", "loadAttempts", "enable_sequential_cpu_offload", "enable_attention_slicing", "enable_vae_slicing", "enable_forward_chunking", "is_cuda_oom", '"commercialUseAllowed": False'],
+              "low_vram_entry": ["modelscope_resilient_provider", "raise SystemExit(main())"],
+              "resilient": ["ResilientModelScopeEngine", "RETRY_WAIT", "retry_delay_seconds", "automaticRetry", "operatorRestartRequired", "modelCacheGiB", "ThreadingHTTPServer"],
+              "commercial": ['COMMERCIAL_MODEL_ID = "zai-org/CogVideoX-2b"', 'COMMERCIAL_MODEL_REVISION = "102080da924c0ab684abeeca4b061ec7dfb7d40c"', 'COMMERCIAL_LICENSE = "Apache-2.0"', "MINIMUM_RECOMMENDED_VRAM_GIB = 12.0", "currentLocalGpuSupported"],
+          }
+          for name, tokens in required_tokens.items():
+              for token in tokens:
+                  assert token in files[name], f"{name} missing contract token: {token}"
+
+          assert files["launcher"].count("cleanup-cinema-storage.ps1") == 2
+          assert files["launcher"].index("-AfterRun") < files["launcher"].index("cinema_p0_evidence_bundle.py")
+          assert files["preflight_launcher"].count("cleanup-cinema-storage.ps1") == 2
+          assert "%USERPROFILE%" not in files["launcher"]
+          assert "%USERPROFILE%" not in files["preflight_launcher"]
+          assert "Join-Path $env:USERPROFILE" not in files["runner_ps"]
+          assert "Join-Path $env:USERPROFILE" not in files["bootstrap"]
+          assert "3.10.20" not in files["ensure_python"]
+          assert "Visual Studio 17 2022" not in files["runner_ps"]
+          assert 'Assert-Command "cmake"' not in files["runner_ps"]
+          assert 'trust_remote_code=True' not in files["low_vram"]
+          assert '"trust_remote_code": True' not in files["low_vram"]
+          assert 'use_safetensors=False' not in files["low_vram"]
+          assert '"use_safetensors": False' not in files["low_vram"]
+          print("D-drive, automatic recovery, evidence ZIP, pinned safe model loading, P0 preflight, resume, licensing, SHA-256, and A/V QC contract PASS")
+
+      - name: Verify Cinema service rejects unverified providers
+        run: python3 tests/test_cinema_job_service_fail_closed.py
