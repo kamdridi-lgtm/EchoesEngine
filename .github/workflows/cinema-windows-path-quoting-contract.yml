@@ -1,0 +1,56 @@
+name: Echoes Cinema Windows Path Quoting Contract
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  path-quoting-regression:
+    runs-on: windows-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout launcher path sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            START_ECHOES_CINEMA.cmd
+            scripts/start-echoes-cinema-stack.ps1
+          sparse-checkout-cone-mode: false
+
+      - name: Parse PowerShell launcher
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content scripts/start-echoes-cinema-stack.ps1 -Raw))
+          Write-Host "PowerShell syntax PASS"
+
+      - name: Verify malformed path normalization
+        shell: pwsh
+        run: |
+          & .\scripts\start-echoes-cinema-stack.ps1 -PathNormalizationSelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Path normalization self-test failed" }
+
+      - name: Verify CMD never passes percent-tilde-dp-zero directly as the final quoted argument
+        shell: pwsh
+        run: |
+          $cmd = Get-Content START_ECHOES_CINEMA.cmd -Raw
+          if ($cmd -match '-RepoRoot\s+"%~dp0"') {
+            throw 'Regression: %~dp0 ends with a backslash and can escape the final quote.'
+          }
+          foreach ($token in @(
+            'set "REPO_ROOT=%~dp0"',
+            'if "%REPO_ROOT:~-1%"=="\" set "REPO_ROOT=%REPO_ROOT:~0,-1%"',
+            '-RepoRoot "%REPO_ROOT%"'
+          )) {
+            if (-not $cmd.Contains($token)) { throw "CMD launcher missing quoting guard: $token" }
+          }
+          Write-Host "CMD trailing-backslash quoting guard PASS"
