@@ -1,0 +1,63 @@
+name: Echoes Cinema Provider Bootstrap Health Bridge
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  provider-bootstrap-health:
+    runs-on: windows-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout provider bootstrap sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            providers/provider_bootstrap_health_bridge.py
+            scripts/echoes-cinema-provider-worker.ps1
+          sparse-checkout-cone-mode: false
+
+      - name: Run bootstrap health bridge self-test
+        shell: pwsh
+        run: |
+          python providers/provider_bootstrap_health_bridge.py --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Bootstrap health bridge self-test failed" }
+
+      - name: Parse provider worker PowerShell
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content scripts/echoes-cinema-provider-worker.ps1 -Raw))
+          Write-Host "Provider worker PowerShell syntax PASS"
+
+      - name: Verify fail-closed bootstrap handoff contract
+        shell: pwsh
+        run: |
+          $worker = Get-Content scripts/echoes-cinema-provider-worker.ps1 -Raw
+          foreach ($token in @(
+            'provider_bootstrap_health_bridge.py',
+            'status = "BOOTSTRAPPING"',
+            'status = "RETRY_WAIT"',
+            'realModelLoaded',
+            'Wait-PortReleased',
+            'systemDriveWritesAllowed = $false'
+          )) {
+            if (-not $worker.Contains($token)) { throw "Provider bootstrap contract missing token: $token" }
+          }
+          $bridge = Get-Content providers/provider_bootstrap_health_bridge.py -Raw
+          if ($bridge -notmatch 'realModelLoaded[^\n]+False') {
+            throw "Bootstrap bridge must never report a real model as loaded"
+          }
+          if ($bridge -notmatch '503') {
+            throw "Bootstrap bridge must reject render work while preparation is incomplete"
+          }
+          Write-Host "Provider bootstrap handoff contract PASS"
