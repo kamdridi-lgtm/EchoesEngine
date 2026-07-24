@@ -1,0 +1,140 @@
+name: Apply Echoes Cinema Quiet Windows Hotfix
+
+on:
+  push:
+    branches:
+      - feature/p0-use-real-input-audio-2026-07-24
+
+permissions:
+  contents: write
+
+jobs:
+  apply-hotfix:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch child process launches
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $supervisorPath = 'scripts/echoes-cinema-stack-supervisor.ps1'
+          $supervisor = Get-Content -LiteralPath $supervisorPath -Raw
+          $oldService = '-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -PassThru'
+          $newService = '-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -WindowStyle Hidden -PassThru'
+          if ($supervisor.Contains($oldService)) {
+            $supervisor = $supervisor.Replace($oldService, $newService)
+            [System.IO.File]::WriteAllText($supervisorPath, $supervisor, [System.Text.UTF8Encoding]::new($false))
+          }
+
+          $workerPath = 'scripts/echoes-cinema-provider-worker.ps1'
+          $worker = Get-Content -LiteralPath $workerPath -Raw
+          $worker = $worker.Replace(
+            '-RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru',
+            '-RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru'
+          )
+          $worker = $worker.Replace(
+            '-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -PassThru',
+            '-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -WindowStyle Hidden -PassThru'
+          )
+
+          $oldBootstrap = @'
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $bootstrap -VenvPath $venvRoot -TorchIndexUrl $TorchIndexUrl
+            $bootstrapExit = $LASTEXITCODE
+'@
+          $newBootstrap = @'
+            $bootstrapArguments = @(
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", $bootstrap,
+                "-VenvPath", $venvRoot,
+                "-TorchIndexUrl", $TorchIndexUrl
+            )
+            $bootstrapProcess = Start-Process -FilePath "powershell.exe" -ArgumentList $bootstrapArguments -WindowStyle Hidden -Wait -PassThru
+            $bootstrapExit = $bootstrapProcess.ExitCode
+'@
+          if ($worker.Contains($oldBootstrap)) {
+            $worker = $worker.Replace($oldBootstrap, $newBootstrap)
+          }
+          [System.IO.File]::WriteAllText($workerPath, $worker, [System.Text.UTF8Encoding]::new($false))
+
+          [void][scriptblock]::Create((Get-Content -LiteralPath $supervisorPath -Raw))
+          [void][scriptblock]::Create((Get-Content -LiteralPath $workerPath -Raw))
+
+      - name: Add permanent Windows regression contract
+        shell: pwsh
+        run: |
+          $workflow = @'
+          name: Echoes Cinema Hidden Child Processes
+
+          on:
+            push:
+              branches:
+                - main
+                - feature/**
+                - fix/**
+            pull_request:
+              branches:
+                - main
+
+          jobs:
+            hidden-child-process-contract:
+              runs-on: windows-latest
+              timeout-minutes: 5
+              steps:
+                - uses: actions/checkout@v4
+                  with:
+                    sparse-checkout: |
+                      scripts/echoes-cinema-stack-supervisor.ps1
+                      scripts/echoes-cinema-provider-worker.ps1
+                    sparse-checkout-cone-mode: false
+
+                - name: Parse PowerShell scripts
+                  shell: pwsh
+                  run: |
+                    [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-stack-supervisor.ps1' -Raw))
+                    [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-provider-worker.ps1' -Raw))
+
+                - name: Verify every long-lived child is hidden
+                  shell: pwsh
+                  run: |
+                    $supervisor = Get-Content -LiteralPath 'scripts/echoes-cinema-stack-supervisor.ps1' -Raw
+                    $worker = Get-Content -LiteralPath 'scripts/echoes-cinema-provider-worker.ps1' -Raw
+                    foreach ($token in @(
+                      '-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -WindowStyle Hidden -PassThru',
+                      '-RedirectStandardOutput $providerWorkerStdout -RedirectStandardError $providerWorkerStderr -WindowStyle Hidden -PassThru',
+                      '-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -WindowStyle Hidden -PassThru',
+                      '-WindowStyle Hidden -Wait -PassThru'
+                    )) {
+                      if (-not (($supervisor + $worker).Contains($token))) {
+                        throw "Missing hidden-process contract token: $token"
+                      }
+                    }
+                    if ($worker.Contains('& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $bootstrap')) {
+                      throw 'Visible bootstrap PowerShell invocation is still present.'
+                    }
+                    Write-Host 'Hidden child process contract PASS'
+          '@
+          $path = '.github/workflows/cinema-hidden-child-processes.yml'
+          New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
+          [System.IO.File]::WriteAllText($path, $workflow, [System.Text.UTF8Encoding]::new($false))
+
+      - name: Remove one-time patch workflow
+        shell: pwsh
+        run: Remove-Item -LiteralPath '.github/workflows/apply-quiet-windows-hotfix.yml' -Force
+
+      - name: Commit repaired launchers
+        shell: pwsh
+        run: |
+          git config user.name 'Echoes Cinema Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add scripts/echoes-cinema-stack-supervisor.ps1 scripts/echoes-cinema-provider-worker.ps1 .github/workflows
+          if (git diff --cached --quiet) {
+            Write-Host 'No changes required.'
+            exit 0
+          }
+          git commit -m 'Hide all Echoes Cinema child process windows'
+          git push origin HEAD:feature/p0-use-real-input-audio-2026-07-24
