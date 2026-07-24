@@ -9,11 +9,32 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+function Normalize-LauncherPath {
+    param(
+        [string]$Value,
+        [string]$Name
+    )
+
+    $normalized = ([string]$Value).Trim().Trim('"')
+    while ($normalized.Length -gt 3 -and ($normalized.EndsWith("\") -or $normalized.EndsWith("/"))) {
+        $normalized = $normalized.Substring(0, $normalized.Length - 1)
+    }
+    if (-not $normalized) {
+        throw "$Name is empty after path normalization."
+    }
+    if ($normalized.IndexOfAny([System.IO.Path]::GetInvalidPathChars()) -ge 0) {
+        throw "$Name contains illegal path characters after normalization: $normalized"
+    }
+    return $normalized
+}
+
 if (-not $RepoRoot) {
     $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 } else {
+    $RepoRoot = Normalize-LauncherPath -Value $RepoRoot -Name "RepoRoot"
     $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 }
+$WorkspaceRoot = Normalize-LauncherPath -Value $WorkspaceRoot -Name "WorkspaceRoot"
 $workspace = [System.IO.Path]::GetFullPath($WorkspaceRoot)
 $runtimeRoot = Join-Path $workspace "runtime"
 $logsRoot = Join-Path $workspace "logs"
