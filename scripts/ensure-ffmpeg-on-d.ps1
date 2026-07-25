@@ -184,7 +184,9 @@ try {
     $ffprobeSource = Get-ChildItem -LiteralPath $extractPath -Filter "ffprobe.exe" -File -Recurse | Select-Object -First 1
     if (-not $ffmpegSource -or -not $ffprobeSource) { throw "Pinned FFmpeg archive does not contain ffmpeg.exe and ffprobe.exe." }
     if ($ffmpegSource.DirectoryName -ne $ffprobeSource.DirectoryName) { throw "FFmpeg and FFprobe were found in different archive directories." }
-    Copy-Item -LiteralPath (Join-Path $ffmpegSource.DirectoryName "*") -Destination (Join-Path $stagedInstall "bin") -Force -Recurse
+    Get-ChildItem -LiteralPath $ffmpegSource.DirectoryName -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $stagedInstall "bin") -Force -Recurse
+    }
     $staged = Test-InstalledRuntime -BinPath (Join-Path $stagedInstall "bin") -Lock $lock
     if (-not $staged.healthy) {
         throw "Extracted FFmpeg runtime does not report the pinned version. FFmpeg=$($staged.ffmpegVersionLine) FFprobe=$($staged.ffprobeVersionLine)"
