@@ -1,0 +1,88 @@
+name: Echoes K-Core Capability Planner
+
+on:
+  pull_request:
+    paths:
+      - "config/echoes-capability-registry.v1.json"
+      - "tools/kcore_mission_planner.py"
+      - ".github/workflows/echoes-kcore-capability-planner.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "config/echoes-capability-registry.v1.json"
+      - "tools/kcore_mission_planner.py"
+      - ".github/workflows/echoes-kcore-capability-planner.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  capability-planner:
+    name: Capability planner (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout planner sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            config/echoes-capability-registry.v1.json
+            tools/kcore_mission_planner.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile and execute planner contract
+        run: |
+          python -m py_compile tools/kcore_mission_planner.py
+          python tools/kcore_mission_planner.py --self-test
+
+      - name: Verify fail-closed planning and power targets
+        shell: pwsh
+        run: |
+          $planner = Get-Content -LiteralPath "tools/kcore_mission_planner.py" -Raw
+          $registry = Get-Content -LiteralPath "config/echoes-capability-registry.v1.json" -Raw | ConvertFrom-Json
+          foreach ($token in @(
+            'kcore.execution-plan.v1',
+            'mutationsAllowed',
+            'requiresOperatorApproval',
+            'COMMERCIAL_USE_NOT_APPROVED',
+            'MISSING_PROVIDER_CAPABILITIES',
+            'UNPROVEN_ENGINE_MODULES',
+            'cinema_identity_local_v1',
+            'cinema_hybrid_identity_v1'
+          )) {
+            if (-not $planner.Contains($token)) { throw "Planner contract token missing: $token" }
+          }
+          foreach ($module in @(
+            'masteringChain',
+            'spatialQSound',
+            'fatigueSimulation',
+            'microPitchDrift',
+            'naturalnessScoring',
+            'monoSafety',
+            'onnxModelManager',
+            'neuralScheduler',
+            'multiStateRenderer',
+            'psychoacousticEngine',
+            'stemExports'
+          )) {
+            if (-not $registry.engineModules.PSObject.Properties.Name.Contains($module)) {
+              throw "Echoes power target missing from registry: $module"
+            }
+          }
+          if ($planner.Contains('subprocess') -or $planner.Contains('shell=True')) {
+            throw 'Planner must never execute shell commands'
+          }
+          Write-Host 'Echoes/K-Core capability planning contract PASS'
