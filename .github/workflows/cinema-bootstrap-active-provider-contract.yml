@@ -24,6 +24,9 @@ jobs:
         with:
           sparse-checkout: |
             scripts/bootstrap-cinema-ai.ps1
+            providers/requirements-diffusers.txt
+            providers/torch-runtime-lock.json
+            providers/diffusers_environment_lock.py
             providers/modelscope_low_vram_provider.py
             providers/modelscope_low_vram_provider_v2.py
             providers/modelscope_resilient_provider.py
@@ -35,18 +38,22 @@ jobs:
         run: |
           $content = Get-Content "scripts/bootstrap-cinema-ai.ps1" -Raw
           [void][scriptblock]::Create($content)
-          Write-Host "Cinema bootstrap PowerShell syntax PASS"
+          & "scripts/bootstrap-cinema-ai.ps1" -TorchProbeSelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Pinned Torch classification self-test failed" }
+          Write-Host "Cinema bootstrap PowerShell syntax and Torch classification PASS"
 
-      - name: Compile active provider and preflight
+      - name: Compile active provider, environment lock, and preflight
         run: |
           python3 -m py_compile \
+            providers/diffusers_environment_lock.py \
             providers/modelscope_low_vram_provider.py \
             providers/modelscope_low_vram_provider_v2.py \
             providers/modelscope_resilient_provider.py \
             tools/cinema_p0_preflight.py
 
-      - name: Run active provider and preflight self-tests
+      - name: Run active provider, environment lock, and preflight self-tests
         run: |
+          python3 providers/diffusers_environment_lock.py --self-test
           python3 providers/modelscope_low_vram_provider.py --self-test
           python3 tools/cinema_p0_preflight.py --self-test
 
@@ -92,27 +99,38 @@ jobs:
           print('Resilient provider permanent-blocker health PASS class=', health['failureClass'])
           PY
 
-      - name: Verify local bootstrap uses the active P0 path
+      - name: Verify local bootstrap uses the active pinned P0 path
         shell: python
         run: |
+          import json
           from pathlib import Path
 
           bootstrap = Path("scripts/bootstrap-cinema-ai.ps1").read_text(encoding="utf-8")
           entry = Path("providers/modelscope_low_vram_provider.py").read_text(encoding="utf-8")
           resilient = Path("providers/modelscope_resilient_provider.py").read_text(encoding="utf-8")
+          torch_lock = json.loads(Path("providers/torch-runtime-lock.json").read_text(encoding="utf-8"))
           required = [
               '$lowVramProvider = Join-Path $repoRoot "providers\\modelscope_low_vram_provider.py"',
               '$p0Preflight = Join-Path $repoRoot "tools\\cinema_p0_preflight.py"',
-              '& $python -m py_compile $provider $proofProvider $lowVramProvider $p0Preflight $service $runner',
+              '$environmentLock = Join-Path $repoRoot "providers\\diffusers_environment_lock.py"',
+              '$torchLockPath = Join-Path $repoRoot "providers\\torch-runtime-lock.json"',
+              '& $python -m py_compile $environmentLock $provider $proofProvider $lowVramProvider $p0Preflight $service $runner',
+              '& $python $environmentLock --allow-unavailable-cuda-runtime',
               '& $python $lowVramProvider --self-test',
               'throw "Active low-VRAM provider self-test failed"',
               '& $python $p0Preflight --self-test',
               'throw "Cinema P0 preflight self-test failed"',
+              'REPLACE_RUNTIME_DRIFT',
+              'Ignoring legacy TorchIndexUrl override',
               r'D:\A.I\EchoesCinema\.venv-cinema',
               r'D:\A.I\Python310',
           ]
           for token in required:
-              assert token in bootstrap, f"bootstrap missing active P0 token: {token}"
+              assert token in bootstrap, f"bootstrap missing active pinned P0 token: {token}"
+          assert torch_lock['torchVersion'] == '2.7.1'
+          assert torch_lock['torchvisionVersion'] == '0.22.1'
+          assert torch_lock['cudaTag'] == 'cu118'
+          assert torch_lock['expectedTorchCudaVersion'] == '11.8'
           assert "modelscope_resilient_provider" in entry
           for token in [
               "classify_load_error",
@@ -130,4 +148,4 @@ jobs:
               assert token in resilient, f"resilient provider missing recovery token: {token}"
           assert "Visual Studio 17 2022" not in bootstrap
           assert "Join-Path $env:USERPROFILE" not in bootstrap
-          print("Active low-VRAM bootstrap, transient retry, storage pause, and permanent blocker contract PASS")
+          print("Active pinned low-VRAM bootstrap, exact Torch repair, retry, storage pause, and blocker contract PASS")
