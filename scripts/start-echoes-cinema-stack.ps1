@@ -58,12 +58,69 @@ $supervisor = Join-Path $RepoRoot "scripts\echoes-cinema-stack-supervisor.ps1"
 $stopScript = Join-Path $RepoRoot "scripts\stop-echoes-cinema-stack.ps1"
 $ffmpegWorker = Join-Path $RepoRoot "scripts\echoes-cinema-ffmpeg-worker.ps1"
 $ffmpegBin = Join-Path $workspace "tools\ffmpeg\bin"
+$runtimePackagePaths = @(
+    "scripts\echoes-cinema-ffmpeg-worker.ps1",
+    "scripts\ensure-ffmpeg-on-d.ps1",
+    "providers\ffmpeg-runtime-lock.json",
+    "tools\assemble_render.py"
+)
 
 foreach ($directory in @($workspace, $runtimeRoot, $logsRoot)) {
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
 }
+
+function Repair-MissingRuntimePackage {
+    $missing = @($runtimePackagePaths | Where-Object {
+        -not (Test-Path -LiteralPath (Join-Path $RepoRoot $_) -PathType Leaf)
+    })
+    if ($missing.Count -eq 0) { return }
+
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if (-not $git) {
+        throw "Echoes Cinema runtime package is incomplete and git is unavailable. Missing: $($missing -join ', ')"
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $RepoRoot ".git") -PathType Container)) {
+        throw "Echoes Cinema runtime package is incomplete and RepoRoot is not a Git repository: $RepoRoot"
+    }
+
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $migrationRoot = Join-Path $workspace "temp\runtime-package-migration-$stamp"
+    $archivePath = Join-Path $migrationRoot "runtime-package.zip"
+    $stagePath = Join-Path $migrationRoot "stage"
+    New-Item -ItemType Directory -Path $stagePath -Force | Out-Null
+
+    try {
+        Write-Host "Incomplete one-click package detected. Synchronizing missing runtime files: $($missing -join ', ')"
+        & $git.Source -C $RepoRoot fetch origin main
+        if ($LASTEXITCODE -ne 0) { throw "Unable to fetch origin/main for automatic runtime migration." }
+
+        $archiveArguments = @("-C", $RepoRoot, "archive", "--format=zip", "--output=$archivePath", "origin/main", "--") + $missing
+        & $git.Source @archiveArguments
+        if ($LASTEXITCODE -ne 0) { throw "Unable to extract missing runtime files from origin/main." }
+
+        Expand-Archive -LiteralPath $archivePath -DestinationPath $stagePath -Force
+        foreach ($relative in $missing) {
+            $source = Join-Path $stagePath $relative
+            $destination = Join-Path $RepoRoot $relative
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+                throw "Canonical runtime migration archive is missing: $relative"
+            }
+            New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+            Copy-Item -LiteralPath $source -Destination $destination -Force
+        }
+        Write-Host "Echoes Cinema runtime migration PASS files=$($missing.Count) source=origin/main"
+    } finally {
+        Remove-Item -LiteralPath $migrationRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Repair-MissingRuntimePackage
 foreach ($required in @($supervisor, $stopScript, $ffmpegWorker)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Echoes Cinema runtime file not found: $required" }
+}
+foreach ($relative in $runtimePackagePaths) {
+    $required = Join-Path $RepoRoot $relative
+    if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Echoes Cinema migrated runtime file not found: $required" }
 }
 
 $env:PATH = "$ffmpegBin;$env:PATH"
