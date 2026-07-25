@@ -90,7 +90,7 @@ jobs:
           foreach ($token in @(
             '"operatorRestartRequired"',
             '"torchCudaVersion"',
-            '"loadState": "BLOCKED"'
+            'assert blocked["loadState"] == "BLOCKED"'
           )) {
             if (-not $bridge.Contains($token)) { throw "Bridge missing truthful-health token: $token" }
           }
