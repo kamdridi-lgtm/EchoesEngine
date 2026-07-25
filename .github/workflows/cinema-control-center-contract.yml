@@ -39,6 +39,7 @@ jobs:
             tools/cinema_job_service.py
             tools/cinema_job_service_durable.py
             tools/cinema_p0_autopilot.py
+            tools/cinema_real_input_audio.py
             tools/cinema_p0_evidence_bundle.py
             tools/http_render_worker.py
             tools/python_render_manifest.py
@@ -56,6 +57,7 @@ jobs:
             tools/cinema_job_ledger.py \
             tools/cinema_job_scheduler.py \
             tools/cinema_p0_autopilot.py \
+            tools/cinema_real_input_audio.py \
             tools/cinema_p0_evidence_bundle.py \
             tools/render_capabilities.py \
             tests/mock_render_provider.py
