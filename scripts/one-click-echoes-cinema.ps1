@@ -26,6 +26,8 @@ $criticalPaths = @(
     "scripts/stop-echoes-cinema-stack.ps1",
     "scripts/echoes-cinema-stack-supervisor.ps1",
     "scripts/echoes-cinema-provider-worker.ps1",
+    "scripts/echoes-cinema-ffmpeg-worker.ps1",
+    "scripts/ensure-ffmpeg-on-d.ps1",
     "scripts/bootstrap-cinema-ai.ps1",
     "scripts/ensure-python-on-d.ps1",
     "scripts/one-click-echoes-cinema.ps1",
@@ -37,6 +39,7 @@ $criticalPaths = @(
     "providers/diffusers_environment_lock.py",
     "providers/requirements-diffusers.txt",
     "providers/torch-runtime-lock.json",
+    "providers/ffmpeg-runtime-lock.json",
     "tools/cinema_control_center.py",
     "tools/cinema_job_service.py",
     "tools/cinema_job_service_durable.py",
@@ -87,11 +90,15 @@ if ($SelfTest) {
         "STOP_ECHOES_CINEMA.cmd",
         "scripts/one-click-echoes-cinema.ps1",
         "scripts/one-click-echoes-cinema-monitor.ps1",
+        "scripts/echoes-cinema-ffmpeg-worker.ps1",
+        "scripts/ensure-ffmpeg-on-d.ps1",
         "providers/provider_bootstrap_health_bridge.py",
         "providers/diffusers_environment_lock.py",
         "providers/requirements-diffusers.txt",
         "providers/torch-runtime-lock.json",
-        "tools/cinema_real_input_audio.py"
+        "providers/ffmpeg-runtime-lock.json",
+        "tools/cinema_real_input_audio.py",
+        "tools/assemble_render.py"
     )) {
         if (-not (Test-Path -LiteralPath (Join-Path $repo $relative) -PathType Leaf)) { throw "Self-test required file missing: $relative" }
     }
@@ -99,8 +106,10 @@ if ($SelfTest) {
         "scripts/one-click-echoes-cinema.ps1",
         "scripts/one-click-echoes-cinema-monitor.ps1",
         "scripts/echoes-cinema-provider-worker.ps1",
+        "scripts/echoes-cinema-ffmpeg-worker.ps1",
         "scripts/echoes-cinema-stack-supervisor.ps1",
-        "scripts/bootstrap-cinema-ai.ps1"
+        "scripts/bootstrap-cinema-ai.ps1",
+        "scripts/ensure-ffmpeg-on-d.ps1"
     )) {
         [void][scriptblock]::Create((Get-Content -LiteralPath (Join-Path $repo $relative) -Raw))
     }
@@ -108,11 +117,15 @@ if ($SelfTest) {
     foreach ($forbidden in @(("reset " + "--hard"), ("clean " + "-fdx"), ("clean " + "-xdf"))) {
         if ($source.Contains($forbidden)) { throw "Forbidden destructive command found: $forbidden" }
     }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "scripts\echoes-cinema-ffmpeg-worker.ps1") -SelfTest
+    if ($LASTEXITCODE -ne 0) { throw "FFmpeg worker self-test failed" }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "scripts\ensure-ffmpeg-on-d.ps1") -SelfTest
+    if ($LASTEXITCODE -ne 0) { throw "FFmpeg runtime lock self-test failed" }
     & python (Join-Path $repo "providers\provider_bootstrap_health_bridge.py") --self-test
     if ($LASTEXITCODE -ne 0) { throw "Provider bootstrap bridge self-test failed" }
     & python (Join-Path $repo "providers\diffusers_environment_lock.py") --self-test
     if ($LASTEXITCODE -ne 0) { throw "Pinned Python/Torch environment lock self-test failed" }
-    Write-Host "one-click orchestrator self-test PASS"
+    Write-Host "one-click orchestrator self-test PASS ffmpeg=packaged dashboard=nonblocking"
     exit 0
 }
 
@@ -158,7 +171,9 @@ try {
         "scripts/stop-echoes-cinema-stack.ps1",
         "scripts/echoes-cinema-stack-supervisor.ps1",
         "scripts/echoes-cinema-provider-worker.ps1",
+        "scripts/echoes-cinema-ffmpeg-worker.ps1",
         "scripts/bootstrap-cinema-ai.ps1",
+        "scripts/ensure-ffmpeg-on-d.ps1",
         "scripts/one-click-echoes-cinema-monitor.ps1"
     )) {
         [void][scriptblock]::Create((Get-Content -LiteralPath (Join-Path $repo $relative) -Raw))
@@ -177,7 +192,8 @@ try {
             (Join-Path $repo "tools\cinema_control_center.py") `
             (Join-Path $repo "tools\cinema_p0_autopilot.py") `
             (Join-Path $repo "tools\cinema_real_input_audio.py") `
-            (Join-Path $repo "tools\cinema_p0_evidence_bundle.py")
+            (Join-Path $repo "tools\cinema_p0_evidence_bundle.py") `
+            (Join-Path $repo "tools\assemble_render.py")
         if ($LASTEXITCODE -ne 0) { throw "Critical Python compilation failed." }
     } else {
         Write-Step "D-drive Python is not installed yet; the canonical bootstrap will install it automatically."
@@ -188,7 +204,7 @@ try {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $stopScript -WorkspaceRoot $workspace -GraceSeconds 20
     $stopExit = $LASTEXITCODE
     if ($stopExit -ne 0) { Write-Step "Safe stop returned $stopExit; startup will repair stale state without deleting models or jobs." }
-    foreach ($name in @("provider.pid", "provider-worker.pid", "stop.signal")) { Remove-Item -LiteralPath (Join-Path $runtime $name) -Force -ErrorAction SilentlyContinue }
+    foreach ($name in @("provider.pid", "provider-worker.pid", "ffmpeg-worker.pid", "stop.signal")) { Remove-Item -LiteralPath (Join-Path $runtime $name) -Force -ErrorAction SilentlyContinue }
 
     Write-Step "Starting the verified one-click stack."
     $startScript = Join-Path $repo "scripts\start-echoes-cinema-stack.ps1"
@@ -224,8 +240,9 @@ try {
         dashboardUrl = $dashboardUrl
         backupPath = $backupPath
         logPath = $logPath
+        ffmpegWorker = (Join-Path $runtime "ffmpeg-worker-status.json")
         automaticMonitor = (Join-Path $runtime "one-click-monitor-status.json")
-        message = "Control center is online. Provider recovery and P0 monitoring continue automatically."
+        message = "Control center is online. FFmpeg, provider recovery, and P0 monitoring continue automatically."
     } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $runtime "one-click-result.json") -Encoding utf8
     Write-Step "DONE. Echoes Cinema is online and continues working automatically."
     exit 0
