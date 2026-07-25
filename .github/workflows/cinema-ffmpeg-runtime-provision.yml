@@ -112,7 +112,7 @@ jobs:
             if (-not $worker.Contains($token)) { throw "Worker missing recovery token: $token" }
           }
           if ($start.Contains('& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ensureFfmpeg')) { throw 'Start stack still blocks on synchronous FFmpeg provisioning' }
-          foreach ($token in @('Start-FfmpegWorker', 'Repair-MissingRuntimePackage', 'git archive', 'origin/main')) {
+          foreach ($token in @('Start-FfmpegWorker', 'Repair-MissingRuntimePackage', '$archiveArguments', '$git.Source', 'origin/main')) {
             if (-not $start.Contains($token)) { throw "Start stack missing nonblocking migration token: $token" }
           }
           if (-not $start.Contains('$env:PATH = "$ffmpegBin;$env:PATH"')) { throw 'Start stack does not propagate deterministic FFmpeg PATH' }
