@@ -3,7 +3,8 @@ param(
     [string]$RepoRoot = "",
     [int]$ProviderPort = 8081,
     [string]$TorchIndexUrl = "https://download.pytorch.org/whl/cu128",
-    [string]$ProviderMode = ""
+    [string]$ProviderMode = "",
+    [switch]$EnvironmentProbeSelfTest
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,28 +30,167 @@ function Get-FreeGiB {
     }
 }
 
+function Get-CinemaEnvironmentAction {
+    param(
+        [bool]$DependenciesReady,
+        [bool]$CudaBuild,
+        [bool]$CudaAvailable
+    )
+    if (-not $DependenciesReady) { return "REPAIR_DEPENDENCIES" }
+    if (-not $CudaBuild) { return "REPLACE_CPU_TORCH" }
+    if (-not $CudaAvailable) { return "BLOCK_CUDA_RUNTIME" }
+    return "READY"
+}
+
 function Test-CinemaEnvironment {
     param([string]$PythonPath)
     if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
-        return @{ healthy = $false; reason = "Cinema virtual-environment Python is missing: $PythonPath" }
+        return [pscustomobject]@{
+            healthy = $false
+            retryable = $true
+            failureClass = "PYTHON_ENVIRONMENT_MISSING"
+            operatorRestartRequired = $false
+            reason = "Cinema virtual-environment Python is missing: $PythonPath"
+            torchVersion = $null
+            torchCudaVersion = $null
+        }
     }
+
+    $probeScript = @'
+import json
+result = {
+    "dependenciesReady": False,
+    "cudaBuild": False,
+    "cudaAvailable": False,
+    "torchVersion": None,
+    "torchCudaVersion": None,
+    "deviceName": None,
+    "error": None,
+}
+try:
+    import torch
+    import diffusers
+    import transformers
+    import accelerate
+    import safetensors
+    result["dependenciesReady"] = True
+    result["torchVersion"] = str(torch.__version__)
+    result["torchCudaVersion"] = str(torch.version.cuda) if torch.version.cuda else None
+    result["cudaBuild"] = bool(torch.version.cuda)
+    result["cudaAvailable"] = bool(torch.cuda.is_available())
+    if result["cudaAvailable"]:
+        result["deviceName"] = torch.cuda.get_device_name(0)
+except Exception as error:
+    result["error"] = str(error)
+print(json.dumps(result))
+'@
+
     $previousPreference = $ErrorActionPreference
     try {
         $ErrorActionPreference = "SilentlyContinue"
-        $probe = & $PythonPath -c "import torch, diffusers, transformers, accelerate, safetensors; assert torch.cuda.is_available(), 'CUDA unavailable'; print(torch.__version__)" 2>&1 | Out-String
+        $raw = $probeScript | & $PythonPath - 2>&1 | Out-String
         $exitCode = $LASTEXITCODE
     } catch {
-        $probe = $_.Exception.Message
+        $raw = $_.Exception.Message
         $exitCode = 1
     } finally {
         $ErrorActionPreference = $previousPreference
     }
-    $detail = ([string]$probe).Trim()
-    if ($detail.Length -gt 4000) { $detail = $detail.Substring($detail.Length - 4000) }
-    return @{
-        healthy = ($exitCode -eq 0)
-        reason = if ($exitCode -eq 0) { "CUDA/Diffusers environment is healthy" } elseif ($detail) { $detail } else { "CUDA/Diffusers import probe failed with exit code $exitCode" }
+
+    if ($exitCode -ne 0) {
+        return [pscustomobject]@{
+            healthy = $false
+            retryable = $true
+            failureClass = "DEPENDENCY_PROBE_FAILED"
+            operatorRestartRequired = $false
+            reason = ([string]$raw).Trim()
+            torchVersion = $null
+            torchCudaVersion = $null
+        }
     }
+
+    try {
+        $probe = ([string]$raw).Trim() | ConvertFrom-Json
+    } catch {
+        return [pscustomobject]@{
+            healthy = $false
+            retryable = $true
+            failureClass = "DEPENDENCY_PROBE_INVALID_JSON"
+            operatorRestartRequired = $false
+            reason = "Cinema dependency probe returned invalid JSON: $raw"
+            torchVersion = $null
+            torchCudaVersion = $null
+        }
+    }
+
+    $action = Get-CinemaEnvironmentAction `
+        -DependenciesReady ([bool]$probe.dependenciesReady) `
+        -CudaBuild ([bool]$probe.cudaBuild) `
+        -CudaAvailable ([bool]$probe.cudaAvailable)
+
+    switch ($action) {
+        "READY" {
+            return [pscustomobject]@{
+                healthy = $true
+                retryable = $false
+                failureClass = $null
+                operatorRestartRequired = $false
+                reason = "CUDA/Diffusers environment is healthy on $($probe.deviceName)"
+                torchVersion = $probe.torchVersion
+                torchCudaVersion = $probe.torchCudaVersion
+            }
+        }
+        "BLOCK_CUDA_RUNTIME" {
+            return [pscustomobject]@{
+                healthy = $false
+                retryable = $false
+                failureClass = "CUDA_RUNTIME_UNAVAILABLE"
+                operatorRestartRequired = $true
+                reason = "CUDA-enabled PyTorch $($probe.torchVersion) (CUDA $($probe.torchCudaVersion)) is installed, but torch.cuda.is_available() is false. The NVIDIA driver/runtime or a pending restart is blocking the GPU."
+                torchVersion = $probe.torchVersion
+                torchCudaVersion = $probe.torchCudaVersion
+            }
+        }
+        "REPLACE_CPU_TORCH" {
+            return [pscustomobject]@{
+                healthy = $false
+                retryable = $true
+                failureClass = "CPU_ONLY_TORCH"
+                operatorRestartRequired = $false
+                reason = "CPU-only PyTorch $($probe.torchVersion) is installed and must be replaced by the official CUDA wheel."
+                torchVersion = $probe.torchVersion
+                torchCudaVersion = $null
+            }
+        }
+        default {
+            return [pscustomobject]@{
+                healthy = $false
+                retryable = $true
+                failureClass = "DEPENDENCY_MISSING"
+                operatorRestartRequired = $false
+                reason = if ($probe.error) { [string]$probe.error } else { "Torch/Diffusers dependencies are incomplete." }
+                torchVersion = $probe.torchVersion
+                torchCudaVersion = $probe.torchCudaVersion
+            }
+        }
+    }
+}
+
+if ($EnvironmentProbeSelfTest) {
+    if ((Get-CinemaEnvironmentAction -DependenciesReady $false -CudaBuild $false -CudaAvailable $false) -ne "REPAIR_DEPENDENCIES") {
+        throw "Dependency repair classification failed."
+    }
+    if ((Get-CinemaEnvironmentAction -DependenciesReady $true -CudaBuild $false -CudaAvailable $false) -ne "REPLACE_CPU_TORCH") {
+        throw "CPU torch replacement classification failed."
+    }
+    if ((Get-CinemaEnvironmentAction -DependenciesReady $true -CudaBuild $true -CudaAvailable $false) -ne "BLOCK_CUDA_RUNTIME") {
+        throw "CUDA runtime blocker classification failed."
+    }
+    if ((Get-CinemaEnvironmentAction -DependenciesReady $true -CudaBuild $true -CudaAvailable $true) -ne "READY") {
+        throw "CUDA ready classification failed."
+    }
+    Write-Host "Echoes Cinema environment probe PASS dependencies=repair cpu-torch=replace cuda-runtime=block ready=run"
+    exit 0
 }
 
 function Stop-ChildProcess {
@@ -150,6 +290,7 @@ $venvPython = Join-Path $venvRoot "Scripts\python.exe"
 $fallbackPython = "D:\A.I\Python310\python.exe"
 $statusPath = Join-Path $runtimeRoot "provider-worker-status.json"
 $pidPath = Join-Path $runtimeRoot "provider.pid"
+$stopSignalPath = Join-Path $runtimeRoot "stop.signal"
 $provider = Join-Path $RepoRoot "providers\modelscope_low_vram_provider.py"
 $bridge = Join-Path $RepoRoot "providers\provider_bootstrap_health_bridge.py"
 $mockProvider = Join-Path $RepoRoot "tests\mock_health_provider.py"
@@ -234,6 +375,36 @@ try {
     while ($true) {
         $environment = Test-CinemaEnvironment -PythonPath $venvPython
         if ($environment.healthy) { break }
+        if (-not [bool]$environment.retryable) {
+            Write-AtomicJson -Path $statusPath -Payload @{
+                schema = "echoes.cinema-provider-worker.v1"
+                status = "BLOCKED"
+                timestampUtc = [DateTime]::UtcNow.ToString("o")
+                providerMode = $resolvedMode
+                providerPort = $ProviderPort
+                error = $environment.reason
+                failureClass = $environment.failureClass
+                retryable = $false
+                automaticRetry = $false
+                operatorRestartRequired = [bool]$environment.operatorRestartRequired
+                operatorAction = "A CUDA wheel is installed, but the NVIDIA runtime is unavailable. Update/restart the NVIDIA driver or reboot Windows; models, caches, jobs, and proofs are preserved."
+                torchVersion = $environment.torchVersion
+                torchCudaVersion = $environment.torchCudaVersion
+                workspace = $workspace
+                workspaceFreeGiB = Get-FreeGiB -Path $workspace
+                minimumFreeGiB = 20
+                recoveryCount = $recoveryCount
+                stdoutLog = $bridgeStdout
+                stderrLog = $bridgeStderr
+                systemDriveWritesAllowed = $false
+            }
+            while (-not (Test-Path -LiteralPath $stopSignalPath)) {
+                if ($bridgeProcess.HasExited) { throw "Provider bridge exited while reporting a permanent CUDA runtime blocker." }
+                Start-Sleep -Seconds 5
+            }
+            exit 0
+        }
+
         $recoveryCount++
         $attemptUtc = [DateTime]::UtcNow
         Write-AtomicJson -Path $statusPath -Payload @{
@@ -243,6 +414,7 @@ try {
             providerMode = $resolvedMode
             providerPort = $ProviderPort
             bootstrapReason = $environment.reason
+            failureClass = $environment.failureClass
             workspace = $workspace
             workspaceFreeGiB = Get-FreeGiB -Path $workspace
             minimumFreeGiB = 20
@@ -265,8 +437,13 @@ try {
             $bootstrapExit = 1
             $bootstrapError = $_.Exception.Message
         }
+
         $environment = Test-CinemaEnvironment -PythonPath $venvPython
-        if ($bootstrapExit -eq 0 -and $environment.healthy) { break }
+        if ($environment.healthy) { break }
+        if (-not [bool]$environment.retryable) {
+            continue
+        }
+
         $reason = if ($bootstrapError) { $bootstrapError } elseif (-not $environment.healthy) { $environment.reason } else { "Cinema bootstrap failed with exit code $bootstrapExit" }
         $nextRetry = [DateTime]::UtcNow.AddSeconds($retrySeconds)
         Write-AtomicJson -Path $statusPath -Payload @{
@@ -276,8 +453,10 @@ try {
             providerMode = $resolvedMode
             providerPort = $ProviderPort
             error = $reason
-            failureClass = "TRANSIENT_BOOTSTRAP"
+            failureClass = $environment.failureClass
             retryable = $true
+            automaticRetry = $true
+            operatorRestartRequired = $false
             operatorAction = "No action is required. Echoes Cinema will retry the D-drive AI bootstrap automatically."
             nextRetryUtc = $nextRetry.ToString("o")
             workspace = $workspace
@@ -338,6 +517,8 @@ catch {
         error = $_.Exception.Message
         failureClass = "PYTHON_RUNTIME_BLOCKER"
         retryable = $false
+        automaticRetry = $false
+        operatorRestartRequired = $false
         operatorAction = "Inspect the provider-worker error log. The supervisor will preserve the control center."
         workspace = $workspace
         workspaceFreeGiB = Get-FreeGiB -Path $workspace
