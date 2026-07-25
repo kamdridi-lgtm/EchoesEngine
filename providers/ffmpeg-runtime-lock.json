@@ -1,0 +1,10 @@
+{
+  "schema": "echoes.ffmpeg-runtime-lock.v1",
+  "repository": "GyanD/codexffmpeg",
+  "releaseTag": "8.1.2",
+  "assetName": "ffmpeg-8.1.2-essentials_build.zip",
+  "ffmpegVersion": "8.1.2",
+  "platform": "windows-x64",
+  "installRelativePath": "tools/ffmpeg",
+  "purpose": "echoes-cinema-render-and-qc"
+}

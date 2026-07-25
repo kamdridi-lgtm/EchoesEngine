@@ -1,0 +1,135 @@
+name: Echoes Cinema FFmpeg Runtime Provision
+
+on:
+  pull_request:
+    paths:
+      - "providers/ffmpeg-runtime-lock.json"
+      - "scripts/ensure-ffmpeg-on-d.ps1"
+      - "scripts/start-echoes-cinema-stack.ps1"
+      - "scripts/one-click-echoes-cinema.ps1"
+      - ".github/workflows/cinema-ffmpeg-runtime-provision.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "providers/ffmpeg-runtime-lock.json"
+      - "scripts/ensure-ffmpeg-on-d.ps1"
+      - "scripts/start-echoes-cinema-stack.ps1"
+      - "scripts/one-click-echoes-cinema.ps1"
+      - ".github/workflows/cinema-ffmpeg-runtime-provision.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-runtime-contract:
+    name: Pinned FFmpeg contract (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+    steps:
+      - name: Checkout FFmpeg runtime sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            providers/ffmpeg-runtime-lock.json
+            scripts/ensure-ffmpeg-on-d.ps1
+            scripts/start-echoes-cinema-stack.ps1
+            scripts/one-click-echoes-cinema.ps1
+          sparse-checkout-cone-mode: false
+
+      - name: Parse PowerShell provisioning chain
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+            'scripts/ensure-ffmpeg-on-d.ps1',
+            'scripts/start-echoes-cinema-stack.ps1',
+            'scripts/one-click-echoes-cinema.ps1'
+          )) {
+            [void][scriptblock]::Create((Get-Content -LiteralPath $path -Raw))
+            Write-Host "PASS $path"
+          }
+
+      - name: Prove exact lock and required GitHub digest
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          & scripts/ensure-ffmpeg-on-d.ps1 -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "FFmpeg lock self-test failed" }
+          $raw = & scripts/ensure-ffmpeg-on-d.ps1 -MetadataOnly
+          if ($LASTEXITCODE -ne 0) { throw "Pinned FFmpeg release metadata lookup failed" }
+          $metadata = ($raw -join "`n") | ConvertFrom-Json
+          if ($metadata.status -ne 'PASS') { throw "Pinned FFmpeg metadata did not pass" }
+          if ([string]$metadata.asset.digest -notmatch '^sha256:[0-9a-f]{64}$') { throw "Pinned asset digest is missing" }
+          if ([string]$metadata.asset.assetName -ne 'ffmpeg-8.1.2-essentials_build.zip') { throw "Unexpected FFmpeg asset" }
+          Write-Host "Pinned FFmpeg metadata PASS digest=$($metadata.asset.digest)"
+
+      - name: Verify fail-closed storage and evidence contract
+        shell: pwsh
+        run: |
+          $lock = Get-Content -LiteralPath 'providers/ffmpeg-runtime-lock.json' -Raw
+          $script = Get-Content -LiteralPath 'scripts/ensure-ffmpeg-on-d.ps1' -Raw
+          $start = Get-Content -LiteralPath 'scripts/start-echoes-cinema-stack.ps1' -Raw
+          $oneClick = Get-Content -LiteralPath 'scripts/one-click-echoes-cinema.ps1' -Raw
+          foreach ($token in @(
+            '"repository": "GyanD/codexffmpeg"',
+            '"releaseTag": "8.1.2"',
+            '"assetName": "ffmpeg-8.1.2-essentials_build.zip"',
+            '"installRelativePath": "tools/ffmpeg"'
+          )) {
+            if (-not $lock.Contains($token)) { throw "FFmpeg lock missing token: $token" }
+          }
+          foreach ($token in @(
+            'asset.digest',
+            'Get-FileHash',
+            'SHA-256 mismatch',
+            'ffmpeg.exe',
+            'ffprobe.exe',
+            'backups\ffmpeg',
+            'networkMetadataRequested = $false',
+            'systemDriveWritesAllowed = $false'
+          )) {
+            if (-not $script.Contains($token)) { throw "Provisioner missing safety token: $token" }
+          }
+          if (-not $start.Contains('ensure-ffmpeg-on-d.ps1')) { throw 'Start stack does not provision FFmpeg' }
+          if (-not $start.Contains('$env:PATH = "$ffmpegBin;$env:PATH"')) { throw 'Start stack does not propagate pinned FFmpeg PATH' }
+          if (-not $oneClick.Contains('providers/ffmpeg-runtime-lock.json')) { throw 'One-click does not sync FFmpeg lock' }
+          if (-not $oneClick.Contains('scripts/ensure-ffmpeg-on-d.ps1')) { throw 'One-click does not sync FFmpeg provisioner' }
+
+      - name: Download, verify, install, and reuse pinned Windows runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $workspace = Join-Path $env:RUNNER_TEMP 'EchoesCinema-FFmpeg-CI'
+          if ([System.IO.Path]::GetPathRoot($workspace).TrimEnd('\').ToUpperInvariant() -eq 'C:') {
+            $workspace = 'D:\EchoesCinema-FFmpeg-CI'
+          }
+          $firstRaw = & scripts/ensure-ffmpeg-on-d.ps1 -WorkspaceRoot $workspace
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned FFmpeg installation failed' }
+          $bin = [string]($firstRaw | Select-Object -Last 1)
+          foreach ($name in @('ffmpeg.exe', 'ffprobe.exe')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $bin $name) -PathType Leaf)) { throw "Installed runtime missing $name" }
+          }
+          $evidencePath = Join-Path $workspace 'runtime\ffmpeg-runtime.json'
+          $firstEvidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
+          if ($firstEvidence.status -ne 'PASS' -or $firstEvidence.reusedExistingInstall) { throw 'First install evidence is not truthful' }
+          if ([string]$firstEvidence.expectedDigest -notmatch '^sha256:[0-9a-f]{64}$') { throw 'Installed evidence is missing digest' }
+          if ([string]$firstEvidence.downloadedSha256 -notmatch '^[0-9a-f]{64}$') { throw 'Installed evidence is missing SHA-256' }
+
+          $secondRaw = & scripts/ensure-ffmpeg-on-d.ps1 -WorkspaceRoot $workspace
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned FFmpeg reuse failed' }
+          $secondBin = [string]($secondRaw | Select-Object -Last 1)
+          if ($secondBin -ne $bin) { throw 'Reused FFmpeg path changed unexpectedly' }
+          $secondEvidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
+          if (-not $secondEvidence.reusedExistingInstall) { throw 'Second run did not reuse the verified install' }
+          if ($secondEvidence.networkMetadataRequested) { throw 'Healthy reuse unexpectedly requested release metadata' }
+          & (Join-Path $bin 'ffmpeg.exe') -version | Select-Object -First 1
+          & (Join-Path $bin 'ffprobe.exe') -version | Select-Object -First 1
