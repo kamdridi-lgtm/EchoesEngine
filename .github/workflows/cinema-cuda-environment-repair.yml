@@ -6,6 +6,8 @@ on:
       - "scripts/bootstrap-cinema-ai.ps1"
       - "scripts/echoes-cinema-provider-worker.ps1"
       - "providers/provider_bootstrap_health_bridge.py"
+      - "providers/diffusers_environment_lock.py"
+      - "providers/requirements-diffusers.txt"
       - ".github/workflows/cinema-cuda-environment-repair.yml"
   push:
     branches:
@@ -14,6 +16,8 @@ on:
       - "scripts/bootstrap-cinema-ai.ps1"
       - "scripts/echoes-cinema-provider-worker.ps1"
       - "providers/provider_bootstrap_health_bridge.py"
+      - "providers/diffusers_environment_lock.py"
+      - "providers/requirements-diffusers.txt"
       - ".github/workflows/cinema-cuda-environment-repair.yml"
 
 permissions:
@@ -37,6 +41,8 @@ jobs:
             scripts/bootstrap-cinema-ai.ps1
             scripts/echoes-cinema-provider-worker.ps1
             providers/provider_bootstrap_health_bridge.py
+            providers/diffusers_environment_lock.py
+            providers/requirements-diffusers.txt
           sparse-checkout-cone-mode: false
 
       - name: Parse PowerShell repair chain
@@ -61,6 +67,9 @@ jobs:
           & "scripts/echoes-cinema-provider-worker.ps1" -EnvironmentProbeSelfTest
           if ($LASTEXITCODE -ne 0) { throw "Provider worker environment self-test failed" }
 
+      - name: Prove pinned dependency and CUDA classification
+        run: python providers/diffusers_environment_lock.py --self-test
+
       - name: Prove bridge keeps permanent blocker truthful
         run: python providers/provider_bootstrap_health_bridge.py --self-test
 
@@ -69,6 +78,7 @@ jobs:
         run: |
           $bootstrap = Get-Content -LiteralPath "scripts/bootstrap-cinema-ai.ps1" -Raw
           $worker = Get-Content -LiteralPath "scripts/echoes-cinema-provider-worker.ps1" -Raw
+          $verifier = Get-Content -LiteralPath "providers/diffusers_environment_lock.py" -Raw
           $bridge = Get-Content -LiteralPath "providers/provider_bootstrap_health_bridge.py" -Raw
           foreach ($token in @(
             "REPLACE_CPU_WHEEL",
@@ -79,13 +89,22 @@ jobs:
             if (-not $bootstrap.Contains($token)) { throw "Bootstrap missing repair token: $token" }
           }
           foreach ($token in @(
-            "CPU_ONLY_TORCH",
-            "CUDA_RUNTIME_UNAVAILABLE",
+            "diffusers_environment_lock.py",
             'status = "BLOCKED"',
             "operatorRestartRequired",
+            "expectedVersions",
+            "versionMismatches",
             "stop.signal"
           )) {
-            if (-not $worker.Contains($token)) { throw "Worker missing blocker token: $token" }
+            if (-not $worker.Contains($token)) { throw "Worker missing environment-gate token: $token" }
+          }
+          foreach ($token in @(
+            "DEPENDENCY_VERSION_DRIFT",
+            "CPU_ONLY_TORCH",
+            "CUDA_RUNTIME_UNAVAILABLE",
+            'assert blocked["operatorRestartRequired"] is True'
+          )) {
+            if (-not $verifier.Contains($token)) { throw "Verifier missing classification token: $token" }
           }
           foreach ($token in @(
             '"operatorRestartRequired"',

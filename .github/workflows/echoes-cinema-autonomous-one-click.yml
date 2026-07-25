@@ -33,6 +33,8 @@ jobs:
             scripts/echoes-cinema-provider-worker.ps1
             scripts/echoes-cinema-stack-supervisor.ps1
             providers/provider_bootstrap_health_bridge.py
+            providers/diffusers_environment_lock.py
+            providers/requirements-diffusers.txt
             tools/cinema_real_input_audio.py
           sparse-checkout-cone-mode: false
 
@@ -47,6 +49,8 @@ jobs:
             'scripts/one-click-echoes-cinema.ps1',
             'scripts/one-click-echoes-cinema-monitor.ps1',
             'providers/provider_bootstrap_health_bridge.py',
+            'providers/diffusers_environment_lock.py',
+            'providers/requirements-diffusers.txt',
             'tools/cinema_real_input_audio.py'
           )) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing: $path" }
@@ -77,17 +81,25 @@ jobs:
           [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-stack-supervisor.ps1' -Raw))
           Write-Host 'PASS scripts/echoes-cinema-stack-supervisor.ps1'
 
-      - name: Compile real input audio runtime
+      - name: Compile autonomous Python runtime
         shell: pwsh
         run: |
-          python -m py_compile tools/cinema_real_input_audio.py
-          if ($LASTEXITCODE -ne 0) { throw "Real input audio module compilation failed" }
+          python -m py_compile `
+            tools/cinema_real_input_audio.py `
+            providers/diffusers_environment_lock.py
+          if ($LASTEXITCODE -ne 0) { throw "Autonomous Python module compilation failed" }
 
       - name: Run bootstrap bridge self-test
         shell: pwsh
         run: |
           python providers/provider_bootstrap_health_bridge.py --self-test
           if ($LASTEXITCODE -ne 0) { throw "Bootstrap bridge self-test failed" }
+
+      - name: Run pinned environment self-test
+        shell: pwsh
+        run: |
+          python providers/diffusers_environment_lock.py --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Pinned environment lock self-test failed" }
 
       - name: Verify autonomous and non-destructive contract
         shell: pwsh
@@ -100,6 +112,8 @@ jobs:
             'backups\one-click',
             'one-click-monitor-status.json',
             'provider_bootstrap_health_bridge.py',
+            'diffusers_environment_lock.py',
+            'providers/requirements-diffusers.txt',
             'tools/cinema_real_input_audio.py',
             'cinema_real_input_audio.py',
             'WorkspaceRoot',
@@ -118,7 +132,7 @@ jobs:
               throw "Forbidden destructive command present: $forbidden"
             }
           }
-          Write-Host 'Autonomous non-destructive real-input sync contract PASS'
+          Write-Host 'Autonomous non-destructive pinned-environment real-input sync contract PASS'
 
       - name: Run orchestrator self-test
         shell: pwsh

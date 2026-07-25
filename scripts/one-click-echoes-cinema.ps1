@@ -34,6 +34,7 @@ $criticalPaths = @(
     "providers/modelscope_low_vram_provider.py",
     "providers/modelscope_resilient_provider.py",
     "providers/modelscope_low_vram_provider_v2.py",
+    "providers/diffusers_environment_lock.py",
     "providers/requirements-diffusers.txt",
     "tools/cinema_control_center.py",
     "tools/cinema_job_service.py",
@@ -92,6 +93,8 @@ if ($SelfTest) {
         "scripts/one-click-echoes-cinema.ps1",
         "scripts/one-click-echoes-cinema-monitor.ps1",
         "providers/provider_bootstrap_health_bridge.py",
+        "providers/diffusers_environment_lock.py",
+        "providers/requirements-diffusers.txt",
         "tools/cinema_real_input_audio.py"
     )) {
         if (-not (Test-Path -LiteralPath (Join-Path $repo $relative) -PathType Leaf)) {
@@ -117,6 +120,8 @@ if ($SelfTest) {
     }
     & python (Join-Path $repo "providers\provider_bootstrap_health_bridge.py") --self-test
     if ($LASTEXITCODE -ne 0) { throw "Provider bootstrap bridge self-test failed" }
+    & python (Join-Path $repo "providers\diffusers_environment_lock.py") --self-test
+    if ($LASTEXITCODE -ne 0) { throw "Pinned Diffusers environment lock self-test failed" }
     Write-Host "one-click orchestrator self-test PASS"
     exit 0
 }
@@ -187,6 +192,7 @@ try {
         Write-Step "Compiling critical Python entrypoints."
         & $python -m py_compile `
             (Join-Path $repo "providers\provider_bootstrap_health_bridge.py") `
+            (Join-Path $repo "providers\diffusers_environment_lock.py") `
             (Join-Path $repo "providers\modelscope_low_vram_provider.py") `
             (Join-Path $repo "providers\modelscope_resilient_provider.py") `
             (Join-Path $repo "providers\modelscope_low_vram_provider_v2.py") `
@@ -272,6 +278,5 @@ catch {
         error = $message
         logPath = $logPath
     } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $runtime "one-click-result.json") -Encoding utf8
-    Write-Error $message
     exit 1
 }
