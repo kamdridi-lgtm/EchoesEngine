@@ -1,0 +1,63 @@
+name: Echoes Cinema P0 Automatic Audio Discovery
+
+on:
+  pull_request:
+    paths:
+      - "tools/cinema_real_input_audio.py"
+      - "tools/cinema_p0_autopilot.py"
+      - ".github/workflows/cinema-p0-auto-audio-discovery.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "tools/cinema_real_input_audio.py"
+      - "tools/cinema_p0_autopilot.py"
+      - ".github/workflows/cinema-p0-auto-audio-discovery.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  automatic-real-audio-discovery:
+    name: Bounded real-audio discovery (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+    steps:
+      - name: Checkout audio discovery sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/cinema_real_input_audio.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile real-audio selector
+        run: python -m py_compile tools/cinema_real_input_audio.py
+
+      - name: Prove automatic discovery and exclusions
+        run: python tools/cinema_real_input_audio.py --self-test
+
+      - name: Verify production safety contract
+        shell: pwsh
+        run: |
+          $source = Get-Content -LiteralPath "tools/cinema_real_input_audio.py" -Raw
+          foreach ($token in @(
+            "AUTO_SEARCH_MAX_DEPTH",
+            "AUTO_SEARCH_MAX_FILES",
+            "AUTO_SEARCH_MIN_BYTES",
+            "GENERATED_FILE_TOKENS",
+            "AUTO_DISCOVERED_USER_AUDIO",
+            "syntheticFallbackAllowed"
+          )) {
+            if (-not $source.Contains($token)) { throw "Missing automatic audio safety token: $token" }
+          }
+          if ($source.Contains("generate fallback audio")) { throw "Synthetic fallback language entered production selector" }
