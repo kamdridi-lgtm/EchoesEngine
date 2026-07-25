@@ -1,0 +1,70 @@
+name: Echoes Cinema P0 Real Input Audio
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+      - fix/**
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  p0-real-input-audio:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/cinema_real_input_audio.py
+            tools/cinema_p0_autopilot.py
+            tools/cinema_p0_evidence_bundle.py
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Verify FFmpeg is available
+        shell: python
+        run: |
+          import shutil
+          assert shutil.which('ffmpeg'), 'FFmpeg is required for real input audio preparation'
+
+      - name: Compile production audio path
+        shell: python
+        run: |
+          import py_compile
+          py_compile.compile('tools/cinema_real_input_audio.py', doraise=True)
+          py_compile.compile('tools/cinema_p0_autopilot.py', doraise=True)
+          py_compile.compile('tools/cinema_p0_evidence_bundle.py', doraise=True)
+
+      - name: Execute real-input preparation contract
+        run: python tools/cinema_real_input_audio.py --self-test
+
+      - name: Execute P0 autopilot proof contract
+        run: python tools/cinema_p0_autopilot.py
+
+      - name: Verify synthetic fallback is impossible
+        shell: python
+        run: |
+          from pathlib import Path
+          autopilot = Path('tools/cinema_p0_autopilot.py').read_text(encoding='utf-8')
+          audio = Path('tools/cinema_real_input_audio.py').read_text(encoding='utf-8')
+          bundle = Path('tools/cinema_p0_evidence_bundle.py').read_text(encoding='utf-8')
+          assert 'WAITING_INPUT_AUDIO' in autopilot
+          assert 'proof-audio-source.json' in autopilot
+          assert 'discover_real_input' in autopilot
+          assert 'prepare_real_input' in autopilot
+          assert 'math.sin' not in autopilot
+          assert 'def _write_audio' not in autopilot
+          assert 'syntheticFallbackAllowed' in audio
+          assert 'generatedByAutopilot' in audio
+          assert 'proof-audio-source.json' in bundle
+          print('P0 real input audio contract PASS synthetic-fallback=forbidden evidence=hashed')
