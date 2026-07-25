@@ -31,12 +31,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Verify FFmpeg is available
-        shell: python
-        run: |
-          import shutil
-          assert shutil.which('ffmpeg'), 'FFmpeg is required for real input audio preparation'
-
       - name: Compile production audio path
         shell: python
         run: |
@@ -66,5 +60,6 @@ jobs:
           assert 'def _write_audio' not in autopilot
           assert 'syntheticFallbackAllowed' in audio
           assert 'generatedByAutopilot' in audio
+          assert 'PYTHON_PCM_WAV' in audio
           assert 'proof-audio-source.json' in bundle
           print('P0 real input audio contract PASS synthetic-fallback=forbidden evidence=hashed')
