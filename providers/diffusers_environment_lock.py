@@ -13,7 +13,6 @@ import argparse
 import importlib
 import importlib.metadata
 import json
-import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -63,6 +62,71 @@ def parse_exact_lock(path: Path = LOCK_PATH) -> dict[str, str]:
     return pins
 
 
+def classify_environment(
+    expected: dict[str, str],
+    installed: dict[str, str | None],
+    import_errors: dict[str, str],
+    torch_info: dict[str, Any],
+    *,
+    require_cuda_build: bool = True,
+    require_cuda_runtime: bool = True,
+) -> dict[str, Any]:
+    missing = sorted(package for package in REQUIRED_DISTRIBUTIONS if installed.get(package) is None)
+    mismatches = [
+        {"package": package, "expected": expected[package], "actual": installed.get(package)}
+        for package in REQUIRED_DISTRIBUTIONS
+        if installed.get(package) != expected[package]
+    ]
+
+    status = "PASS"
+    failure_class: str | None = None
+    retryable = False
+    operator_restart_required = False
+    blocker: str | None = None
+
+    if missing:
+        status = "FAILED"
+        failure_class = "DEPENDENCY_MISSING"
+        retryable = True
+        blocker = "Missing pinned packages: " + ", ".join(missing)
+    elif mismatches:
+        status = "FAILED"
+        failure_class = "DEPENDENCY_VERSION_DRIFT"
+        retryable = True
+        blocker = "Pinned dependency versions differ from the lock file."
+    elif import_errors:
+        status = "FAILED"
+        failure_class = "DEPENDENCY_IMPORT_FAILED"
+        retryable = True
+        blocker = "Pinned packages are installed but one or more imports failed."
+    elif not torch_info.get("importable"):
+        status = "FAILED"
+        failure_class = "TORCH_MISSING"
+        retryable = True
+        blocker = str(torch_info.get("error") or "PyTorch is not importable.")
+    elif require_cuda_build and not torch_info.get("cudaBuildPresent"):
+        status = "FAILED"
+        failure_class = "CPU_ONLY_TORCH"
+        retryable = True
+        blocker = "PyTorch is importable but it is not a CUDA-enabled build."
+    elif require_cuda_runtime and not torch_info.get("cudaRuntimeAvailable"):
+        status = "BLOCKED"
+        failure_class = "CUDA_RUNTIME_UNAVAILABLE"
+        retryable = False
+        operator_restart_required = True
+        blocker = "A CUDA-enabled PyTorch wheel is installed, but the NVIDIA runtime is unavailable."
+
+    return {
+        "status": status,
+        "failureClass": failure_class,
+        "retryable": retryable,
+        "operatorRestartRequired": operator_restart_required,
+        "blocker": blocker,
+        "missingPackages": missing,
+        "versionMismatches": mismatches,
+    }
+
+
 def inspect_environment(
     *,
     lock_path: Path = LOCK_PATH,
@@ -71,8 +135,6 @@ def inspect_environment(
 ) -> dict[str, Any]:
     expected = parse_exact_lock(lock_path)
     installed: dict[str, str | None] = {}
-    missing: list[str] = []
-    mismatches: list[dict[str, str | None]] = []
     import_errors: dict[str, str] = {}
 
     for distribution in REQUIRED_DISTRIBUTIONS:
@@ -80,16 +142,7 @@ def inspect_environment(
             actual = importlib.metadata.version(distribution)
         except importlib.metadata.PackageNotFoundError:
             actual = None
-            missing.append(distribution)
         installed[distribution] = actual
-        if actual != expected[distribution]:
-            mismatches.append(
-                {
-                    "package": distribution,
-                    "expected": expected[distribution],
-                    "actual": actual,
-                }
-            )
         if actual is not None:
             try:
                 importlib.import_module(IMPORT_NAMES[distribution])
@@ -124,59 +177,36 @@ def inspect_environment(
     except Exception as error:  # noqa: BLE001 - exact torch blocker belongs in evidence
         torch_info["error"] = str(error)
 
-    status = "PASS"
-    failure_class: str | None = None
-    retryable = False
-    operator_restart_required = False
-    blocker: str | None = None
-
-    if missing:
-        status = "FAILED"
-        failure_class = "DEPENDENCY_MISSING"
-        retryable = True
-        blocker = "Missing pinned packages: " + ", ".join(missing)
-    elif mismatches:
-        status = "FAILED"
-        failure_class = "DEPENDENCY_VERSION_DRIFT"
-        retryable = True
-        blocker = "Pinned dependency versions differ from the lock file."
-    elif import_errors:
-        status = "FAILED"
-        failure_class = "DEPENDENCY_IMPORT_FAILED"
-        retryable = True
-        blocker = "Pinned packages are installed but one or more imports failed."
-    elif not torch_info["importable"]:
-        status = "FAILED"
-        failure_class = "TORCH_MISSING"
-        retryable = True
-        blocker = str(torch_info["error"] or "PyTorch is not importable.")
-    elif require_cuda_build and not torch_info["cudaBuildPresent"]:
-        status = "FAILED"
-        failure_class = "CPU_ONLY_TORCH"
-        retryable = True
-        blocker = "PyTorch is importable but it is not a CUDA-enabled build."
-    elif require_cuda_runtime and not torch_info["cudaRuntimeAvailable"]:
-        status = "BLOCKED"
-        failure_class = "CUDA_RUNTIME_UNAVAILABLE"
-        retryable = False
-        operator_restart_required = True
-        blocker = "A CUDA-enabled PyTorch wheel is installed, but the NVIDIA runtime is unavailable."
-
+    classification = classify_environment(
+        expected,
+        installed,
+        import_errors,
+        torch_info,
+        require_cuda_build=require_cuda_build,
+        require_cuda_runtime=require_cuda_runtime,
+    )
     return {
         "schema": SCHEMA,
-        "status": status,
-        "failureClass": failure_class,
-        "retryable": retryable,
-        "operatorRestartRequired": operator_restart_required,
-        "blocker": blocker,
+        **classification,
         "lockPath": str(lock_path.resolve()),
         "expectedVersions": expected,
         "installedVersions": installed,
-        "missingPackages": missing,
-        "versionMismatches": mismatches,
         "importErrors": import_errors,
         "torch": torch_info,
         "systemDriveWritesAllowed": False,
+    }
+
+
+def _ready_torch() -> dict[str, Any]:
+    return {
+        "importable": True,
+        "version": "2.x+cu128",
+        "cudaBuildPresent": True,
+        "torchCudaVersion": "12.8",
+        "cudaRuntimeAvailable": True,
+        "deviceCount": 1,
+        "deviceName": "mock-gpu",
+        "error": None,
     }
 
 
@@ -220,7 +250,34 @@ def self_test() -> int:
         else:
             raise AssertionError("An incomplete dependency lock unexpectedly passed")
 
-    print("DiffusersEnvironmentLock PASS exact-pins=required package-set=complete drift=repairable cuda-runtime=fail-closed")
+        installed = dict(pins)
+        ready = classify_environment(pins, installed, {}, _ready_torch())
+        assert ready["status"] == "PASS"
+
+        drifted = dict(installed)
+        drifted["transformers"] = "5.14.1"
+        drift = classify_environment(pins, drifted, {}, _ready_torch())
+        assert drift["failureClass"] == "DEPENDENCY_VERSION_DRIFT"
+        assert drift["retryable"] is True
+        assert drift["versionMismatches"][0]["package"] == "transformers"
+
+        cpu_torch = _ready_torch()
+        cpu_torch["cudaBuildPresent"] = False
+        cpu_torch["cudaRuntimeAvailable"] = False
+        cpu = classify_environment(pins, installed, {}, cpu_torch)
+        assert cpu["failureClass"] == "CPU_ONLY_TORCH" and cpu["retryable"] is True
+
+        blocked_torch = _ready_torch()
+        blocked_torch["cudaRuntimeAvailable"] = False
+        blocked = classify_environment(pins, installed, {}, blocked_torch)
+        assert blocked["status"] == "BLOCKED"
+        assert blocked["failureClass"] == "CUDA_RUNTIME_UNAVAILABLE"
+        assert blocked["operatorRestartRequired"] is True
+
+    print(
+        "DiffusersEnvironmentLock PASS exact-pins=required drift=repairable "
+        "cpu-torch=repairable cuda-runtime=fail-closed ready=exact"
+    )
     return 0
 
 
