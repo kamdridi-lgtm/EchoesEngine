@@ -28,16 +28,22 @@ jobs:
             STOP_ECHOES_CINEMA.cmd
             CLIQUE_ICI_ECHOES_CINEMA.cmd
             DOWNLOAD_AND_RUN_ECHOES_CINEMA.cmd
+            scripts/start-echoes-cinema-stack.ps1
+            scripts/stop-echoes-cinema-stack.ps1
             scripts/one-click-echoes-cinema.ps1
             scripts/one-click-echoes-cinema-monitor.ps1
             scripts/echoes-cinema-provider-worker.ps1
+            scripts/echoes-cinema-ffmpeg-worker.ps1
             scripts/echoes-cinema-stack-supervisor.ps1
             scripts/bootstrap-cinema-ai.ps1
+            scripts/ensure-ffmpeg-on-d.ps1
             providers/provider_bootstrap_health_bridge.py
             providers/diffusers_environment_lock.py
             providers/requirements-diffusers.txt
             providers/torch-runtime-lock.json
+            providers/ffmpeg-runtime-lock.json
             tools/cinema_real_input_audio.py
+            tools/assemble_render.py
           sparse-checkout-cone-mode: false
 
       - name: Verify required one-click files
@@ -48,14 +54,20 @@ jobs:
             'STOP_ECHOES_CINEMA.cmd',
             'CLIQUE_ICI_ECHOES_CINEMA.cmd',
             'DOWNLOAD_AND_RUN_ECHOES_CINEMA.cmd',
+            'scripts/start-echoes-cinema-stack.ps1',
+            'scripts/stop-echoes-cinema-stack.ps1',
             'scripts/one-click-echoes-cinema.ps1',
             'scripts/one-click-echoes-cinema-monitor.ps1',
+            'scripts/echoes-cinema-ffmpeg-worker.ps1',
+            'scripts/ensure-ffmpeg-on-d.ps1',
             'scripts/bootstrap-cinema-ai.ps1',
             'providers/provider_bootstrap_health_bridge.py',
             'providers/diffusers_environment_lock.py',
             'providers/requirements-diffusers.txt',
             'providers/torch-runtime-lock.json',
-            'tools/cinema_real_input_audio.py'
+            'providers/ffmpeg-runtime-lock.json',
+            'tools/cinema_real_input_audio.py',
+            'tools/assemble_render.py'
           )) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing: $path" }
             Write-Host "PASS $path"
@@ -65,11 +77,15 @@ jobs:
         shell: pwsh
         run: |
           foreach ($path in @(
+            'scripts/start-echoes-cinema-stack.ps1',
+            'scripts/stop-echoes-cinema-stack.ps1',
             'scripts/one-click-echoes-cinema.ps1',
             'scripts/one-click-echoes-cinema-monitor.ps1',
             'scripts/echoes-cinema-provider-worker.ps1',
+            'scripts/echoes-cinema-ffmpeg-worker.ps1',
             'scripts/echoes-cinema-stack-supervisor.ps1',
-            'scripts/bootstrap-cinema-ai.ps1'
+            'scripts/bootstrap-cinema-ai.ps1',
+            'scripts/ensure-ffmpeg-on-d.ps1'
           )) {
             [void][scriptblock]::Create((Get-Content -LiteralPath $path -Raw))
             Write-Host "PASS $path"
@@ -80,22 +96,23 @@ jobs:
         run: |
           python -m py_compile `
             tools/cinema_real_input_audio.py `
+            tools/assemble_render.py `
             providers/diffusers_environment_lock.py
           if ($LASTEXITCODE -ne 0) { throw "Autonomous Python module compilation failed" }
 
-      - name: Run bootstrap bridge self-test
+      - name: Run bootstrap and media self-tests
         shell: pwsh
         run: |
           python providers/provider_bootstrap_health_bridge.py --self-test
           if ($LASTEXITCODE -ne 0) { throw "Bootstrap bridge self-test failed" }
-
-      - name: Run pinned environment self-test
-        shell: pwsh
-        run: |
           python providers/diffusers_environment_lock.py --self-test
           if ($LASTEXITCODE -ne 0) { throw "Pinned environment lock self-test failed" }
           & scripts/bootstrap-cinema-ai.ps1 -TorchProbeSelfTest
           if ($LASTEXITCODE -ne 0) { throw "Pinned Torch bootstrap self-test failed" }
+          & scripts/ensure-ffmpeg-on-d.ps1 -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Pinned FFmpeg lock self-test failed" }
+          & scripts/echoes-cinema-ffmpeg-worker.ps1 -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Nonblocking FFmpeg worker self-test failed" }
 
       - name: Verify autonomous and non-destructive contract
         shell: pwsh
@@ -103,6 +120,9 @@ jobs:
           $orchestrator = Get-Content scripts/one-click-echoes-cinema.ps1 -Raw
           $monitor = Get-Content scripts/one-click-echoes-cinema-monitor.ps1 -Raw
           $bootstrap = Get-Content scripts/bootstrap-cinema-ai.ps1 -Raw
+          $start = Get-Content scripts/start-echoes-cinema-stack.ps1 -Raw
+          $mediaWorker = Get-Content scripts/echoes-cinema-ffmpeg-worker.ps1 -Raw
+          $assembler = Get-Content tools/assemble_render.py -Raw
           $launcher = Get-Content CLIQUE_ICI_ECHOES_CINEMA.cmd -Raw
           $downloadLauncher = Get-Content DOWNLOAD_AND_RUN_ECHOES_CINEMA.cmd -Raw
           foreach ($required in @(
@@ -112,13 +132,20 @@ jobs:
             'diffusers_environment_lock.py',
             'providers/requirements-diffusers.txt',
             'providers/torch-runtime-lock.json',
+            'providers/ffmpeg-runtime-lock.json',
+            'scripts/ensure-ffmpeg-on-d.ps1',
+            'scripts/echoes-cinema-ffmpeg-worker.ps1',
             'tools/cinema_real_input_audio.py',
+            'tools/assemble_render.py',
             'cinema_real_input_audio.py',
             'REPLACE_RUNTIME_DRIFT',
+            'Start-FfmpegWorker',
+            'FFMPEG_RUNTIME_TRANSIENT',
+            'ECHOES_CINEMA_MEDIA_TOOL_WAIT_SECONDS',
             'WorkspaceRoot',
             'one-click-echoes-cinema.ps1'
           )) {
-            if (-not (($orchestrator + $monitor + $bootstrap + $launcher + $downloadLauncher).Contains($required))) {
+            if (-not (($orchestrator + $monitor + $bootstrap + $start + $mediaWorker + $assembler + $launcher + $downloadLauncher).Contains($required))) {
               throw "Missing autonomous contract token: $required"
             }
           }
@@ -127,11 +154,11 @@ jobs:
             ('clean ' + '-fdx'),
             ('clean ' + '-xdf')
           )) {
-            if (($orchestrator + $monitor + $bootstrap + $launcher + $downloadLauncher).Contains($forbidden)) {
+            if (($orchestrator + $monitor + $bootstrap + $start + $mediaWorker + $launcher + $downloadLauncher).Contains($forbidden)) {
               throw "Forbidden destructive command present: $forbidden"
             }
           }
-          Write-Host 'Autonomous non-destructive exact-Torch pinned-environment real-input sync contract PASS'
+          Write-Host 'Autonomous non-destructive exact-Torch pinned-FFmpeg real-input sync contract PASS'
 
       - name: Run orchestrator self-test
         shell: pwsh
