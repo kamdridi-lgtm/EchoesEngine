@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - fix/hidden-child-processes-direct-2026-07-25
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   apply-direct-source-repair:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
