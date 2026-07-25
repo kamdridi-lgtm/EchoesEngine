@@ -1,0 +1,52 @@
+name: Echoes Cinema provider not-ready contract
+
+on:
+  pull_request:
+    paths:
+      - "providers/modelscope_low_vram_provider.py"
+      - "providers/modelscope_low_vram_provider_v2.py"
+      - "providers/modelscope_resilient_provider.py"
+      - "providers/modelscope_ready_aware_provider.py"
+      - ".github/workflows/cinema-provider-not-ready-503.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "providers/modelscope_low_vram_provider.py"
+      - "providers/modelscope_low_vram_provider_v2.py"
+      - "providers/modelscope_resilient_provider.py"
+      - "providers/modelscope_ready_aware_provider.py"
+      - ".github/workflows/cinema-provider-not-ready-503.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  provider-not-ready-contract:
+    name: HTTP 503 not-ready contract (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile provider entrypoints
+        run: >-
+          python -m py_compile
+          providers/modelscope_low_vram_provider.py
+          providers/modelscope_low_vram_provider_v2.py
+          providers/modelscope_resilient_provider.py
+          providers/modelscope_ready_aware_provider.py
+
+      - name: Prove render waits with HTTP 503
+        run: python providers/modelscope_low_vram_provider.py --self-test
