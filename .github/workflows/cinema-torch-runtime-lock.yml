@@ -1,0 +1,109 @@
+name: Echoes Cinema Torch Runtime Lock
+
+on:
+  pull_request:
+    paths:
+      - "providers/torch-runtime-lock.json"
+      - "providers/diffusers_environment_lock.py"
+      - "scripts/bootstrap-cinema-ai.ps1"
+      - "scripts/one-click-echoes-cinema.ps1"
+      - ".github/workflows/cinema-torch-runtime-lock.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "providers/torch-runtime-lock.json"
+      - "providers/diffusers_environment_lock.py"
+      - "scripts/bootstrap-cinema-ai.ps1"
+      - "scripts/one-click-echoes-cinema.ps1"
+      - ".github/workflows/cinema-torch-runtime-lock.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  exact-torch-runtime:
+    name: Exact Torch CUDA runtime (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+    steps:
+      - name: Checkout runtime lock sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            providers/requirements-diffusers.txt
+            providers/torch-runtime-lock.json
+            providers/diffusers_environment_lock.py
+            scripts/bootstrap-cinema-ai.ps1
+            scripts/one-click-echoes-cinema.ps1
+          sparse-checkout-cone-mode: false
+
+      - name: Set up production Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Compile and self-test environment verifier
+        run: |
+          python -m py_compile providers/diffusers_environment_lock.py
+          python providers/diffusers_environment_lock.py --self-test
+
+      - name: Resolve exact official Torch wheels without installing
+        shell: pwsh
+        run: |
+          $lock = Get-Content -LiteralPath "providers/torch-runtime-lock.json" -Raw | ConvertFrom-Json
+          python -m pip install --dry-run --ignore-installed `
+            "torch==$($lock.torchVersion)" `
+            "torchvision==$($lock.torchvisionVersion)" `
+            --index-url $lock.indexUrl
+          if ($LASTEXITCODE -ne 0) { throw "Pinned Torch runtime does not resolve on ${{ matrix.os }}" }
+
+      - name: Parse bootstrap and one-click orchestration
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content -LiteralPath "scripts/bootstrap-cinema-ai.ps1" -Raw))
+          [void][scriptblock]::Create((Get-Content -LiteralPath "scripts/one-click-echoes-cinema.ps1" -Raw))
+
+      - name: Prove exact runtime repair contract
+        shell: pwsh
+        run: |
+          & "scripts/bootstrap-cinema-ai.ps1" -TorchProbeSelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Torch runtime classification self-test failed" }
+          $lock = Get-Content -LiteralPath "providers/torch-runtime-lock.json" -Raw
+          $verifier = Get-Content -LiteralPath "providers/diffusers_environment_lock.py" -Raw
+          $bootstrap = Get-Content -LiteralPath "scripts/bootstrap-cinema-ai.ps1" -Raw
+          $oneClick = Get-Content -LiteralPath "scripts/one-click-echoes-cinema.ps1" -Raw
+          foreach ($token in @(
+            '"torchVersion": "2.7.1"',
+            '"torchvisionVersion": "0.22.1"',
+            '"cudaTag": "cu118"',
+            '"expectedTorchCudaVersion": "11.8"',
+            '"indexUrl": "https://download.pytorch.org/whl/cu118"'
+          )) {
+            if (-not $lock.Contains($token)) { throw "Torch lock missing token: $token" }
+          }
+          foreach ($token in @(
+            "TORCH_RUNTIME_VERSION_DRIFT",
+            "TORCH_CUDA_BUILD_DRIFT",
+            "torchvisionVersion",
+            "expectedTorchRuntime"
+          )) {
+            if (-not $verifier.Contains($token)) { throw "Verifier missing Torch lock token: $token" }
+          }
+          foreach ($token in @(
+            "REPLACE_RUNTIME_DRIFT",
+            '"torch==$($torchLock.torchVersion)"',
+            '"torchvision==$($torchLock.torchvisionVersion)"',
+            "Ignoring legacy TorchIndexUrl override",
+            "--force-reinstall"
+          )) {
+            if (-not $bootstrap.Contains($token)) { throw "Bootstrap missing exact-runtime token: $token" }
+          }
+          if (-not $oneClick.Contains("providers/torch-runtime-lock.json")) {
+            throw "One-click does not synchronize the Torch runtime lock"
+          }

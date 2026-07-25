@@ -8,6 +8,7 @@ on:
       - "providers/provider_bootstrap_health_bridge.py"
       - "providers/diffusers_environment_lock.py"
       - "providers/requirements-diffusers.txt"
+      - "providers/torch-runtime-lock.json"
       - ".github/workflows/cinema-cuda-environment-repair.yml"
   push:
     branches:
@@ -18,6 +19,7 @@ on:
       - "providers/provider_bootstrap_health_bridge.py"
       - "providers/diffusers_environment_lock.py"
       - "providers/requirements-diffusers.txt"
+      - "providers/torch-runtime-lock.json"
       - ".github/workflows/cinema-cuda-environment-repair.yml"
 
 permissions:
@@ -43,6 +45,7 @@ jobs:
             providers/provider_bootstrap_health_bridge.py
             providers/diffusers_environment_lock.py
             providers/requirements-diffusers.txt
+            providers/torch-runtime-lock.json
           sparse-checkout-cone-mode: false
 
       - name: Parse PowerShell repair chain
@@ -80,8 +83,10 @@ jobs:
           $worker = Get-Content -LiteralPath "scripts/echoes-cinema-provider-worker.ps1" -Raw
           $verifier = Get-Content -LiteralPath "providers/diffusers_environment_lock.py" -Raw
           $bridge = Get-Content -LiteralPath "providers/provider_bootstrap_health_bridge.py" -Raw
+          $torchLock = Get-Content -LiteralPath "providers/torch-runtime-lock.json" -Raw
           foreach ($token in @(
             "REPLACE_CPU_WHEEL",
+            "REPLACE_RUNTIME_DRIFT",
             "--force-reinstall",
             "torch.version.cuda",
             "official CUDA wheel"
@@ -100,11 +105,20 @@ jobs:
           }
           foreach ($token in @(
             "DEPENDENCY_VERSION_DRIFT",
+            "TORCH_RUNTIME_VERSION_DRIFT",
+            "TORCH_CUDA_BUILD_DRIFT",
             "CPU_ONLY_TORCH",
             "CUDA_RUNTIME_UNAVAILABLE",
-            'assert blocked["operatorRestartRequired"] is True'
+            'blocked["operatorRestartRequired"] is True'
           )) {
             if (-not $verifier.Contains($token)) { throw "Verifier missing classification token: $token" }
+          }
+          foreach ($token in @(
+            '"torchVersion": "2.7.1"',
+            '"cudaTag": "cu118"',
+            '"expectedTorchCudaVersion": "11.8"'
+          )) {
+            if (-not $torchLock.Contains($token)) { throw "Torch lock missing CUDA repair token: $token" }
           }
           foreach ($token in @(
             '"operatorRestartRequired"',
