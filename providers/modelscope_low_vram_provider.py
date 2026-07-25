@@ -23,9 +23,29 @@ from modelscope_resilient_provider import *  # noqa: F401,F403
 _BASE_SELF_TEST = resilient.self_test
 
 
+def provider_health_with_progress(payload: dict[str, Any]) -> dict[str, Any]:
+    """Expose a stable byte counter for progress-aware P0 waiters.
+
+    Older resilient health payloads report the model cache in GiB. P0 uses a
+    byte counter in its progress signature. Publishing both prevents a long
+    active model download from looking idle without changing the existing GiB
+    field consumed by the dashboard.
+    """
+
+    result = dict(payload)
+    if result.get("modelCacheBytes") is None and result.get("modelCacheGiB") is not None:
+        try:
+            gib = max(0.0, float(result["modelCacheGiB"]))
+            result["modelCacheBytes"] = int(round(gib * (1024**3)))
+        except (TypeError, ValueError, OverflowError):
+            result["modelCacheBytes"] = None
+    return result
+
+
 def provider_not_ready_payload(engine: Any) -> dict[str, Any]:
     """Return a small, non-secret readiness response for render callers."""
-    health = engine.health()
+
+    health = provider_health_with_progress(engine.health())
     load_state = str(health.get("loadState") or "LOADING")
     automatic_retry = bool(health.get("automaticRetry"))
     blocked = load_state == "BLOCKED"
@@ -39,11 +59,19 @@ def provider_not_ready_payload(engine: Any) -> dict[str, Any]:
         "nextRetryUtc": health.get("nextRetryUtc"),
         "failureClass": health.get("failureClass"),
         "operatorAction": health.get("operatorAction"),
+        "modelCacheBytes": health.get("modelCacheBytes"),
+        "modelCacheGiB": health.get("modelCacheGiB"),
     }
 
 
 class ReadyAwareProviderHandler(resilient.ProviderHandler):
-    """Return 503 while recovery is active instead of misclassifying it as 500."""
+    """Keep health truthful and render requests fail-closed during recovery."""
+
+    def do_GET(self) -> None:  # noqa: N802
+        if self.path == "/health" and self._authorized():
+            self._send_json(200, provider_health_with_progress(self.engine.health()))
+            return
+        super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
         if self.path == "/v1/render" and self._authorized() and not self.engine.real_model_loaded:
@@ -52,20 +80,16 @@ class ReadyAwareProviderHandler(resilient.ProviderHandler):
         super().do_POST()
 
 
-def _post_json(url: str, token: str) -> tuple[int, dict[str, Any]]:
+def _request_json(url: str, token: str, *, method: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
+    body = json.dumps(payload).encode("utf-8") if payload is not None else None
     request = urllib.request.Request(
         url,
-        data=json.dumps(
-            {
-                "schema": "echoes.render-request.v1",
-                "task": {"prompt": "self-test", "durationSeconds": 1.0},
-            }
-        ).encode("utf-8"),
+        data=body,
         headers={
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },
-        method="POST",
+        method=method,
     )
     try:
         with urllib.request.urlopen(request, timeout=3.0) as response:
@@ -76,6 +100,11 @@ def _post_json(url: str, token: str) -> tuple[int, dict[str, Any]]:
 
 def self_test() -> int:
     assert _BASE_SELF_TEST() == 0
+
+    converted = provider_health_with_progress({"modelCacheGiB": 1.5})
+    assert converted["modelCacheBytes"] == int(1.5 * (1024**3))
+    assert provider_health_with_progress({"modelCacheGiB": 1.5, "modelCacheBytes": 17})["modelCacheBytes"] == 17
+    assert provider_health_with_progress({"modelCacheGiB": "bad"})["modelCacheBytes"] is None
 
     class DummyEngine:
         real_model_loaded = False
@@ -88,6 +117,7 @@ def self_test() -> int:
                 "nextRetryUtc": "2099-01-01T00:00:00Z",
                 "failureClass": "TRANSIENT_NETWORK",
                 "operatorAction": "No operator action is required.",
+                "modelCacheGiB": 1.25,
             }
 
     settings = resilient.Settings(
@@ -114,7 +144,24 @@ def self_test() -> int:
     thread.start()
     try:
         port = int(server.server_address[1])
-        status, payload = _post_json(f"http://127.0.0.1:{port}/v1/render", settings.token)
+        health_status, health = _request_json(
+            f"http://127.0.0.1:{port}/health",
+            settings.token,
+            method="GET",
+        )
+        assert health_status == 200
+        assert health["modelCacheGiB"] == 1.25
+        assert health["modelCacheBytes"] == int(1.25 * (1024**3))
+
+        status, payload = _request_json(
+            f"http://127.0.0.1:{port}/v1/render",
+            settings.token,
+            method="POST",
+            payload={
+                "schema": "echoes.render-request.v1",
+                "task": {"prompt": "self-test", "durationSeconds": 1.0},
+            },
+        )
         assert status == 503
         assert payload["schema"] == "echoes.render-provider-readiness.v1"
         assert payload["status"] == "PARTIAL"
@@ -122,12 +169,16 @@ def self_test() -> int:
         assert payload["loadState"] == "RETRY_WAIT"
         assert payload["retryable"] is True
         assert payload["failureClass"] == "TRANSIENT_NETWORK"
+        assert payload["modelCacheBytes"] == int(1.25 * (1024**3))
     finally:
         server.shutdown()
         server.server_close()
         thread.join(timeout=3.0)
 
-    print("ModelScopeReadyAwareProvider PASS not-ready-render=503 recovery-state=preserved")
+    print(
+        "ModelScopeReadyAwareProvider PASS not-ready-render=503 "
+        "recovery-state=preserved model-cache-bytes=progress-visible"
+    )
     return 0
 
 
