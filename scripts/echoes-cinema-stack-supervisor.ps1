@@ -7,7 +7,9 @@ param(
     [double]$StorageReserveGiB = 20,
     [double]$DefaultJobGiB = 8,
     [double]$MaxJobGiB = 200,
-    [string]$ProviderMode = ""
+    [string]$ProviderMode = "",
+    [int]$DashboardFailureThreshold = 3,
+    [switch]$DashboardRecoverySelfTest
 )
 
 $ErrorActionPreference = "Stop"
@@ -62,6 +64,20 @@ function Test-DashboardReady {
     }
 }
 
+function Get-DashboardRecoveryAction {
+    param(
+        [bool]$ProcessAlive,
+        [bool]$DashboardHealthy,
+        [int]$ConsecutiveFailures,
+        [int]$FailureThreshold
+    )
+    $threshold = [math]::Max(1, $FailureThreshold)
+    if (-not $ProcessAlive) { return "RESTART_EXITED" }
+    if ($DashboardHealthy) { return "HEALTHY" }
+    if ($ConsecutiveFailures -ge $threshold) { return "RESTART_UNRESPONSIVE" }
+    return "WAIT_UNRESPONSIVE"
+}
+
 function Stop-ChildProcess {
     param([System.Diagnostics.Process]$Process)
     if (-not $Process) { return }
@@ -71,6 +87,23 @@ function Stop-ChildProcess {
             Wait-Process -Id $Process.Id -Timeout 10 -ErrorAction SilentlyContinue
         }
     } catch { }
+}
+
+if ($DashboardRecoverySelfTest) {
+    if ((Get-DashboardRecoveryAction -ProcessAlive $false -DashboardHealthy $false -ConsecutiveFailures 0 -FailureThreshold 3) -ne "RESTART_EXITED") {
+        throw "Exited process recovery contract failed."
+    }
+    if ((Get-DashboardRecoveryAction -ProcessAlive $true -DashboardHealthy $true -ConsecutiveFailures 9 -FailureThreshold 3) -ne "HEALTHY") {
+        throw "Healthy dashboard recovery contract failed."
+    }
+    if ((Get-DashboardRecoveryAction -ProcessAlive $true -DashboardHealthy $false -ConsecutiveFailures 2 -FailureThreshold 3) -ne "WAIT_UNRESPONSIVE") {
+        throw "Unresponsive grace-window contract failed."
+    }
+    if ((Get-DashboardRecoveryAction -ProcessAlive $true -DashboardHealthy $false -ConsecutiveFailures 3 -FailureThreshold 3) -ne "RESTART_UNRESPONSIVE") {
+        throw "Unresponsive restart threshold contract failed."
+    }
+    Write-Host "Echoes Cinema dashboard recovery PASS exited=restart healthy=keep unresponsive=threshold-restart"
+    exit 0
 }
 
 if (-not $RepoRoot) {
@@ -84,6 +117,7 @@ if (-not $workspaceDrive -or $workspaceDrive.TrimEnd("\").ToUpperInvariant() -eq
     throw "Echoes Cinema stack refuses workspace storage on drive C:. Current: $workspace"
 }
 if ($MaxWorkers -le 0) { throw "MaxWorkers must be positive." }
+if ($DashboardFailureThreshold -le 0) { throw "DashboardFailureThreshold must be positive." }
 
 $resolvedProviderMode = if ($ProviderMode) { $ProviderMode } elseif ($env:ECHOES_CINEMA_PROVIDER_MODE) { $env:ECHOES_CINEMA_PROVIDER_MODE } else { "real" }
 $resolvedProviderMode = $resolvedProviderMode.Trim().ToLowerInvariant()
@@ -131,6 +165,7 @@ $providerWorkerStdout = ""
 $providerWorkerStderr = ""
 $lastError = ""
 $dashboardUrl = ""
+$consecutiveDashboardFailures = 0
 
 try {
     Remove-Item -LiteralPath $stopSignalPath -Force -ErrorAction SilentlyContinue
@@ -184,6 +219,7 @@ try {
 
     function Start-ControlCenterProcess {
         $script:serviceRestarts++
+        $script:consecutiveDashboardFailures = 0
         $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
         $script:serviceStdout = Join-Path $logsRoot "control-center-$stamp.log"
         $script:serviceStderr = Join-Path $logsRoot "control-center-$stamp.error.log"
@@ -248,6 +284,8 @@ try {
             providerPid = $providerPid
             serviceRestarts = $serviceRestarts
             providerRestarts = $providerRestarts
+            consecutiveDashboardFailures = $consecutiveDashboardFailures
+            dashboardFailureThreshold = $DashboardFailureThreshold
             serviceStdoutLog = $serviceStdout
             serviceStderrLog = $serviceStderr
             providerWorkerStdoutLog = $providerWorkerStdout
@@ -280,14 +318,48 @@ try {
 
     while (-not (Test-Path -LiteralPath $stopSignalPath)) {
         $now = Get-Date
-        if (-not $serviceProcess -or $serviceProcess.HasExited) {
-            $lastError = "Control center stopped and is being restarted automatically."
-            if (($now - $lastServiceRestart).TotalSeconds -ge $serviceBackoffSeconds) {
-                Start-ControlCenterProcess
-                $serviceBackoffSeconds = [math]::Min(60, [math]::Max(2, $serviceBackoffSeconds * 2))
+        $serviceAlive = [bool]($serviceProcess -and -not $serviceProcess.HasExited)
+        $dashboardHealthy = $false
+        if ($serviceAlive) { $dashboardHealthy = Test-DashboardReady -Url $dashboardUrl }
+
+        if ($serviceAlive -and -not $dashboardHealthy) {
+            $consecutiveDashboardFailures++
+        } elseif ($dashboardHealthy) {
+            $consecutiveDashboardFailures = 0
+        } else {
+            $consecutiveDashboardFailures = 0
+        }
+
+        $dashboardAction = Get-DashboardRecoveryAction `
+            -ProcessAlive $serviceAlive `
+            -DashboardHealthy $dashboardHealthy `
+            -ConsecutiveFailures $consecutiveDashboardFailures `
+            -FailureThreshold $DashboardFailureThreshold
+
+        switch ($dashboardAction) {
+            "RESTART_EXITED" {
+                $lastError = "Control center stopped and is being restarted automatically."
+                if (($now - $lastServiceRestart).TotalSeconds -ge $serviceBackoffSeconds) {
+                    Start-ControlCenterProcess
+                    $serviceBackoffSeconds = [math]::Min(60, [math]::Max(2, $serviceBackoffSeconds * 2))
+                }
             }
-        } elseif (Test-DashboardReady -Url $dashboardUrl) {
-            $serviceBackoffSeconds = 2
+            "RESTART_UNRESPONSIVE" {
+                $lastError = "Control center process stayed alive but failed $consecutiveDashboardFailures consecutive HTTP health checks. It is being replaced automatically."
+                if (($now - $lastServiceRestart).TotalSeconds -ge $serviceBackoffSeconds) {
+                    Stop-ChildProcess -Process $serviceProcess
+                    Remove-Item -LiteralPath $servicePidPath -Force -ErrorAction SilentlyContinue
+                    Start-ControlCenterProcess
+                    $serviceBackoffSeconds = [math]::Min(60, [math]::Max(2, $serviceBackoffSeconds * 2))
+                }
+            }
+            "WAIT_UNRESPONSIVE" {
+                $lastError = "Control center HTTP health check failed $consecutiveDashboardFailures of $DashboardFailureThreshold times; supervisor is verifying before replacement."
+            }
+            "HEALTHY" {
+                $serviceBackoffSeconds = 2
+                $lastError = ""
+            }
         }
 
         if (-not $providerWorkerProcess -or $providerWorkerProcess.HasExited) {
@@ -300,7 +372,7 @@ try {
             $providerBackoffSeconds = 5
         }
 
-        $stackStatus = if ($serviceProcess -and -not $serviceProcess.HasExited -and (Test-DashboardReady -Url $dashboardUrl)) { "RUNNING" } else { "PARTIAL" }
+        $stackStatus = if ($dashboardHealthy) { "RUNNING" } else { "PARTIAL" }
         Publish-State -Status $stackStatus
         Start-Sleep -Seconds 5
     }
