@@ -83,7 +83,7 @@ jobs:
           if ([string]$metadata.asset.digest -notmatch '^sha256:[0-9a-f]{64}$') { throw "Pinned asset digest is missing" }
           if ([string]$metadata.asset.assetName -ne 'ffmpeg-8.1.2-essentials_build.zip') { throw "Unexpected FFmpeg asset" }
 
-      - name: Verify nonblocking, fail-closed, and packaging contract
+      - name: Verify nonblocking, fail-closed, migration, and packaging contract
         shell: pwsh
         run: |
           $lock = Get-Content -LiteralPath 'providers/ffmpeg-runtime-lock.json' -Raw
@@ -103,7 +103,8 @@ jobs:
           }
           foreach ($token in @(
             'asset.digest', 'Get-FileHash', 'SHA-256 mismatch', 'ffmpeg.exe', 'ffprobe.exe',
-            'backups\ffmpeg', 'networkMetadataRequested = $false', 'systemDriveWritesAllowed = $false'
+            'backups\ffmpeg', 'networkMetadataRequested = $false', 'systemDriveWritesAllowed = $false',
+            '$installParent', 'Get-ChildItem -LiteralPath $ffmpegSource.DirectoryName', 'status = "BROKEN"'
           )) {
             if (-not $script.Contains($token)) { throw "Provisioner missing safety token: $token" }
           }
@@ -111,7 +112,9 @@ jobs:
             if (-not $worker.Contains($token)) { throw "Worker missing recovery token: $token" }
           }
           if ($start.Contains('& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ensureFfmpeg')) { throw 'Start stack still blocks on synchronous FFmpeg provisioning' }
-          if (-not $start.Contains('Start-FfmpegWorker')) { throw 'Start stack does not launch background FFmpeg worker' }
+          foreach ($token in @('Start-FfmpegWorker', 'Repair-MissingRuntimePackage', 'git archive', 'origin/main')) {
+            if (-not $start.Contains($token)) { throw "Start stack missing nonblocking migration token: $token" }
+          }
           if (-not $start.Contains('$env:PATH = "$ffmpegBin;$env:PATH"')) { throw 'Start stack does not propagate deterministic FFmpeg PATH' }
           if (-not $stop.Contains('ffmpeg-worker.pid')) { throw 'Stop stack does not clean FFmpeg worker' }
           foreach ($token in @('providers/ffmpeg-runtime-lock.json', 'scripts/ensure-ffmpeg-on-d.ps1', 'scripts/echoes-cinema-ffmpeg-worker.ps1')) {
@@ -128,27 +131,50 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           $workspace = Join-Path $env:RUNNER_TEMP 'EchoesCinema-FFmpeg-CI'
+          $diagnostics = Join-Path $env:RUNNER_TEMP 'echoes-ffmpeg-runtime-diagnostics'
+          New-Item -ItemType Directory -Path $diagnostics -Force | Out-Null
           if ([System.IO.Path]::GetPathRoot($workspace).TrimEnd('\').ToUpperInvariant() -eq 'C:') {
             $workspace = 'D:\EchoesCinema-FFmpeg-CI'
           }
-          $firstRaw = & scripts/ensure-ffmpeg-on-d.ps1 -WorkspaceRoot $workspace
-          if ($LASTEXITCODE -ne 0) { throw 'Pinned FFmpeg installation failed' }
-          $bin = [string]($firstRaw | Select-Object -Last 1)
-          foreach ($name in @('ffmpeg.exe', 'ffprobe.exe')) {
-            if (-not (Test-Path -LiteralPath (Join-Path $bin $name) -PathType Leaf)) { throw "Installed runtime missing $name" }
-          }
-          $evidencePath = Join-Path $workspace 'runtime\ffmpeg-runtime.json'
-          $firstEvidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
-          if ($firstEvidence.status -ne 'PASS' -or $firstEvidence.reusedExistingInstall) { throw 'First install evidence is not truthful' }
-          if ([string]$firstEvidence.expectedDigest -notmatch '^sha256:[0-9a-f]{64}$') { throw 'Installed evidence is missing digest' }
-          if ([string]$firstEvidence.downloadedSha256 -notmatch '^[0-9a-f]{64}$') { throw 'Installed evidence is missing SHA-256' }
+          try {
+            $firstRaw = & scripts/ensure-ffmpeg-on-d.ps1 -WorkspaceRoot $workspace
+            if ($LASTEXITCODE -ne 0) { throw 'Pinned FFmpeg installation failed' }
+            $bin = [string]($firstRaw | Select-Object -Last 1)
+            foreach ($name in @('ffmpeg.exe', 'ffprobe.exe')) {
+              if (-not (Test-Path -LiteralPath (Join-Path $bin $name) -PathType Leaf)) { throw "Installed runtime missing $name" }
+            }
+            $evidencePath = Join-Path $workspace 'runtime\ffmpeg-runtime.json'
+            $firstEvidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
+            if ($firstEvidence.status -ne 'PASS' -or $firstEvidence.reusedExistingInstall) { throw 'First install evidence is not truthful' }
+            if ([string]$firstEvidence.expectedDigest -notmatch '^sha256:[0-9a-f]{64}$') { throw 'Installed evidence is missing digest' }
+            if ([string]$firstEvidence.downloadedSha256 -notmatch '^[0-9a-f]{64}$') { throw 'Installed evidence is missing SHA-256' }
 
-          $secondRaw = & scripts/ensure-ffmpeg-on-d.ps1 -WorkspaceRoot $workspace
-          if ($LASTEXITCODE -ne 0) { throw 'Pinned FFmpeg reuse failed' }
-          $secondBin = [string]($secondRaw | Select-Object -Last 1)
-          if ($secondBin -ne $bin) { throw 'Reused FFmpeg path changed unexpectedly' }
-          $secondEvidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
-          if (-not $secondEvidence.reusedExistingInstall) { throw 'Second run did not reuse the verified install' }
-          if ($secondEvidence.networkMetadataRequested) { throw 'Healthy reuse unexpectedly requested release metadata' }
-          & (Join-Path $bin 'ffmpeg.exe') -version | Select-Object -First 1
-          & (Join-Path $bin 'ffprobe.exe') -version | Select-Object -First 1
+            $secondRaw = & scripts/ensure-ffmpeg-on-d.ps1 -WorkspaceRoot $workspace
+            if ($LASTEXITCODE -ne 0) { throw 'Pinned FFmpeg reuse failed' }
+            $secondBin = [string]($secondRaw | Select-Object -Last 1)
+            if ($secondBin -ne $bin) { throw 'Reused FFmpeg path changed unexpectedly' }
+            $secondEvidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
+            if (-not $secondEvidence.reusedExistingInstall) { throw 'Second run did not reuse the verified install' }
+            if ($secondEvidence.networkMetadataRequested) { throw 'Healthy reuse unexpectedly requested release metadata' }
+            & (Join-Path $bin 'ffmpeg.exe') -version | Select-Object -First 1
+            & (Join-Path $bin 'ffprobe.exe') -version | Select-Object -First 1
+            Copy-Item -LiteralPath $evidencePath -Destination (Join-Path $diagnostics 'ffmpeg-runtime.json') -Force
+            Set-Content -LiteralPath (Join-Path $diagnostics 'install.pass') -Value 'PASS'
+          } catch {
+            Set-Content -LiteralPath (Join-Path $diagnostics 'failure.txt') -Value $_.Exception.ToString()
+            $evidencePath = Join-Path $workspace 'runtime\ffmpeg-runtime.json'
+            if (Test-Path -LiteralPath $evidencePath -PathType Leaf) {
+              Copy-Item -LiteralPath $evidencePath -Destination (Join-Path $diagnostics 'ffmpeg-runtime.json') -Force
+            }
+            Write-Host "EXACT FFMPEG INSTALL FAILURE: $($_.Exception.Message)"
+            throw
+          }
+
+      - name: Upload FFmpeg runtime diagnostics
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-ffmpeg-runtime-diagnostics
+          path: ${{ runner.temp }}/echoes-ffmpeg-runtime-diagnostics
+          if-no-files-found: warn
+          retention-days: 3
