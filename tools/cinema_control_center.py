@@ -4,6 +4,9 @@
 from __future__ import annotations
 
 import ipaddress
+import json
+import time
+import urllib.error
 import urllib.parse
 from typing import Any
 
@@ -129,6 +132,109 @@ def scheduler_counts(snapshot: dict[str, Any]) -> dict[str, Any]:
         "queuedCount": len(queued) if isinstance(queued, list) else int(snapshot.get("queuedCount", 0) or 0),
         "runningCount": len(running) if isinstance(running, list) else int(snapshot.get("runningCount", 0) or 0),
     }
+
+
+def provider_progress_signature(health: dict[str, Any]) -> str:
+    """Return only fields that prove provider recovery or download activity advanced."""
+
+    payload = {
+        "loadState": health.get("loadState"),
+        "recoveryCount": int(health.get("recoveryCount", 0) or 0),
+        "consecutiveSameFailure": int(health.get("consecutiveSameFailure", 0) or 0),
+        "lastAttemptUtc": health.get("lastAttemptUtc"),
+        "nextRetryUtc": health.get("nextRetryUtc"),
+        "modelCacheBytes": int(health.get("modelCacheBytes", 0) or 0),
+        "workspaceFreeGiB": health.get("workspaceFreeGiB"),
+        "realModelLoaded": health.get("realModelLoaded") is True,
+    }
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def permanent_provider_blocker(health: dict[str, Any]) -> str | None:
+    load_state = str(health.get("loadState") or "")
+    if load_state != "BLOCKED" and health.get("operatorRestartRequired") is not True:
+        return None
+    detail = str(health.get("lastLoadError") or health.get("loadError") or "").strip()
+    action = str(health.get("operatorAction") or "").strip()
+    return " | ".join(value for value in (detail, action) if value) or "provider recovery entered BLOCKED state"
+
+
+class ProgressAwareP0Autopilot(p0auto.P0Autopilot):
+    """Wait on provider inactivity, not a fixed total wall-clock duration."""
+
+    def _wait_for_provider(self) -> dict[str, Any]:
+        if not self.config.provider_token:
+            raise RuntimeError("ECHOES_RENDER_TOKEN is missing from the control-center environment")
+
+        inactivity_window = max(30.0, self.config.wait_timeout_seconds)
+        inactivity_deadline = time.monotonic() + inactivity_window
+        last_progress_signature: str | None = None
+        last_message = "provider has not answered yet"
+        last_status_write = 0.0
+        last_health: dict[str, Any] = {}
+
+        while not self._stop_event.is_set():
+            try:
+                health = self._provider_health()
+                last_health = health
+                if health.get("realModelLoaded") is True:
+                    p0auto.atomic_json(self.provider_health_path, health)
+                    return health
+
+                permanent = permanent_provider_blocker(health)
+                if permanent:
+                    raise RuntimeError(f"model recovery stopped permanently: {permanent}")
+
+                signature = provider_progress_signature(health)
+                now = time.monotonic()
+                if signature != last_progress_signature:
+                    last_progress_signature = signature
+                    inactivity_deadline = now + inactivity_window
+
+                load_state = str(health.get("loadState") or "LOADING")
+                recovery_count = int(health.get("recoveryCount", 0) or 0)
+                failure_class = str(health.get("failureClass") or "").strip()
+                next_retry = str(health.get("nextRetryUtc") or "").strip()
+                last_message = f"loadState={load_state}; recoveryCount={recovery_count}"
+                if failure_class:
+                    last_message += f"; failureClass={failure_class}"
+                if next_retry:
+                    last_message += f"; nextRetryUtc={next_retry}"
+            except urllib.error.HTTPError as error:
+                if error.code in {401, 403}:
+                    raise RuntimeError(f"provider health authorization failed with HTTP {error.code}") from error
+                last_message = f"provider health HTTP {error.code}"
+            except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as error:
+                last_message = str(error)
+
+            now = time.monotonic()
+            if now >= inactivity_deadline:
+                raise RuntimeError(
+                    f"no provider recovery progress was observed for {int(inactivity_window)} seconds; "
+                    f"last provider message: {last_message}"
+                )
+            if now - last_status_write >= 15.0:
+                remaining = max(0, int(inactivity_deadline - now))
+                self._write_status(
+                    "PARTIAL",
+                    "WAITING_PROVIDER",
+                    "The dashboard is online. P0 keeps waiting while model recovery or download activity progresses.",
+                    blocker=last_message,
+                    extra={
+                        "providerLoadState": last_health.get("loadState"),
+                        "providerRecoveryCount": last_health.get("recoveryCount"),
+                        "providerNextRetryUtc": last_health.get("nextRetryUtc"),
+                        "providerFailureClass": last_health.get("failureClass"),
+                        "providerAutomaticRetry": last_health.get("automaticRetry") is True,
+                        "providerInactivityTimeoutSeconds": int(inactivity_window),
+                        "providerInactivityRemainingSeconds": remaining,
+                        "providerWaitPolicy": "PROGRESS_AWARE_INACTIVITY_TIMEOUT",
+                    },
+                )
+                last_status_write = now
+            self._stop_event.wait(5.0)
+
+        raise RuntimeError("P0 autopilot was stopped before the provider became ready")
 
 
 def build_status(server: base.CinemaServer) -> dict[str, Any]:
@@ -263,7 +369,7 @@ def build_status(server: base.CinemaServer) -> dict[str, Any]:
 
 
 class ControlCenterHandler(durable.DurableHandler):
-    server_version = "EchoesCinemaControlCenter/1.3"
+    server_version = "EchoesCinemaControlCenter/1.4"
 
     def send_html(self, status: int, body: str) -> None:
         payload = body.encode("utf-8")
@@ -303,7 +409,34 @@ def self_test() -> int:
     assert "workspaceFreeGiB" in DASHBOARD_HTML
     assert "permanent blockers stop safely" in DASHBOARD_HTML
     assert "localhost refused" not in DASHBOARD_HTML.lower()
-    print("CinemaControlCenter PASS loopback=protected p0=visible blocker-classification=visible polling=enabled")
+
+    health = {
+        "loadState": "LOADING",
+        "recoveryCount": 1,
+        "lastAttemptUtc": "2026-07-25T00:00:00Z",
+        "nextRetryUtc": None,
+        "modelCacheBytes": 100,
+        "workspaceFreeGiB": 25.0,
+        "realModelLoaded": False,
+    }
+    first_signature = provider_progress_signature(health)
+    health["modelCacheBytes"] = 101
+    assert provider_progress_signature(health) != first_signature
+    assert permanent_provider_blocker({"loadState": "RETRY_WAIT", "lastLoadError": "temporary"}) is None
+    assert "driver" in str(
+        permanent_provider_blocker(
+            {
+                "loadState": "BLOCKED",
+                "lastLoadError": "CUDA driver is incompatible",
+                "operatorAction": "Update the driver.",
+            }
+        )
+    ).lower()
+    assert issubclass(ProgressAwareP0Autopilot, p0auto.P0Autopilot)
+    print(
+        "CinemaControlCenter PASS loopback=protected p0=visible blocker-classification=visible "
+        "provider-wait=progress-aware polling=enabled"
+    )
     return 0
 
 
@@ -315,7 +448,7 @@ def main() -> int:
     server = base.CinemaServer((config.host, config.port), ControlCenterHandler)
     server.config = config
     server.registry = durable.DurableJobRegistry(config)
-    server.p0_autopilot = p0auto.P0Autopilot(p0auto.AutopilotConfig.from_environment())
+    server.p0_autopilot = ProgressAwareP0Autopilot(p0auto.AutopilotConfig.from_environment())
     server.p0_autopilot.start()
     print(
         f"EchoesCinemaControlCenter READY http://{config.host}:{config.port} "
