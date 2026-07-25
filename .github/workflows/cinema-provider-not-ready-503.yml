@@ -6,7 +6,6 @@ on:
       - "providers/modelscope_low_vram_provider.py"
       - "providers/modelscope_low_vram_provider_v2.py"
       - "providers/modelscope_resilient_provider.py"
-      - "providers/modelscope_ready_aware_provider.py"
       - ".github/workflows/cinema-provider-not-ready-503.yml"
   push:
     branches:
@@ -15,7 +14,6 @@ on:
       - "providers/modelscope_low_vram_provider.py"
       - "providers/modelscope_low_vram_provider_v2.py"
       - "providers/modelscope_resilient_provider.py"
-      - "providers/modelscope_ready_aware_provider.py"
       - ".github/workflows/cinema-provider-not-ready-503.yml"
 
 permissions:
@@ -46,7 +44,6 @@ jobs:
           providers/modelscope_low_vram_provider.py
           providers/modelscope_low_vram_provider_v2.py
           providers/modelscope_resilient_provider.py
-          providers/modelscope_ready_aware_provider.py
 
       - name: Prove render waits with HTTP 503
         run: python providers/modelscope_low_vram_provider.py --self-test
