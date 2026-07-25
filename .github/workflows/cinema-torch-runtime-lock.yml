@@ -97,8 +97,8 @@ jobs:
           }
           foreach ($token in @(
             "REPLACE_RUNTIME_DRIFT",
-            "torch==$(`$torchLock.torchVersion)",
-            "torchvision==$(`$torchLock.torchvisionVersion)",
+            '"torch==$($torchLock.torchVersion)"',
+            '"torchvision==$($torchLock.torchvisionVersion)"',
             "Ignoring legacy TorchIndexUrl override",
             "--force-reinstall"
           )) {
