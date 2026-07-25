@@ -58,6 +58,8 @@ jobs:
             'mutationsAllowed',
             'requiresOperatorApproval',
             'COMMERCIAL_USE_NOT_APPROVED',
+            'PROVIDER_STATUS_NOT_PASS',
+            'QUALITY_',
             'MISSING_PROVIDER_CAPABILITIES',
             'UNPROVEN_ENGINE_MODULES',
             'cinema_identity_local_v1',
