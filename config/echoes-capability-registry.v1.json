@@ -2,7 +2,14 @@
   "schema": "echoes.capability-registry.v1",
   "version": "1.0.0",
   "truthPolicy": {
-    "allowedStatuses": ["REAL", "PARTIAL", "MOCK", "DORMANT", "BROKEN", "MISSING"],
+    "allowedStatuses": [
+      "REAL",
+      "PARTIAL",
+      "MOCK",
+      "DORMANT",
+      "BROKEN",
+      "MISSING"
+    ],
     "selectionRule": "A pipeline is eligible only when every required runtime and capability condition is proven.",
     "noImplicitCapability": true
   },
@@ -15,18 +22,66 @@
     "client_video"
   ],
   "engineModules": {
-    "audioCore": {"kind": "audio", "target": "native", "status": "REAL"},
-    "masteringChain": {"kind": "audio", "target": "native", "status": "PARTIAL"},
-    "spatialQSound": {"kind": "audio", "target": "native", "status": "MISSING"},
-    "fatigueSimulation": {"kind": "audio", "target": "native", "status": "MISSING"},
-    "microPitchDrift": {"kind": "audio", "target": "native", "status": "MISSING"},
-    "naturalnessScoring": {"kind": "quality", "target": "native", "status": "MISSING"},
-    "monoSafety": {"kind": "quality", "target": "native", "status": "MISSING"},
-    "onnxModelManager": {"kind": "ai", "target": "native", "status": "MISSING"},
-    "neuralScheduler": {"kind": "orchestration", "target": "kcore", "status": "MISSING"},
-    "multiStateRenderer": {"kind": "render", "target": "echoes", "status": "MISSING"},
-    "psychoacousticEngine": {"kind": "audio", "target": "native", "status": "MISSING"},
-    "stemExports": {"kind": "audio", "target": "native", "status": "MISSING"}
+    "audioCore": {
+      "kind": "audio",
+      "target": "native",
+      "status": "REAL"
+    },
+    "masteringChain": {
+      "kind": "audio",
+      "target": "native",
+      "status": "PARTIAL"
+    },
+    "spatialQSound": {
+      "kind": "audio",
+      "target": "native",
+      "status": "MISSING"
+    },
+    "fatigueSimulation": {
+      "kind": "audio",
+      "target": "native",
+      "status": "MISSING"
+    },
+    "microPitchDrift": {
+      "kind": "audio",
+      "target": "native",
+      "status": "MISSING"
+    },
+    "naturalnessScoring": {
+      "kind": "quality",
+      "target": "native",
+      "status": "MISSING"
+    },
+    "monoSafety": {
+      "kind": "quality",
+      "target": "native",
+      "status": "MISSING"
+    },
+    "onnxModelManager": {
+      "kind": "ai",
+      "target": "native",
+      "status": "MISSING"
+    },
+    "neuralScheduler": {
+      "kind": "orchestration",
+      "target": "kcore",
+      "status": "MISSING"
+    },
+    "multiStateRenderer": {
+      "kind": "render",
+      "target": "echoes",
+      "status": "MISSING"
+    },
+    "psychoacousticEngine": {
+      "kind": "audio",
+      "target": "native",
+      "status": "MISSING"
+    },
+    "stemExports": {
+      "kind": "audio",
+      "target": "native",
+      "status": "MISSING"
+    }
   },
   "pipelines": [
     {
@@ -40,7 +95,8 @@
         "providerCapabilities": [],
         "engineModules": ["audioCore"]
       },
-      "stages": ["inspect_audio", "process_native_audio", "qc_audio", "emit_manifest"]
+      "stages": ["inspect_audio", "process_native_audio", "qc_audio", "emit_manifest"],
+      "qualityScore": 85
     },
     {
       "id": "lyric_video_local_v1",
@@ -53,7 +109,8 @@
         "providerCapabilities": [],
         "engineModules": ["audioCore"]
       },
-      "stages": ["analyze_audio", "build_timeline", "render_typography", "assemble", "qc_video"]
+      "stages": ["analyze_audio", "build_timeline", "render_typography", "assemble", "qc_video"],
+      "qualityScore": 75
     },
     {
       "id": "cinema_low_vram_text_v1",
@@ -66,7 +123,8 @@
         "providerCapabilities": ["textToVideo"],
         "engineModules": ["audioCore"]
       },
-      "stages": ["analyze_audio", "plan_scenes", "render_resumable", "assemble", "qc_video", "emit_evidence"]
+      "stages": ["analyze_audio", "plan_scenes", "render_resumable", "assemble", "qc_video", "emit_evidence"],
+      "qualityScore": 70
     },
     {
       "id": "cinema_identity_local_v1",
@@ -79,7 +137,8 @@
         "providerCapabilities": ["textToVideo", "referenceImage", "subjectIdentity"],
         "engineModules": ["audioCore"]
       },
-      "stages": ["analyze_audio", "lock_subject_identity", "plan_scenes", "render_resumable", "identity_qc", "assemble", "qc_video", "emit_evidence"]
+      "stages": ["analyze_audio", "lock_subject_identity", "plan_scenes", "render_resumable", "identity_qc", "assemble", "qc_video", "emit_evidence"],
+      "qualityScore": 85
     },
     {
       "id": "cinema_hybrid_identity_v1",
@@ -93,7 +152,8 @@
         "engineModules": ["audioCore"],
         "cloudAllowed": true
       },
-      "stages": ["analyze_audio_local", "plan_scenes_local", "render_remote", "download_verified", "assemble_local", "qc_video", "emit_evidence"]
+      "stages": ["analyze_audio_local", "plan_scenes_local", "render_remote", "download_verified", "assemble_local", "qc_video", "emit_evidence"],
+      "qualityScore": 92
     },
     {
       "id": "restoration_local_v1",
@@ -106,7 +166,8 @@
         "providerCapabilities": ["videoRestoration"],
         "engineModules": []
       },
-      "stages": ["inspect_media", "restore_frames", "restore_audio", "assemble", "qc_video"]
+      "stages": ["inspect_media", "restore_frames", "restore_audio", "assemble", "qc_video"],
+      "qualityScore": 80
     }
   ]
 }
