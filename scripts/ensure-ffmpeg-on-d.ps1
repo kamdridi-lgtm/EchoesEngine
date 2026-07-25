@@ -244,3 +244,4 @@ try {
     Remove-Item -LiteralPath $extractPath -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $stagedInstall -Recurse -Force -ErrorAction SilentlyContinue
 }
+exit 0
