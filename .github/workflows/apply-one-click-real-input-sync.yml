@@ -1,0 +1,94 @@
+name: Apply One Click Real Input Audio Sync
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch-one-click-runtime:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/one-click-real-input-audio-sync-2026-07-25
+          sparse-checkout: |
+            scripts/one-click-echoes-cinema.ps1
+          sparse-checkout-cone-mode: false
+
+      - name: Patch the runtime-critical archive and compile chain
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('scripts/one-click-echoes-cinema.ps1')
+          text = path.read_text(encoding='utf-8-sig')
+
+          def replace_required(old: str, new: str, label: str) -> None:
+              global text
+              if new in text:
+                  return
+              if old not in text:
+                  raise SystemExit(f'Missing one-click source token: {label}')
+              text = text.replace(old, new)
+
+          replace_required(
+              '    "tools/cinema_p0_autopilot.py",\n    "tools/cinema_p0_preflight.py",',
+              '    "tools/cinema_p0_autopilot.py",\n    "tools/cinema_real_input_audio.py",\n    "tools/cinema_p0_preflight.py",',
+              'runtime-critical real input module',
+          )
+          replace_required(
+              '        "providers/provider_bootstrap_health_bridge.py"\n',
+              '        "providers/provider_bootstrap_health_bridge.py",\n        "tools/cinema_real_input_audio.py"\n',
+              'self-test real input module',
+          )
+          replace_required(
+              '            (Join-Path $repo "providers\\modelscope_low_vram_provider_v2.py") `\n            (Join-Path $repo "tools\\cinema_control_center.py")',
+              '            (Join-Path $repo "providers\\modelscope_low_vram_provider_v2.py") `\n            (Join-Path $repo "tools\\cinema_control_center.py") `\n            (Join-Path $repo "tools\\cinema_p0_autopilot.py") `\n            (Join-Path $repo "tools\\cinema_real_input_audio.py") `\n            (Join-Path $repo "tools\\cinema_p0_evidence_bundle.py")',
+              'critical Python compile chain',
+          )
+
+          required = (
+              '"tools/cinema_real_input_audio.py"',
+              '"tools\\cinema_real_input_audio.py"',
+              '"tools\\cinema_p0_autopilot.py"',
+              '"tools\\cinema_p0_evidence_bundle.py"',
+          )
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'One-click real-input sync validation failed: {token}')
+          path.write_text(text, encoding='utf-8', newline='\n')
+
+      - name: Parse repaired orchestrator
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/one-click-echoes-cinema.ps1' -Raw))
+          $source = Get-Content -LiteralPath 'scripts/one-click-echoes-cinema.ps1' -Raw
+          foreach ($token in @(
+            'tools/cinema_real_input_audio.py',
+            'tools\cinema_real_input_audio.py',
+            'tools\cinema_p0_autopilot.py',
+            'tools\cinema_p0_evidence_bundle.py'
+          )) {
+            if (-not $source.Contains($token)) { throw "Missing repaired token: $token" }
+          }
+          Write-Host 'One-click real-input runtime source PASS'
+
+      - name: Commit source repair
+        shell: pwsh
+        run: |
+          git config user.name 'Echoes Cinema Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add scripts/one-click-echoes-cinema.ps1
+          if (git diff --cached --quiet) {
+            Write-Host 'One-click source already contains the real input runtime.'
+            exit 0
+          }
+          git commit -m 'Sync real input audio through one-click startup'
+          git push origin HEAD:fix/one-click-real-input-audio-sync-2026-07-25
