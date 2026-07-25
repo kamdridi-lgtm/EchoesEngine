@@ -23,7 +23,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
+            providers/ffmpeg-runtime-lock.json
             scripts/echoes-cinema-provider-worker.ps1
+            scripts/echoes-cinema-ffmpeg-worker.ps1
+            scripts/ensure-ffmpeg-on-d.ps1
             scripts/echoes-cinema-stack-supervisor.ps1
             scripts/start-echoes-cinema-stack.ps1
             scripts/stop-echoes-cinema-stack.ps1
