@@ -168,7 +168,7 @@ if ($current.healthy) {
 
 $asset = Get-PinnedReleaseAsset -Lock $lock
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$archivePath = Join-Path $tempRoot "$($lock.assetName).$stamp.download"
+$archivePath = Join-Path $tempRoot "$stamp-$($lock.assetName)"
 $extractPath = Join-Path $tempRoot "extract-$stamp"
 $stagedInstall = Join-Path $tempRoot "install-$stamp"
 New-Item -ItemType Directory -Path $extractPath, (Join-Path $stagedInstall "bin") -Force | Out-Null
