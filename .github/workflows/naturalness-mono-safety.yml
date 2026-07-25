@@ -1,0 +1,109 @@
+name: Echoes Naturalness and Mono Safety
+
+on:
+  pull_request:
+    paths:
+      - "engine/include/EchoesEngine/NaturalnessScorer.h"
+      - "engine/include/EchoesEngine/audio/AudioBuffer.h"
+      - "tests/native_naturalness/**"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/naturalness-mono-safety.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "engine/include/EchoesEngine/NaturalnessScorer.h"
+      - "engine/include/EchoesEngine/audio/AudioBuffer.h"
+      - "tests/native_naturalness/**"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/naturalness-mono-safety.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  naturalness-contract:
+    name: Native naturalness decisions (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2022
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout scorer and contract
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            engine/include/EchoesEngine/NaturalnessScorer.h
+            engine/include/EchoesEngine/audio/AudioBuffer.h
+            tests/native_naturalness
+            config/echoes-capability-registry.v1.json
+          sparse-checkout-cone-mode: false
+
+      - name: Configure contract
+        shell: pwsh
+        run: |
+          cmake -S tests/native_naturalness -B build-naturalness
+          if ($LASTEXITCODE -ne 0) { throw 'Naturalness contract configure failed' }
+
+      - name: Build contract
+        shell: pwsh
+        run: |
+          cmake --build build-naturalness --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'Naturalness contract build failed' }
+
+      - name: Execute controlled stereo cases
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem build-naturalness -Recurse -File | Where-Object {
+            $_.Name -eq 'EchoesNaturalnessContract.exe' -or $_.Name -eq 'EchoesNaturalnessContract'
+          } | Select-Object -First 1
+          if (-not $exe) { throw 'Naturalness contract executable was not produced' }
+          & $exe.FullName 2>&1 | Tee-Object naturalness-contract.log
+          if ($LASTEXITCODE -ne 0) { throw 'Naturalness scorer decision contract failed' }
+          if (-not (Select-String -LiteralPath naturalness-contract.log -Pattern 'NaturalnessMonoSafety PASS' -Quiet)) {
+            throw 'Naturalness PASS marker missing'
+          }
+
+      - name: Verify capability truth contract
+        shell: pwsh
+        run: |
+          $source = Get-Content -LiteralPath 'tests/native_naturalness/native_naturalness_contract.cpp' -Raw
+          $registry = Get-Content -LiteralPath 'config/echoes-capability-registry.v1.json' -Raw | ConvertFrom-Json
+          foreach ($token in @(
+            'healthyOverall',
+            'monoStereo',
+            'monoSafety',
+            'wideStereo',
+            'wideMonoSafety',
+            'antiStereo',
+            'antiMonoSafety',
+            'antiCorrection'
+          )) {
+            if (-not $source.Contains($token)) { throw "Naturalness evidence token missing: $token" }
+          }
+          foreach ($module in @('naturalnessScoring', 'monoSafety')) {
+            if ($registry.engineModules.$module.status -ne 'REAL') {
+              throw "Capability must remain non-REAL until this workflow is green: $module"
+            }
+          }
+          if (-not $registry.pipelines[0].requirements.engineModules.Contains('naturalnessScoring')) {
+            throw 'Audio master pipeline does not require naturalnessScoring'
+          }
+          if (-not $registry.pipelines[0].requirements.engineModules.Contains('monoSafety')) {
+            throw 'Audio master pipeline does not require monoSafety'
+          }
+          Write-Host 'Naturalness and mono-safety capability contract PASS'
+
+      - name: Upload controlled-score evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: naturalness-mono-safety-${{ matrix.os }}
+          path: naturalness-contract.log
+          if-no-files-found: error
+          retention-days: 14

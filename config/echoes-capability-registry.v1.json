@@ -55,12 +55,12 @@
     "naturalnessScoring": {
       "kind": "quality",
       "target": "native",
-      "status": "MISSING"
+      "status": "REAL"
     },
     "monoSafety": {
       "kind": "quality",
       "target": "native",
-      "status": "MISSING"
+      "status": "REAL"
     },
     "onnxModelManager": {
       "kind": "ai",
@@ -104,7 +104,9 @@
         "providerCapabilities": [],
         "engineModules": [
           "audioCore",
-          "audioAbcRegression"
+          "audioAbcRegression",
+          "naturalnessScoring",
+          "monoSafety"
         ]
       },
       "stages": [
@@ -112,6 +114,8 @@
         "render_bypass_reference",
         "process_native_audio",
         "verify_abc_regression",
+        "verify_naturalness",
+        "verify_mono_safety",
         "emit_manifest"
       ],
       "qualityScore": 85
