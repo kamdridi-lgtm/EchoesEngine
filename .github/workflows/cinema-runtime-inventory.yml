@@ -1,0 +1,75 @@
+name: Echoes Cinema Runtime Inventory
+
+on:
+  pull_request:
+    paths:
+      - "tools/cinema_runtime_inventory.py"
+      - "providers/requirements-diffusers.txt"
+      - "providers/torch-runtime-lock.json"
+      - "providers/ffmpeg-runtime-lock.json"
+      - ".github/workflows/cinema-runtime-inventory.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "tools/cinema_runtime_inventory.py"
+      - "providers/requirements-diffusers.txt"
+      - "providers/torch-runtime-lock.json"
+      - "providers/ffmpeg-runtime-lock.json"
+      - ".github/workflows/cinema-runtime-inventory.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-inventory-contract:
+    name: Runtime inventory (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout runtime inventory sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/cinema_runtime_inventory.py
+            providers/requirements-diffusers.txt
+            providers/torch-runtime-lock.json
+            providers/ffmpeg-runtime-lock.json
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile and test truthful inventory
+        shell: pwsh
+        run: |
+          python -m py_compile tools/cinema_runtime_inventory.py
+          if ($LASTEXITCODE -ne 0) { throw "Runtime inventory compilation failed" }
+          python tools/cinema_runtime_inventory.py --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Runtime inventory self-test failed" }
+
+      - name: Verify fail-closed inventory contract
+        shell: pwsh
+        run: |
+          $source = Get-Content -LiteralPath 'tools/cinema_runtime_inventory.py' -Raw
+          foreach ($token in @(
+            'echoes.cinema-runtime-inventory.v1',
+            'RUNTIME_VERSION_DRIFT_OR_BLOCKER',
+            'RUNTIME_EVIDENCE_MISSING',
+            'cinema-bootstrap-report.json',
+            'ffmpeg-runtime.json',
+            'expectedDigest',
+            'systemDriveWritesAllowed',
+            'secretsPersisted'
+          )) {
+            if (-not $source.Contains($token)) { throw "Missing inventory token: $token" }
+          }
+          Write-Host 'Runtime inventory fail-closed contract PASS'
