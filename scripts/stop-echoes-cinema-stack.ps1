@@ -32,7 +32,8 @@ function Read-PidFile {
     $path = Join-Path $runtimeRoot $Name
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
     $raw = (Get-Content -LiteralPath $path -Raw -ErrorAction SilentlyContinue).Trim()
-    return if ($raw -match '^\d+$') { [int]$raw } else { $null }
+    if ($raw -match '^\d+$') { return [int]$raw }
+    return $null
 }
 
 function Stop-VerifiedProcess {
