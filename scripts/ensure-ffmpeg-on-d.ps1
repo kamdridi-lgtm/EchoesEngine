@@ -17,6 +17,12 @@ function Write-AtomicJson {
     Move-Item -LiteralPath $temporary -Destination $Path -Force
 }
 
+function Read-JsonFile {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
+    try { return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json } catch { return $null }
+}
+
 function Read-FfmpegLock {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "FFmpeg runtime lock is missing: $Path" }
@@ -69,11 +75,7 @@ function Get-PinnedReleaseAsset {
 function Get-BinaryVersionLine {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
-    try {
-        return [string](& $Path -version 2>&1 | Select-Object -First 1)
-    } catch {
-        return $null
-    }
+    try { return [string](& $Path -version 2>&1 | Select-Object -First 1) } catch { return $null }
 }
 
 function Test-InstalledRuntime {
@@ -110,8 +112,8 @@ if ($SelfTest) {
     exit 0
 }
 
-$asset = Get-PinnedReleaseAsset -Lock $lock
 if ($MetadataOnly) {
+    $asset = Get-PinnedReleaseAsset -Lock $lock
     @{
         schema = "echoes.ffmpeg-release-metadata.v1"
         status = "PASS"
@@ -140,14 +142,16 @@ foreach ($directory in @($runtimeRoot, $tempRoot, $backupRoot)) { New-Item -Item
 
 $current = Test-InstalledRuntime -BinPath $binPath -Lock $lock
 if ($current.healthy) {
+    $previousEvidence = Read-JsonFile -Path $evidencePath
     Write-AtomicJson -Path $evidencePath -Payload @{
         schema = "echoes.ffmpeg-runtime.v1"
         status = "PASS"
         timestampUtc = [DateTime]::UtcNow.ToString("o")
         sourceRepository = $lock.repository
         releaseTag = $lock.releaseTag
-        assetName = $asset.assetName
-        expectedDigest = $asset.digest
+        assetName = $lock.assetName
+        expectedDigest = if ($previousEvidence -and $previousEvidence.expectedDigest) { [string]$previousEvidence.expectedDigest } else { $null }
+        downloadedSha256 = if ($previousEvidence -and $previousEvidence.downloadedSha256) { [string]$previousEvidence.downloadedSha256 } else { $null }
         installRoot = $installRoot
         binPath = $binPath
         ffmpegPath = $current.ffmpegPath
@@ -155,12 +159,14 @@ if ($current.healthy) {
         ffmpegVersionLine = $current.ffmpegVersionLine
         ffprobeVersionLine = $current.ffprobeVersionLine
         reusedExistingInstall = $true
+        networkMetadataRequested = $false
         systemDriveWritesAllowed = $false
     }
     Write-Output $binPath
     exit 0
 }
 
+$asset = Get-PinnedReleaseAsset -Lock $lock
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $archivePath = Join-Path $tempRoot "$($lock.assetName).$stamp.download"
 $extractPath = Join-Path $tempRoot "extract-$stamp"
@@ -211,6 +217,7 @@ try {
         ffmpegVersionLine = $installed.ffmpegVersionLine
         ffprobeVersionLine = $installed.ffprobeVersionLine
         reusedExistingInstall = $false
+        networkMetadataRequested = $true
         systemDriveWritesAllowed = $false
     }
     Write-Output $binPath
