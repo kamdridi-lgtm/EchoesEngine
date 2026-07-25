@@ -1,0 +1,74 @@
+name: Echoes Native ONNX Manager and Neural Scheduler
+
+on:
+  pull_request:
+    paths:
+      - "engine/include/EchoesEngine/neural/OnnxModelManager.h"
+      - "engine/include/EchoesEngine/neural/NeuralScheduler.h"
+      - "tests/native_neural_manager/**"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/native-neural-model-manager.yml"
+  push:
+    branches: [main]
+    paths:
+      - "engine/include/EchoesEngine/neural/OnnxModelManager.h"
+      - "engine/include/EchoesEngine/neural/NeuralScheduler.h"
+      - "tests/native_neural_manager/**"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/native-neural-model-manager.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  native-contract:
+    name: Native model integrity and scheduling (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-latest]
+    steps:
+      - name: Checkout native neural contract
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            engine/include
+            tests/native_neural_manager
+            config/echoes-capability-registry.v1.json
+          sparse-checkout-cone-mode: true
+      - name: Configure contract
+        run: cmake -S tests/native_neural_manager -B build/native-neural
+      - name: Build contract
+        run: cmake --build build/native-neural --config Release
+      - name: Execute integrity and scheduling decisions
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem build/native-neural -Recurse -File | Where-Object { $_.Name -in @('echoes_native_neural_manager.exe', 'echoes_native_neural_manager') } | Select-Object -First 1
+          if (-not $exe) { throw 'Native neural contract executable was not produced' }
+          & $exe.FullName 2>&1 | Tee-Object native-neural-contract.log
+          if ($LASTEXITCODE -ne 0) { throw "Native neural contract failed with exit code $LASTEXITCODE" }
+          $text = Get-Content native-neural-contract.log -Raw
+          foreach ($token in @('integrity=verified','drift=blocked','path-escape=blocked','quality=voice-large','commercial=voice-small','low-vram=blocked','execution=not-authorized')) {
+            if (-not $text.Contains($token)) { throw "Missing native neural proof token: $token" }
+          }
+      - name: Verify truthful capability scope
+        shell: pwsh
+        run: |
+          $registry = Get-Content -LiteralPath 'config/echoes-capability-registry.v1.json' -Raw | ConvertFrom-Json
+          foreach ($name in @('onnxModelManager','neuralScheduler')) {
+            $module = $registry.engineModules.$name
+            if ($module.status -ne 'REAL') { throw "$name must be REAL after the native proof" }
+            if (-not $module.scope) { throw "$name must declare its limited proof scope" }
+          }
+          if ($registry.engineModules.onnxModelManager.modelInferenceProven -ne $false) { throw 'Model inference must remain explicitly unproven' }
+          if ($registry.engineModules.neuralScheduler.executionProven -ne $false) { throw 'Neural execution must remain explicitly unproven' }
+      - name: Upload native neural evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-neural-manager-${{ matrix.os }}
+          path: native-neural-contract.log
+          if-no-files-found: error
+          retention-days: 14
