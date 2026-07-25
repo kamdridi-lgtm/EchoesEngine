@@ -133,12 +133,13 @@ if (-not $workspaceDrive -or $workspaceDrive.TrimEnd("\").ToUpperInvariant() -eq
 }
 
 $installRoot = Join-Path $workspace ([string]$lock.installRelativePath).Replace("/", "\")
+$installParent = Split-Path -Parent $installRoot
 $binPath = Join-Path $installRoot "bin"
 $runtimeRoot = Join-Path $workspace "runtime"
 $tempRoot = Join-Path $workspace "temp\ffmpeg-provision"
 $backupRoot = Join-Path $workspace "backups\ffmpeg"
 $evidencePath = Join-Path $runtimeRoot "ffmpeg-runtime.json"
-foreach ($directory in @($runtimeRoot, $tempRoot, $backupRoot)) { New-Item -ItemType Directory -Path $directory -Force | Out-Null }
+foreach ($directory in @($runtimeRoot, $tempRoot, $backupRoot, $installParent)) { New-Item -ItemType Directory -Path $directory -Force | Out-Null }
 
 $current = Test-InstalledRuntime -BinPath $binPath -Lock $lock
 if ($current.healthy) {
@@ -223,6 +224,21 @@ try {
         systemDriveWritesAllowed = $false
     }
     Write-Output $binPath
+} catch {
+    Write-AtomicJson -Path $evidencePath -Payload @{
+        schema = "echoes.ffmpeg-runtime.v1"
+        status = "BROKEN"
+        timestampUtc = [DateTime]::UtcNow.ToString("o")
+        sourceRepository = $lock.repository
+        releaseTag = $lock.releaseTag
+        assetName = $lock.assetName
+        installRoot = $installRoot
+        binPath = $binPath
+        error = $_.Exception.Message
+        networkMetadataRequested = $true
+        systemDriveWritesAllowed = $false
+    }
+    throw
 } finally {
     Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $extractPath -Recurse -Force -ErrorAction SilentlyContinue
