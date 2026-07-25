@@ -20,9 +20,7 @@ function Normalize-LauncherPath {
     while ($normalized.Length -gt 3 -and ($normalized.EndsWith("\") -or $normalized.EndsWith("/"))) {
         $normalized = $normalized.Substring(0, $normalized.Length - 1)
     }
-    if (-not $normalized) {
-        throw "$Name is empty after path normalization."
-    }
+    if (-not $normalized) { throw "$Name is empty after path normalization." }
     if ($normalized.IndexOfAny([System.IO.Path]::GetInvalidPathChars()) -ge 0) {
         throw "$Name contains illegal path characters after normalization: $normalized"
     }
@@ -58,12 +56,13 @@ $logsRoot = Join-Path $workspace "logs"
 $statePath = Join-Path $runtimeRoot "stack-state.json"
 $supervisor = Join-Path $RepoRoot "scripts\echoes-cinema-stack-supervisor.ps1"
 $stopScript = Join-Path $RepoRoot "scripts\stop-echoes-cinema-stack.ps1"
+$ensureFfmpeg = Join-Path $RepoRoot "scripts\ensure-ffmpeg-on-d.ps1"
 
 foreach ($directory in @($workspace, $runtimeRoot, $logsRoot)) {
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
 }
-if (-not (Test-Path -LiteralPath $supervisor -PathType Leaf)) {
-    throw "Echoes Cinema supervisor not found: $supervisor"
+foreach ($required in @($supervisor, $stopScript, $ensureFfmpeg)) {
+    if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Echoes Cinema runtime file not found: $required" }
 }
 
 function Get-State {
@@ -85,9 +84,7 @@ function Test-Dashboard {
     try {
         $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 3
         return $response.StatusCode -eq 200 -and $response.Content -like "*ECHOES CINEMA*"
-    } catch {
-        return $false
-    }
+    } catch { return $false }
 }
 
 function Test-StateReady {
@@ -110,6 +107,15 @@ if ($existing -and (Test-VerifiedSupervisor -ProcessId $existing.supervisorPid))
     & powershell -NoProfile -ExecutionPolicy Bypass -File $stopScript -WorkspaceRoot $workspace -GraceSeconds 10
 }
 
+Write-Host "Verifying the pinned D-drive FFmpeg and FFprobe runtime."
+$ffmpegOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ensureFfmpeg -WorkspaceRoot $workspace
+if ($LASTEXITCODE -ne 0) { throw "Pinned FFmpeg provisioning failed." }
+$ffmpegBin = [string]($ffmpegOutput | Select-Object -Last 1)
+if (-not (Test-Path -LiteralPath (Join-Path $ffmpegBin "ffmpeg.exe") -PathType Leaf) -or -not (Test-Path -LiteralPath (Join-Path $ffmpegBin "ffprobe.exe") -PathType Leaf)) {
+    throw "Pinned FFmpeg provisioning did not return a valid bin directory: $ffmpegBin"
+}
+$env:PATH = "$ffmpegBin;$env:PATH"
+
 Remove-Item -LiteralPath (Join-Path $runtimeRoot "stop.signal") -Force -ErrorAction SilentlyContinue
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $stdoutLog = Join-Path $logsRoot "supervisor-$stamp.log"
@@ -121,9 +127,7 @@ $arguments = @(
     "-WorkspaceRoot", $workspace,
     "-RepoRoot", $RepoRoot
 )
-if ($ProviderMode) {
-    $arguments += @("-ProviderMode", $ProviderMode)
-}
+if ($ProviderMode) { $arguments += @("-ProviderMode", $ProviderMode) }
 
 Write-Host "Starting Echoes Cinema supervisor. The browser opens only after localhost is truly reachable."
 $supervisorProcess = Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -WorkingDirectory $RepoRoot -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru
