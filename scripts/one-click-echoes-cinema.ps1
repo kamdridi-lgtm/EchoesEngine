@@ -41,6 +41,7 @@ $criticalPaths = @(
     "tools/cinema_job_scheduler.py",
     "tools/cinema_job_ledger.py",
     "tools/cinema_p0_autopilot.py",
+    "tools/cinema_real_input_audio.py",
     "tools/cinema_p0_preflight.py",
     "tools/cinema_p0_evidence_bundle.py",
     "tools/cinema_job_runner.py",
@@ -90,7 +91,8 @@ if ($SelfTest) {
         "STOP_ECHOES_CINEMA.cmd",
         "scripts/one-click-echoes-cinema.ps1",
         "scripts/one-click-echoes-cinema-monitor.ps1",
-        "providers/provider_bootstrap_health_bridge.py"
+        "providers/provider_bootstrap_health_bridge.py",
+        "tools/cinema_real_input_audio.py"
     )) {
         if (-not (Test-Path -LiteralPath (Join-Path $repo $relative) -PathType Leaf)) {
             throw "Self-test required file missing: $relative"
@@ -188,7 +190,10 @@ try {
             (Join-Path $repo "providers\modelscope_low_vram_provider.py") `
             (Join-Path $repo "providers\modelscope_resilient_provider.py") `
             (Join-Path $repo "providers\modelscope_low_vram_provider_v2.py") `
-            (Join-Path $repo "tools\cinema_control_center.py")
+            (Join-Path $repo "tools\cinema_control_center.py") `
+            (Join-Path $repo "tools\cinema_p0_autopilot.py") `
+            (Join-Path $repo "tools\cinema_real_input_audio.py") `
+            (Join-Path $repo "tools\cinema_p0_evidence_bundle.py")
         if ($LASTEXITCODE -ne 0) { throw "Critical Python compilation failed." }
     } else {
         Write-Step "D-drive Python is not installed yet; the canonical bootstrap will install it automatically."
