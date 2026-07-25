@@ -135,7 +135,7 @@ jobs:
               "preflight_launcher": [r"D:\A.I\EchoesCinema", r".venv-cinema\Scripts\python.exe", "cinema_p0_preflight.py", "p0-preflight-only-report.json", "No model load. No package reinstall. D drive only.", "cleanup-cinema-storage.ps1", "-AfterRun", "--require-cuda"],
               "runner_ps": [r"D:\A.I\EchoesCinema", "systemDriveWritesAllowed = $false", "modelscope_low_vram_provider.py", "cinema_p0_preflight.py", "preflight-report.json", '"--width", "384"', '"--height", "216"', '"--fps", "4"', '"--max-frames", "16"'],
               "cleanup": ["cache\\pip", "cache\\huggingface", '".venv-cinema"', '"proofs\\first-real-ai-clip"', "KeepProofArchives = 2", "build-first-real-cli"],
-              "bootstrap": [r"D:\A.I\EchoesCinema\.venv-cinema", r"D:\A.I\Python310", '"systemDriveWritesAllowed": False', "ensure-python-on-d.ps1", "Test-PythonModuleImport"],
+              "bootstrap": [r"D:\A.I\EchoesCinema\.venv-cinema", r"D:\A.I\Python310", '"systemDriveWritesAllowed": False', "ensure-python-on-d.ps1", "Get-TorchRuntimeProbe", "REPLACE_CPU_WHEEL", "BLOCK_CUDA_RUNTIME", "--force-reinstall"],
               "ensure_python": [r"D:\A.I\Python310", '[string]$PythonVersion = "3.10.11"', "Get-AuthenticodeSignature", "Python Software Foundation", "Get-FileHash", "Include_launcher=0"],
               "runner": ["--resume", "resumable_http_render_worker.py", "artifactEvidence", "--require-commercial-use", "reusedTaskCount", "renderedTaskCount"],
               "evidence": ["echoes.cinema-p0-evidence-bundle.v1", "READ_ME_FIRST.txt", "evidence-index.json", "truthStatus", "firstBlocker", "missingExpectedProofFiles", "sha256_file", "os.replace", "[REDACTED]", "systemDriveWritesAllowed"],
@@ -171,7 +171,7 @@ jobs:
           assert '"trust_remote_code": True' not in files["low_vram"]
           assert 'use_safetensors=False' not in files["low_vram"]
           assert '"use_safetensors": False' not in files["low_vram"]
-          print("D-drive, automatic recovery, evidence ZIP, pinned safe model loading, P0 preflight, resume, licensing, SHA-256, and A/V QC contract PASS")
+          print("D-drive, automatic recovery, CUDA-wheel repair, evidence ZIP, pinned safe model loading, P0 preflight, resume, licensing, SHA-256, and A/V QC contract PASS")
 
       - name: Verify Cinema service rejects unverified providers
         run: python3 tests/test_cinema_job_service_fail_closed.py

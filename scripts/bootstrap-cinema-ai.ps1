@@ -4,11 +4,111 @@ param(
     [string]$PythonVersion = "3.10",
     [string]$VenvPath = "D:\A.I\EchoesCinema\.venv-cinema",
     [string]$TorchIndexUrl = "",
-    [switch]$Recreate
+    [switch]$Recreate,
+    [switch]$TorchProbeSelfTest
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+function Get-TorchRepairAction {
+    param(
+        [bool]$Importable,
+        [bool]$CudaBuild,
+        [bool]$CudaAvailable
+    )
+    if (-not $Importable) { return "INSTALL_CUDA_WHEEL" }
+    if (-not $CudaBuild) { return "REPLACE_CPU_WHEEL" }
+    if (-not $CudaAvailable) { return "BLOCK_CUDA_RUNTIME" }
+    return "READY"
+}
+
+function Get-TorchRuntimeProbe {
+    param([string]$PythonPath)
+    if (-not $PythonPath -or -not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
+        return [pscustomobject]@{
+            importable = $false
+            cudaBuild = $false
+            cudaAvailable = $false
+            version = $null
+            torchCudaVersion = $null
+            error = "Python executable is missing: $PythonPath"
+        }
+    }
+
+    $probeScript = @'
+import json
+result = {
+    "importable": False,
+    "cudaBuild": False,
+    "cudaAvailable": False,
+    "version": None,
+    "torchCudaVersion": None,
+    "error": None,
+}
+try:
+    import torch
+    result["importable"] = True
+    result["version"] = str(torch.__version__)
+    result["torchCudaVersion"] = str(torch.version.cuda) if torch.version.cuda else None
+    result["cudaBuild"] = bool(torch.version.cuda)
+    result["cudaAvailable"] = bool(torch.cuda.is_available())
+except Exception as error:
+    result["error"] = str(error)
+print(json.dumps(result))
+'@
+
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "SilentlyContinue"
+        $raw = $probeScript | & $PythonPath - 2>&1 | Out-String
+        $exitCode = $LASTEXITCODE
+    } catch {
+        $raw = $_.Exception.Message
+        $exitCode = 1
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($exitCode -ne 0) {
+        return [pscustomobject]@{
+            importable = $false
+            cudaBuild = $false
+            cudaAvailable = $false
+            version = $null
+            torchCudaVersion = $null
+            error = ([string]$raw).Trim()
+        }
+    }
+    try {
+        return ([string]$raw).Trim() | ConvertFrom-Json
+    } catch {
+        return [pscustomobject]@{
+            importable = $false
+            cudaBuild = $false
+            cudaAvailable = $false
+            version = $null
+            torchCudaVersion = $null
+            error = "Torch probe returned invalid JSON: $raw"
+        }
+    }
+}
+
+if ($TorchProbeSelfTest) {
+    if ((Get-TorchRepairAction -Importable $false -CudaBuild $false -CudaAvailable $false) -ne "INSTALL_CUDA_WHEEL") {
+        throw "Missing-torch repair classification failed."
+    }
+    if ((Get-TorchRepairAction -Importable $true -CudaBuild $false -CudaAvailable $false) -ne "REPLACE_CPU_WHEEL") {
+        throw "CPU-only torch repair classification failed."
+    }
+    if ((Get-TorchRepairAction -Importable $true -CudaBuild $true -CudaAvailable $false) -ne "BLOCK_CUDA_RUNTIME") {
+        throw "CUDA runtime blocker classification failed."
+    }
+    if ((Get-TorchRepairAction -Importable $true -CudaBuild $true -CudaAvailable $true) -ne "READY") {
+        throw "CUDA-ready classification failed."
+    }
+    Write-Host "Cinema bootstrap torch probe PASS missing=install cpu-wheel=replace cuda-runtime=block ready=keep"
+    exit 0
+}
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $venv = if ([System.IO.Path]::IsPathRooted($VenvPath)) { [System.IO.Path]::GetFullPath($VenvPath) } else { [System.IO.Path]::GetFullPath((Join-Path $repoRoot $VenvPath)) }
@@ -102,25 +202,6 @@ function Resolve-BasePython {
     return (Resolve-Path -LiteralPath $resolved).Path
 }
 
-function Test-PythonModuleImport {
-    param(
-        [string]$PythonPath,
-        [string]$ModuleName
-    )
-
-    $previousPreference = $ErrorActionPreference
-    try {
-        $ErrorActionPreference = "SilentlyContinue"
-        & $PythonPath -c "import $ModuleName; print(getattr($ModuleName, '__version__', 'present'))" *> $null
-        $exitCode = $LASTEXITCODE
-    } catch {
-        $exitCode = 1
-    } finally {
-        $ErrorActionPreference = $previousPreference
-    }
-    return $exitCode -eq 0
-}
-
 if (-not (Test-Path $requirements)) {
     throw "Requirements file not found: $requirements"
 }
@@ -160,25 +241,48 @@ if ($LASTEXITCODE -ne 0) {
     throw "pip bootstrap failed"
 }
 
-$torchPresent = Test-PythonModuleImport -PythonPath $python -ModuleName "torch"
-if ($torchPresent) {
-    Write-Host "PyTorch is already installed in the Cinema virtual environment."
-} else {
-    Write-Host "PyTorch is not installed yet; continuing with the selected official CUDA wheel index."
+$torchBefore = Get-TorchRuntimeProbe -PythonPath $python
+$torchAction = Get-TorchRepairAction `
+    -Importable ([bool]$torchBefore.importable) `
+    -CudaBuild ([bool]$torchBefore.cudaBuild) `
+    -CudaAvailable ([bool]$torchBefore.cudaAvailable)
+
+switch ($torchAction) {
+    "READY" {
+        Write-Host "CUDA-enabled PyTorch is already installed and the GPU runtime is available. Version: $($torchBefore.version) CUDA: $($torchBefore.torchCudaVersion)"
+    }
+    "BLOCK_CUDA_RUNTIME" {
+        Write-Host "A CUDA-enabled PyTorch wheel is installed, but the NVIDIA CUDA runtime is unavailable. Package reinstall is intentionally skipped."
+    }
+    "INSTALL_CUDA_WHEEL" {
+        Write-Host "PyTorch is missing; installing the selected official CUDA wheel."
+    }
+    "REPLACE_CPU_WHEEL" {
+        Write-Host "CPU-only PyTorch detected. It will be replaced automatically with the selected official CUDA wheel."
+    }
 }
 
-if (-not $torchPresent) {
+if ($torchAction -in @("INSTALL_CUDA_WHEEL", "REPLACE_CPU_WHEEL")) {
     if (-not $TorchIndexUrl) {
-        throw "PyTorch is not installed. Re-run with -TorchIndexUrl set to the official CUDA wheel index selected for this machine. The bootstrap refuses to guess a CUDA build."
+        throw "A CUDA PyTorch wheel is required. Re-run with -TorchIndexUrl set to the official CUDA wheel index selected for this machine."
     }
     if (-not $TorchIndexUrl.StartsWith("https://download.pytorch.org/whl/")) {
         throw "TorchIndexUrl must be an official https://download.pytorch.org/whl/ index"
     }
-    Write-Host "Installing PyTorch from the selected official index into the D: virtual environment."
-    & $python -m pip install torch torchvision --index-url $TorchIndexUrl
-    if ($LASTEXITCODE -ne 0) {
-        throw "PyTorch installation failed"
+    $installArguments = @("-m", "pip", "install", "--upgrade")
+    if ($torchAction -eq "REPLACE_CPU_WHEEL") {
+        $installArguments += "--force-reinstall"
     }
+    $installArguments += @("torch", "torchvision", "--index-url", $TorchIndexUrl)
+    & $python @installArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "PyTorch CUDA installation failed"
+    }
+    $torchAfter = Get-TorchRuntimeProbe -PythonPath $python
+    if (-not [bool]$torchAfter.importable -or -not [bool]$torchAfter.cudaBuild) {
+        throw "The official CUDA wheel installation completed but PyTorch still has no CUDA build. Version=$($torchAfter.version) Error=$($torchAfter.error)"
+    }
+    Write-Host "CUDA PyTorch wheel installed. Version: $($torchAfter.version) CUDA build: $($torchAfter.torchCudaVersion) Runtime available: $($torchAfter.cudaAvailable)"
 }
 
 & $python -m pip install -r $requirements
@@ -208,7 +312,7 @@ import shutil
 import sys
 
 report = {
-    "schema": "echoes.cinema-bootstrap-report.v1",
+    "schema": "echoes.cinema-bootstrap-report.v2",
     "status": "RUNNING",
     "python": {
         "version": sys.version,
@@ -236,6 +340,7 @@ try:
     import accelerate
     import safetensors
 
+    cuda_build = bool(torch.version.cuda)
     cuda_available = bool(torch.cuda.is_available())
     report["packages"] = {
         "torch": torch.__version__,
@@ -245,6 +350,7 @@ try:
         "safetensors": safetensors.__version__,
     }
     report["cuda"] = {
+        "buildPresent": cuda_build,
         "available": cuda_available,
         "deviceCount": torch.cuda.device_count() if cuda_available else 0,
         "deviceName": torch.cuda.get_device_name(0) if cuda_available else None,
@@ -262,14 +368,22 @@ try:
     report["storage"]["cDriveSelected"] = c_drive_used
     if c_drive_used:
         report["status"] = "FAILED"
+        report["failureClass"] = "SYSTEM_DRIVE_STORAGE"
         report["blocker"] = "A Cinema cache or temporary path still targets drive C:"
-    elif cuda_available:
-        report["status"] = "PASS"
+    elif not cuda_build:
+        report["status"] = "FAILED"
+        report["failureClass"] = "CUDA_WHEEL_MISSING"
+        report["blocker"] = "PyTorch is importable but it is not a CUDA-enabled build"
+    elif not cuda_available:
+        report["status"] = "BLOCKED"
+        report["failureClass"] = "CUDA_RUNTIME_UNAVAILABLE"
+        report["operatorRestartRequired"] = True
+        report["blocker"] = "A CUDA-enabled PyTorch wheel is installed, but the NVIDIA driver/runtime is unavailable"
     else:
-        report["status"] = "PARTIAL"
-        report["blocker"] = "PyTorch is installed but CUDA is not available"
+        report["status"] = "PASS"
 except Exception as error:
     report["status"] = "FAILED"
+    report["failureClass"] = "DEPENDENCY_IMPORT_FAILED"
     report["blocker"] = str(error)
 
 print(json.dumps(report, indent=2))
@@ -285,12 +399,13 @@ $report = $diagnosticOutput | ConvertFrom-Json
 Write-Host "Cinema bootstrap report: $reportPath"
 Write-Host "Status: $($report.status)"
 Write-Host "Python: $($report.python.version)"
+Write-Host "CUDA build present: $($report.cuda.buildPresent)"
 Write-Host "CUDA available: $($report.cuda.available)"
 Write-Host "GPU: $($report.cuda.deviceName)"
 Write-Host "C drive selected by Cinema caches: $($report.storage.cDriveSelected)"
 
 if ($report.status -ne "PASS") {
-    throw "Cinema AI bootstrap is not ready: $($report.blocker)"
+    throw "Cinema AI bootstrap is not ready [$($report.failureClass)]: $($report.blocker)"
 }
 
 Write-Host "Echoes Cinema AI environment PASS"
