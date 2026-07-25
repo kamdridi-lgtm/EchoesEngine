@@ -144,7 +144,6 @@ def provider_progress_signature(health: dict[str, Any]) -> str:
         "lastAttemptUtc": health.get("lastAttemptUtc"),
         "nextRetryUtc": health.get("nextRetryUtc"),
         "modelCacheBytes": int(health.get("modelCacheBytes", 0) or 0),
-        "workspaceFreeGiB": health.get("workspaceFreeGiB"),
         "realModelLoaded": health.get("realModelLoaded") is True,
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -420,6 +419,8 @@ def self_test() -> int:
         "realModelLoaded": False,
     }
     first_signature = provider_progress_signature(health)
+    health["workspaceFreeGiB"] = 24.5
+    assert provider_progress_signature(health) == first_signature
     health["modelCacheBytes"] = 101
     assert provider_progress_signature(health) != first_signature
     assert permanent_provider_blocker({"loadState": "RETRY_WAIT", "lastLoadError": "temporary"}) is None
