@@ -1,0 +1,55 @@
+name: Echoes Cinema Dashboard Watchdog
+
+on:
+  pull_request:
+    paths:
+      - "scripts/echoes-cinema-stack-supervisor.ps1"
+      - ".github/workflows/cinema-dashboard-watchdog.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/echoes-cinema-stack-supervisor.ps1"
+      - ".github/workflows/cinema-dashboard-watchdog.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dashboard-recovery-contract:
+    name: Live-but-unresponsive recovery (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+    steps:
+      - name: Checkout watchdog sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/echoes-cinema-stack-supervisor.ps1
+          sparse-checkout-cone-mode: false
+
+      - name: Parse supervisor
+        shell: pwsh
+        run: |
+          $source = Get-Content -LiteralPath "scripts/echoes-cinema-stack-supervisor.ps1" -Raw
+          [void][scriptblock]::Create($source)
+          foreach ($token in @(
+            "Get-DashboardRecoveryAction",
+            "RESTART_UNRESPONSIVE",
+            "consecutiveDashboardFailures",
+            "dashboardFailureThreshold",
+            "Stop-ChildProcess -Process `$serviceProcess"
+          )) {
+            if (-not $source.Contains($token)) { throw "Missing watchdog contract token: $token" }
+          }
+
+      - name: Prove dashboard recovery decisions
+        shell: pwsh
+        run: |
+          & "scripts/echoes-cinema-stack-supervisor.ps1" -DashboardRecoverySelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Dashboard recovery self-test failed with exit code $LASTEXITCODE" }
