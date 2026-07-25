@@ -85,6 +85,20 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Verify explicit transparent bypass contract
+        shell: pwsh
+        run: |
+          $cli = Get-Content -LiteralPath 'app/standalone_processor.cpp' -Raw
+          foreach ($token in @(
+            '--bypass-all',
+            'Transparent bypass reference selected',
+            'no DSP is executed',
+            'no Gain, Gate, Compressor, EQ, AI, Spatial, MixBus, or Emotional processing'
+          )) {
+            if (-not $cli.Contains($token)) { throw "Transparent bypass token missing: $token" }
+          }
+          Write-Host 'Explicit transparent bypass contract PASS'
+
       - name: Configure and build native engine
         shell: pwsh
         run: |
@@ -125,8 +139,8 @@ jobs:
         run: |
           $exe = Get-ChildItem build -Recurse -Filter EchoesEngine.exe | Select-Object -First 1
           if (-not $exe) { throw 'EchoesEngine.exe was not produced' }
-          & $exe.FullName abc-source.wav abc-bypass.wav --input-gain 0 --output-gain 0 --no-gate --no-comp --no-eq --verbose 2>&1 | Tee-Object abc-bypass.log
-          if ($LASTEXITCODE -ne 0) { throw 'Native bypass render failed' }
+          & $exe.FullName abc-source.wav abc-bypass.wav --bypass-all 2>&1 | Tee-Object abc-bypass.log
+          if ($LASTEXITCODE -ne 0) { throw 'Transparent bypass render failed' }
           & $exe.FullName abc-source.wav abc-processed.wav --input-gain 2 --output-gain -3 --gate-thresh -60 --comp-thresh -24 --comp-ratio 4 --verbose 2>&1 | Tee-Object abc-processed.log
           if ($LASTEXITCODE -ne 0) { throw 'Native processed render failed' }
 
