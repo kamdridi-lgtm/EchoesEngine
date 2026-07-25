@@ -1,0 +1,88 @@
+name: Echoes Cinema P0 Transient Recovery
+
+on:
+  pull_request:
+    paths:
+      - "tools/resumable_http_render_worker.py"
+      - "tools/http_render_worker.py"
+      - "tools/render_capabilities.py"
+      - "tools/render_resume.py"
+      - ".github/workflows/cinema-p0-transient-recovery.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "tools/resumable_http_render_worker.py"
+      - "tools/http_render_worker.py"
+      - "tools/render_capabilities.py"
+      - "tools/render_resume.py"
+      - ".github/workflows/cinema-p0-transient-recovery.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  transient-recovery-contract:
+    name: Transient-only P0 recovery (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout resumable render sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/resumable_http_render_worker.py
+            tools/http_render_worker.py
+            tools/render_capabilities.py
+            tools/render_resume.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile recovery chain
+        shell: pwsh
+        run: |
+          python -m py_compile `
+            tools/resumable_http_render_worker.py `
+            tools/http_render_worker.py `
+            tools/render_capabilities.py `
+            tools/render_resume.py
+          if ($LASTEXITCODE -ne 0) { throw "P0 recovery chain compilation failed" }
+
+      - name: Prove transient retry and permanent fail-closed behavior
+        shell: pwsh
+        run: |
+          python tools/resumable_http_render_worker.py --self-test
+          if ($LASTEXITCODE -ne 0) { throw "P0 transient recovery self-test failed" }
+
+      - name: Verify durable recovery contract
+        shell: pwsh
+        run: |
+          $worker = Get-Content -LiteralPath 'tools/resumable_http_render_worker.py' -Raw
+          foreach ($token in @(
+            'TRANSIENT_HTTP_CODES',
+            'PERMANENT_HTTP_CODES',
+            'execute_with_transient_retries',
+            'RETRY_WAIT',
+            'retryHistory',
+            'nextRetryUtc',
+            'TRANSIENT_ONLY',
+            'permanent provider blocker',
+            'provider identity changed during retry',
+            'retryLimitMeaning',
+            'UNKNOWN_PERMANENT'
+          )) {
+            if (-not $worker.Contains($token)) { throw "Missing P0 recovery contract token: $token" }
+          }
+          if ($worker.Contains('except Exception: pass')) { throw 'P0 recovery swallows failures without evidence' }
+          Write-Host 'P0 transient-only durable recovery contract PASS'
