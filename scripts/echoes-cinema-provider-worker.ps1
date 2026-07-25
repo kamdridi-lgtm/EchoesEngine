@@ -210,7 +210,7 @@ try {
         $stdoutLog = Join-Path $logsRoot "provider-mock-$stamp.log"
         $stderrLog = Join-Path $logsRoot "provider-mock-$stamp.error.log"
         $arguments = @($mockProvider, "--host", "127.0.0.1", "--port", "$ProviderPort")
-        $providerProcess = Start-Process -FilePath $mockPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
+        $providerProcess = Start-Process -FilePath $mockPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru
         exit (Wait-ProviderProcess -Process $providerProcess -StatusPath $statusPath -Mode $resolvedMode -Port $ProviderPort -StdoutLog $stdoutLog -StderrLog $stderrLog -Workspace $workspace -PidPath $pidPath)
     }
 
@@ -220,7 +220,7 @@ try {
     $bridgeStdout = Join-Path $logsRoot "provider-bootstrap-bridge-$bridgeStamp.log"
     $bridgeStderr = Join-Path $logsRoot "provider-bootstrap-bridge-$bridgeStamp.error.log"
     $bridgeArguments = @($bridge, "--host", "127.0.0.1", "--port", "$ProviderPort", "--status-file", $statusPath)
-    $bridgeProcess = Start-Process -FilePath $bridgePython -ArgumentList $bridgeArguments -WorkingDirectory $workspace -RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -PassThru
+    $bridgeProcess = Start-Process -FilePath $bridgePython -ArgumentList $bridgeArguments -WorkingDirectory $workspace -RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -WindowStyle Hidden -PassThru
     Set-Content -LiteralPath $pidPath -Value $bridgeProcess.Id -Encoding ascii
     Start-Sleep -Milliseconds 800
     if ($bridgeProcess.HasExited) {
@@ -253,8 +253,14 @@ try {
         }
         $bootstrapError = ""
         try {
-            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $bootstrap -VenvPath $venvRoot -TorchIndexUrl $TorchIndexUrl
-            $bootstrapExit = $LASTEXITCODE
+            $bootstrapArguments = @(
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", $bootstrap,
+                "-VenvPath", $venvRoot,
+                "-TorchIndexUrl", $TorchIndexUrl
+            )
+            $bootstrapProcess = Start-Process -FilePath "powershell.exe" -ArgumentList $bootstrapArguments -WindowStyle Hidden -Wait -PassThru
+            $bootstrapExit = $bootstrapProcess.ExitCode
         } catch {
             $bootstrapExit = 1
             $bootstrapError = $_.Exception.Message
@@ -319,7 +325,7 @@ try {
         "--inference-steps", "15",
         "--max-frames", "16"
     )
-    $providerProcess = Start-Process -FilePath $venvPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
+    $providerProcess = Start-Process -FilePath $venvPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru
     exit (Wait-ProviderProcess -Process $providerProcess -StatusPath $statusPath -Mode $resolvedMode -Port $ProviderPort -StdoutLog $stdoutLog -StderrLog $stderrLog -Workspace $workspace -PidPath $pidPath)
 }
 catch {

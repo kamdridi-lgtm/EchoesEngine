@@ -197,7 +197,7 @@ try {
             "--provider-timeout", "180",
             "--max-workers", "$MaxWorkers"
         )
-        $script:serviceProcess = Start-Process -FilePath $servicePython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -PassThru
+        $script:serviceProcess = Start-Process -FilePath $servicePython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -WindowStyle Hidden -PassThru
         Set-Content -LiteralPath $servicePidPath -Value $serviceProcess.Id -Encoding ascii
         $script:lastServiceRestart = Get-Date
     }
