@@ -53,6 +53,9 @@ def validate_registry(registry: Mapping[str, Any]) -> None:
             raise PlanningError(f"unsupported execution mode: {pipeline_id}")
         if not isinstance(pipeline.get("requirements"), Mapping):
             raise PlanningError(f"pipeline requirements must be an object: {pipeline_id}")
+        quality_score = int(pipeline.get("qualityScore", 0) or 0)
+        if quality_score < 1 or quality_score > 100:
+            raise PlanningError(f"pipeline qualityScore must be between 1 and 100: {pipeline_id}")
         if not isinstance(pipeline.get("stages"), list) or not pipeline["stages"]:
             raise PlanningError(f"pipeline stages must be a non-empty list: {pipeline_id}")
 
@@ -121,12 +124,17 @@ def evaluate(pipeline: Mapping[str, Any], mission: Mission, runtime: RuntimeCont
     execution = str(pipeline.get("execution"))
     if execution in {"hybrid", "remote"} and not mission.cloud_allowed:
         blockers.append("CLOUD_NOT_ALLOWED")
+    quality_score = int(pipeline.get("qualityScore", 0) or 0)
+    if quality_score < mission.minimum_quality:
+        blockers.append(f"QUALITY_{quality_score}_BELOW_{mission.minimum_quality}")
     required_caps = {str(x) for x in req.get("providerCapabilities") or []}
     if mission.require_identity:
         required_caps.update({"referenceImage", "subjectIdentity"})
     missing_caps = sorted(required_caps - set(runtime.capabilities))
     if missing_caps:
         blockers.append("MISSING_PROVIDER_CAPABILITIES:" + ",".join(missing_caps))
+    if required_caps and runtime.provider_status != "PASS":
+        blockers.append("PROVIDER_STATUS_NOT_PASS")
     if required_caps and not runtime.real_model_loaded:
         blockers.append("REAL_MODEL_NOT_LOADED")
     if mission.commercial_use and not runtime.commercial_use_allowed:
@@ -182,12 +190,17 @@ def self_test() -> int:
     assert blocked["status"] == "BLOCKED" and any("VRAM_" in b for b in blocked["blockers"])
     hybrid = plan_mission(registry, {"jobId": "artist-video-003", "missionType": "music_video", "requireIdentity": True, "commercialUse": False, "cloudAllowed": True}, low_vram, provider)
     assert hybrid["status"] == "PLANNED" and hybrid["selectedPipeline"] == "cinema_hybrid_identity_v1"
+    quality = plan_mission(registry, {"jobId": "artist-video-004", "missionType": "music_video", "requireIdentity": True, "commercialUse": False, "cloudAllowed": True, "minimumQuality": 90}, inventory, provider)
+    assert quality["status"] == "PLANNED" and quality["selectedPipeline"] == "cinema_hybrid_identity_v1"
+    partial_provider = {**provider, "status": "PARTIAL"}
+    provider_blocked = plan_mission(registry, {"jobId": "artist-video-005", "missionType": "music_video", "requireIdentity": True, "commercialUse": False, "cloudAllowed": False}, inventory, partial_provider)
+    assert provider_blocked["status"] == "BLOCKED" and "PROVIDER_STATUS_NOT_PASS" in provider_blocked["blockers"]
     audio = plan_mission(registry, {"jobId": "master-001", "missionType": "audio_master", "requireIdentity": False, "commercialUse": False, "cloudAllowed": False}, inventory, None)
     assert audio["status"] == "PLANNED" and audio["selectedPipeline"] == "audio_master_local_v1"
     drifted = {**inventory, "status": "BLOCKED"}
     fail_closed = plan_mission(registry, {"jobId": "master-002", "missionType": "audio_master", "requireIdentity": False, "commercialUse": False, "cloudAllowed": False}, drifted, None)
     assert fail_closed["status"] == "BLOCKED"
-    print("KCoreMissionPlanner PASS identity=local low-vram=blocked hybrid=selected audio=local runtime-drift=blocked")
+    print("KCoreMissionPlanner PASS identity=local low-vram=blocked hybrid=selected quality=hybrid provider-partial=blocked audio=local runtime-drift=blocked")
     return 0
 
 def main() -> int:
