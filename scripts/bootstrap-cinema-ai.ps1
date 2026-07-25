@@ -40,7 +40,6 @@ function Get-TorchRuntimeProbe {
             error = "Python executable is missing: $PythonPath"
         }
     }
-
     $probeScript = @'
 import importlib.metadata
 import json
@@ -73,7 +72,6 @@ except Exception as error:
     result["error"] = str(error)
 print(json.dumps(result))
 '@
-
     $previousPreference = $ErrorActionPreference
     try {
         $ErrorActionPreference = "SilentlyContinue"
@@ -98,9 +96,7 @@ print(json.dumps(result))
             error = ([string]$raw).Trim()
         }
     }
-    try {
-        return ([string]$raw).Trim() | ConvertFrom-Json
-    } catch {
+    try { return ([string]$raw).Trim() | ConvertFrom-Json } catch {
         return [pscustomobject]@{
             importable = $false
             cudaBuild = $false
@@ -116,10 +112,7 @@ print(json.dumps(result))
 }
 
 function Test-ExactTorchRuntime {
-    param(
-        [object]$Probe,
-        [object]$Lock
-    )
+    param([object]$Probe, [object]$Lock)
     if (-not [bool]$Probe.importable) { return $false }
     return (
         [string]$Probe.baseVersion -eq [string]$Lock.torchVersion -and
@@ -129,21 +122,11 @@ function Test-ExactTorchRuntime {
 }
 
 if ($TorchProbeSelfTest) {
-    if ((Get-TorchRepairAction -Importable $false -CudaBuild $false -CudaAvailable $false -ExactRuntime $false) -ne "INSTALL_CUDA_WHEEL") {
-        throw "Missing-torch repair classification failed."
-    }
-    if ((Get-TorchRepairAction -Importable $true -CudaBuild $false -CudaAvailable $false -ExactRuntime $false) -ne "REPLACE_CPU_WHEEL") {
-        throw "CPU-only torch repair classification failed."
-    }
-    if ((Get-TorchRepairAction -Importable $true -CudaBuild $true -CudaAvailable $true -ExactRuntime $false) -ne "REPLACE_RUNTIME_DRIFT") {
-        throw "Torch runtime drift classification failed."
-    }
-    if ((Get-TorchRepairAction -Importable $true -CudaBuild $true -CudaAvailable $false -ExactRuntime $true) -ne "BLOCK_CUDA_RUNTIME") {
-        throw "CUDA runtime blocker classification failed."
-    }
-    if ((Get-TorchRepairAction -Importable $true -CudaBuild $true -CudaAvailable $true -ExactRuntime $true) -ne "READY") {
-        throw "CUDA-ready classification failed."
-    }
+    if ((Get-TorchRepairAction -Importable $false -CudaBuild $false -CudaAvailable $false -ExactRuntime $false) -ne "INSTALL_CUDA_WHEEL") { throw "Missing-torch repair classification failed." }
+    if ((Get-TorchRepairAction -Importable $true -CudaBuild $false -CudaAvailable $false -ExactRuntime $false) -ne "REPLACE_CPU_WHEEL") { throw "CPU-only torch repair classification failed." }
+    if ((Get-TorchRepairAction -Importable $true -CudaBuild $true -CudaAvailable $true -ExactRuntime $false) -ne "REPLACE_RUNTIME_DRIFT") { throw "Torch runtime drift classification failed." }
+    if ((Get-TorchRepairAction -Importable $true -CudaBuild $true -CudaAvailable $false -ExactRuntime $true) -ne "BLOCK_CUDA_RUNTIME") { throw "CUDA runtime blocker classification failed." }
+    if ((Get-TorchRepairAction -Importable $true -CudaBuild $true -CudaAvailable $true -ExactRuntime $true) -ne "READY") { throw "CUDA-ready classification failed." }
     Write-Host "Cinema bootstrap torch probe PASS missing=install cpu-wheel=replace drift=replace cuda-runtime=block ready=keep"
     exit 0
 }
@@ -151,9 +134,7 @@ if ($TorchProbeSelfTest) {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $venv = if ([System.IO.Path]::IsPathRooted($VenvPath)) { [System.IO.Path]::GetFullPath($VenvPath) } else { [System.IO.Path]::GetFullPath((Join-Path $repoRoot $VenvPath)) }
 $venvDrive = [System.IO.Path]::GetPathRoot($venv)
-if (-not $venvDrive -or $venvDrive.TrimEnd("\").ToUpperInvariant() -eq "C:") {
-    throw "Cinema virtual environment must be on drive D: or another non-C: drive. Current path: $venv"
-}
+if (-not $venvDrive -or $venvDrive.TrimEnd("\").ToUpperInvariant() -eq "C:") { throw "Cinema virtual environment must be on drive D: or another non-C: drive. Current path: $venv" }
 
 $workspaceRoot = Split-Path -Parent $venv
 $cacheRoot = Join-Path $workspaceRoot "cache"
@@ -178,25 +159,19 @@ if ([string]$torchLock.schema -ne "echoes.torch-runtime-lock.v1") { throw "Unsup
 $lockedIndexUrl = [string]$torchLock.indexUrl
 if (-not $lockedIndexUrl.StartsWith("https://download.pytorch.org/whl/")) { throw "Torch runtime lock must use the official PyTorch wheel index." }
 if ($TorchIndexUrl -and $TorchIndexUrl -ne $lockedIndexUrl) {
-    throw "TorchIndexUrl override does not match the pinned runtime lock. Expected: $lockedIndexUrl"
+    Write-Host "Ignoring legacy TorchIndexUrl override '$TorchIndexUrl'; the pinned runtime lock requires '$lockedIndexUrl'."
 }
 $TorchIndexUrl = $lockedIndexUrl
 
 $storageDirectories = @(
     $workspaceRoot, $cacheRoot,
-    (Join-Path $cacheRoot "huggingface"),
-    (Join-Path $cacheRoot "huggingface\hub"),
-    (Join-Path $cacheRoot "huggingface\transformers"),
-    (Join-Path $cacheRoot "torch"),
-    (Join-Path $cacheRoot "pip"),
-    (Join-Path $cacheRoot "xdg"),
-    (Join-Path $cacheRoot "cuda"),
-    (Join-Path $cacheRoot "numba"),
-    (Join-Path $cacheRoot "python-bytecode"),
-    $tempRoot
+    (Join-Path $cacheRoot "huggingface"), (Join-Path $cacheRoot "huggingface\hub"),
+    (Join-Path $cacheRoot "huggingface\transformers"), (Join-Path $cacheRoot "torch"),
+    (Join-Path $cacheRoot "pip"), (Join-Path $cacheRoot "xdg"),
+    (Join-Path $cacheRoot "cuda"), (Join-Path $cacheRoot "numba"),
+    (Join-Path $cacheRoot "python-bytecode"), $tempRoot
 )
 foreach ($directory in $storageDirectories) { New-Item -ItemType Directory -Path $directory -Force | Out-Null }
-
 $env:HF_HOME = Join-Path $cacheRoot "huggingface"
 $env:HF_HUB_CACHE = Join-Path $cacheRoot "huggingface\hub"
 $env:HUGGINGFACE_HUB_CACHE = $env:HF_HUB_CACHE
@@ -236,7 +211,6 @@ function Resolve-BasePython {
 
 if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) { throw "FFmpeg is not available in PATH" }
 if (-not (Get-Command ffprobe -ErrorAction SilentlyContinue)) { throw "FFprobe is not available in PATH" }
-
 $basePython = Resolve-BasePython
 Write-Host "Cinema workspace: $workspaceRoot"
 Write-Host "Base Python: $basePython"
@@ -254,7 +228,6 @@ if (-not (Test-Path $venv)) {
 }
 $python = Join-Path $venv "Scripts\python.exe"
 if (-not (Test-Path $python)) { throw "Virtual environment Python not found: $python" }
-
 & $python -m pip install --upgrade pip setuptools wheel
 if ($LASTEXITCODE -ne 0) { throw "pip bootstrap failed" }
 
@@ -268,15 +241,10 @@ switch ($torchAction) {
     "REPLACE_CPU_WHEEL" { Write-Host "CPU-only PyTorch detected. It will be replaced with the pinned official CUDA wheel." }
     "REPLACE_RUNTIME_DRIFT" { Write-Host "Torch runtime drift detected. It will be replaced with the exact pinned CUDA wheel set." }
 }
-
 if ($torchAction -in @("INSTALL_CUDA_WHEEL", "REPLACE_CPU_WHEEL", "REPLACE_RUNTIME_DRIFT")) {
     $installArguments = @("-m", "pip", "install", "--upgrade")
     if ($torchAction -ne "INSTALL_CUDA_WHEEL") { $installArguments += "--force-reinstall" }
-    $installArguments += @(
-        "torch==$($torchLock.torchVersion)",
-        "torchvision==$($torchLock.torchvisionVersion)",
-        "--index-url", $TorchIndexUrl
-    )
+    $installArguments += @("torch==$($torchLock.torchVersion)", "torchvision==$($torchLock.torchvisionVersion)", "--index-url", $TorchIndexUrl)
     & $python @installArguments
     if ($LASTEXITCODE -ne 0) { throw "Pinned PyTorch CUDA installation failed" }
     $torchAfter = Get-TorchRuntimeProbe -PythonPath $python
@@ -288,7 +256,6 @@ if ($torchAction -in @("INSTALL_CUDA_WHEEL", "REPLACE_CPU_WHEEL", "REPLACE_RUNTI
 
 & $python -m pip install -r $requirements
 if ($LASTEXITCODE -ne 0) { throw "Diffusers provider dependency installation failed" }
-
 & $python -m py_compile $environmentLock $provider $proofProvider $lowVramProvider $p0Preflight $service $runner
 if ($LASTEXITCODE -ne 0) { throw "Cinema provider/preflight/service Python compilation failed" }
 & $python $environmentLock --allow-unavailable-cuda-runtime
@@ -332,15 +299,10 @@ try:
     vision_base = str(vision).split("+", 1)[0]
     cuda_build = bool(torch.version.cuda)
     cuda_available = bool(torch.cuda.is_available())
-    exact_runtime = (
-        torch_base == str(torch_lock["torchVersion"])
-        and vision_base == str(torch_lock["torchvisionVersion"])
-        and str(torch.version.cuda or "") == str(torch_lock["expectedTorchCudaVersion"])
-    )
+    exact_runtime = torch_base == str(torch_lock["torchVersion"]) and vision_base == str(torch_lock["torchvisionVersion"]) and str(torch.version.cuda or "") == str(torch_lock["expectedTorchCudaVersion"])
     report["packages"] = {
         "torch": torch.__version__, "torchvision": vision, "diffusers": diffusers.__version__,
-        "transformers": transformers.__version__, "accelerate": accelerate.__version__,
-        "safetensors": safetensors.__version__,
+        "transformers": transformers.__version__, "accelerate": accelerate.__version__, "safetensors": safetensors.__version__,
     }
     report["cuda"] = {
         "buildPresent": cuda_build, "available": cuda_available,
@@ -365,7 +327,6 @@ except Exception as error:
     report.update(status="FAILED", failureClass="DEPENDENCY_IMPORT_FAILED", blocker=str(error))
 print(json.dumps(report, indent=2))
 '@
-
 $diagnosticOutput = $diagnosticScript | & $python - $torchLockPath
 if ($LASTEXITCODE -ne 0) { throw "Cinema diagnostic failed" }
 $diagnosticOutput | Set-Content -Path $reportPath -Encoding utf8
