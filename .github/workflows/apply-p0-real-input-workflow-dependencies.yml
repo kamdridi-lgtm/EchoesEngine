@@ -18,6 +18,9 @@ jobs:
         with:
           fetch-depth: 0
           ref: feature/p0-real-input-audio-2026-07-25
+          sparse-checkout: |
+            .github/workflows
+          sparse-checkout-cone-mode: true
 
       - name: Add the real-input module to every sparse checkout that runs P0
         shell: python
