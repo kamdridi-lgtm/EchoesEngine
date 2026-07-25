@@ -1,6 +1,6 @@
 {
   "schema": "echoes.capability-registry.v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "truthPolicy": {
     "allowedStatuses": [
       "REAL",
@@ -65,12 +65,18 @@
     "onnxModelManager": {
       "kind": "ai",
       "target": "native",
-      "status": "MISSING"
+      "status": "REAL",
+      "scope": "offline path containment, regular-file enforcement, exact size and SHA-256 integrity evidence",
+      "modelInferenceProven": false,
+      "networkProvisioningProven": false
     },
     "neuralScheduler": {
       "kind": "orchestration",
-      "target": "kcore",
-      "status": "MISSING"
+      "target": "echoes+kcore",
+      "status": "REAL",
+      "scope": "read-only selection of integrity-verified models by purpose, capability, provider, precision, quality, licence and VRAM budget",
+      "executionProven": false,
+      "requiresOperatorApproval": true
     },
     "multiStateRenderer": {
       "kind": "render",
