@@ -1,0 +1,68 @@
+name: Echoes Cinema Hidden Child Processes
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+      - fix/**
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  hidden-child-process-contract:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/echoes-cinema-stack-supervisor.ps1
+            scripts/echoes-cinema-provider-worker.ps1
+          sparse-checkout-cone-mode: false
+
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-stack-supervisor.ps1' -Raw))
+          [void][scriptblock]::Create((Get-Content -LiteralPath 'scripts/echoes-cinema-provider-worker.ps1' -Raw))
+
+      - name: Verify every long-lived child is hidden
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $supervisor = Get-Content -LiteralPath 'scripts/echoes-cinema-stack-supervisor.ps1' -Raw
+          $worker = Get-Content -LiteralPath 'scripts/echoes-cinema-provider-worker.ps1' -Raw
+
+          $requiredSupervisor = @(
+            '-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -WindowStyle Hidden -PassThru',
+            '-RedirectStandardOutput $providerWorkerStdout -RedirectStandardError $providerWorkerStderr -WindowStyle Hidden -PassThru'
+          )
+          foreach ($token in $requiredSupervisor) {
+            if (-not $supervisor.Contains($token)) {
+              throw "Missing supervisor hidden-process contract token: $token"
+            }
+          }
+
+          $requiredWorker = @(
+            '-RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru',
+            '-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -WindowStyle Hidden -PassThru',
+            '-WindowStyle Hidden -Wait -PassThru'
+          )
+          foreach ($token in $requiredWorker) {
+            if (-not $worker.Contains($token)) {
+              throw "Missing provider-worker hidden-process contract token: $token"
+            }
+          }
+
+          if ($worker.Contains('& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $bootstrap')) {
+            throw 'Visible bootstrap PowerShell invocation is still present.'
+          }
+          if (($supervisor + $worker) -match 'Start-Process[^\r\n]+-RedirectStandard(Output|Error)[^\r\n]+-PassThru' -and
+              ($supervisor + $worker) -match 'Start-Process[^\r\n]+-RedirectStandard(Output|Error)(?![^\r\n]+-WindowStyle Hidden)[^\r\n]+-PassThru') {
+            throw 'At least one redirected long-lived child process is not explicitly hidden.'
+          }
+
+          Write-Host 'Echoes Cinema hidden child-process contract PASS'
