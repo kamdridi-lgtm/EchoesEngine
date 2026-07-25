@@ -127,6 +127,7 @@ struct CliArgs {
     bool    compEnabled      = true;
     bool    eqEnabled        = true;
     bool    aiEnabled        = false;  // off by default (needs model)
+    bool    bypassAll        = false;  // transparent reference path; no DSP is executed
     std::string aiModelPath;
     bool    verbose          = false;
 };
@@ -141,9 +142,10 @@ CliArgs parseArgs(int argc, char* argv[]) {
                      "  --gate-thresh <dB>    Noise gate threshold       default: -40\n"
                      "  --comp-thresh <dB>    Compressor threshold       default: -18\n"
                      "  --comp-ratio  <x>     Compression ratio          default: 4.0\n"
-                     "  --no-gate             Disable noise gate\n"
-                     "  --no-comp             Disable compressor\n"
-                     "  --no-eq               Disable 5-band EQ\n"
+                     "  --no-gate             Disable noise gate only\n"
+                     "  --no-comp             Disable compressor only\n"
+                     "  --no-eq               Disable 5-band EQ only\n"
+                     "  --bypass-all          Transparent WAV reference; execute no DSP\n"
                      "  --ai <model.onnx>     Enable AI voice (stub now)\n"
                      "  -v / --verbose        Verbose logging\n\n"
                      "Example (Hard Rock preset):\n"
@@ -160,9 +162,10 @@ CliArgs parseArgs(int argc, char* argv[]) {
         else if (arg == "--gate-thresh" && i+1<argc) a.gateThresholdDb = std::stof(argv[++i]);
         else if (arg == "--comp-thresh" && i+1<argc) a.compThresholdDb = std::stof(argv[++i]);
         else if (arg == "--comp-ratio"  && i+1<argc) a.compRatio       = std::stof(argv[++i]);
-        else if (arg == "--no-gate")  a.gateEnabled = false;
-        else if (arg == "--no-comp")  a.compEnabled = false;
-        else if (arg == "--no-eq")    a.eqEnabled   = false;
+        else if (arg == "--no-gate")    a.gateEnabled = false;
+        else if (arg == "--no-comp")    a.compEnabled = false;
+        else if (arg == "--no-eq")      a.eqEnabled   = false;
+        else if (arg == "--bypass-all") a.bypassAll   = true;
         else if (arg == "--ai" && i+1<argc) { a.aiEnabled = true; a.aiModelPath = argv[++i]; }
         else if (arg == "-v" || arg == "--verbose") a.verbose = true;
     }
@@ -200,6 +203,23 @@ int main(int argc, char* argv[]) {
               << buffer.durationSeconds() << "s | "
               << "Peak: " << buffer.peakDb() << " dBFS\n";
 
+    // A true reference path must not instantiate or execute any processing module.
+    // The input is decoded to the engine's canonical float representation and written
+    // back with identical samples, geometry, ordering, and duration.
+    if (args.bypassAll) {
+        std::cout << "\n[2/4] Transparent bypass reference selected.\n";
+        std::cout << "  Chain: NONE (no Gain, Gate, Compressor, EQ, AI, Spatial, MixBus, or Emotional processing)\n";
+        std::cout << "\n[3/4] Preserving " << buffer.frames() << " frames without DSP.\n";
+        std::cout << "\n[4/4] Writing: " << args.outputPath << "\n";
+        if (!writeWav(args.outputPath, buffer)) {
+            std::cerr << "[ERROR] Failed to write bypass output WAV\n";
+            return 4;
+        }
+        std::cout << "\n  ✓ Transparent bypass complete\n"
+                  << "  Output: " << args.outputPath << "\n\n";
+        return 0;
+    }
+
     // ── Configure engine ──────────────────────────────────────────────────────
     echoes::EchoesEngine::Config cfg;
     cfg.sampleRate    = static_cast<float>(buffer.sampleRate());
@@ -224,7 +244,7 @@ int main(int argc, char* argv[]) {
     engine.setCompThreshold(args.compThresholdDb);
     engine.setCompRatio(args.compRatio);
 
-    std::cout << "  Chain: GainStage → NoiseGate → Compressor → VocalEQ(5b) → AI → Output\n";
+    std::cout << "  Chain: GainStage → NoiseGate → Compressor → VocalEQ(5b) → AI → Spatial → MixBus → Output\n";
     std::cout << "  Source format: " << buffer.sampleRate() << " Hz | "
               << buffer.channels() << "ch\n";
     std::cout << "  Input gain: "   << args.inputGainDb   << " dB"

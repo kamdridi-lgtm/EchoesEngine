@@ -27,6 +27,11 @@
       "target": "native",
       "status": "REAL"
     },
+    "audioAbcRegression": {
+      "kind": "quality",
+      "target": "native",
+      "status": "REAL"
+    },
     "masteringChain": {
       "kind": "audio",
       "target": "native",
@@ -86,87 +91,182 @@
   "pipelines": [
     {
       "id": "audio_master_local_v1",
-      "missions": ["audio_master"],
+      "missions": [
+        "audio_master"
+      ],
       "execution": "local",
       "priority": 100,
       "requirements": {
-        "runtimeStatus": ["PASS"],
+        "runtimeStatus": [
+          "PASS"
+        ],
         "minimumVramGiB": 0,
         "providerCapabilities": [],
-        "engineModules": ["audioCore"]
+        "engineModules": [
+          "audioCore",
+          "audioAbcRegression"
+        ]
       },
-      "stages": ["inspect_audio", "process_native_audio", "qc_audio", "emit_manifest"],
+      "stages": [
+        "inspect_audio",
+        "render_bypass_reference",
+        "process_native_audio",
+        "verify_abc_regression",
+        "emit_manifest"
+      ],
       "qualityScore": 85
     },
     {
       "id": "lyric_video_local_v1",
-      "missions": ["lyric_video"],
+      "missions": [
+        "lyric_video"
+      ],
       "execution": "local",
       "priority": 80,
       "requirements": {
-        "runtimeStatus": ["PASS"],
+        "runtimeStatus": [
+          "PASS"
+        ],
         "minimumVramGiB": 0,
         "providerCapabilities": [],
-        "engineModules": ["audioCore"]
+        "engineModules": [
+          "audioCore"
+        ]
       },
-      "stages": ["analyze_audio", "build_timeline", "render_typography", "assemble", "qc_video"],
+      "stages": [
+        "analyze_audio",
+        "build_timeline",
+        "render_typography",
+        "assemble",
+        "qc_video"
+      ],
       "qualityScore": 75
     },
     {
       "id": "cinema_low_vram_text_v1",
-      "missions": ["music_video", "game_trailer", "client_video"],
+      "missions": [
+        "music_video",
+        "game_trailer",
+        "client_video"
+      ],
       "execution": "local",
       "priority": 70,
       "requirements": {
-        "runtimeStatus": ["PASS"],
+        "runtimeStatus": [
+          "PASS"
+        ],
         "minimumVramGiB": 5.5,
-        "providerCapabilities": ["textToVideo"],
-        "engineModules": ["audioCore"]
+        "providerCapabilities": [
+          "textToVideo"
+        ],
+        "engineModules": [
+          "audioCore"
+        ]
       },
-      "stages": ["analyze_audio", "plan_scenes", "render_resumable", "assemble", "qc_video", "emit_evidence"],
+      "stages": [
+        "analyze_audio",
+        "plan_scenes",
+        "render_resumable",
+        "assemble",
+        "qc_video",
+        "emit_evidence"
+      ],
       "qualityScore": 70
     },
     {
       "id": "cinema_identity_local_v1",
-      "missions": ["music_video", "client_video"],
+      "missions": [
+        "music_video",
+        "client_video"
+      ],
       "execution": "local",
       "priority": 90,
       "requirements": {
-        "runtimeStatus": ["PASS"],
+        "runtimeStatus": [
+          "PASS"
+        ],
         "minimumVramGiB": 6.0,
-        "providerCapabilities": ["textToVideo", "referenceImage", "subjectIdentity"],
-        "engineModules": ["audioCore"]
+        "providerCapabilities": [
+          "textToVideo",
+          "referenceImage",
+          "subjectIdentity"
+        ],
+        "engineModules": [
+          "audioCore"
+        ]
       },
-      "stages": ["analyze_audio", "lock_subject_identity", "plan_scenes", "render_resumable", "identity_qc", "assemble", "qc_video", "emit_evidence"],
+      "stages": [
+        "analyze_audio",
+        "lock_subject_identity",
+        "plan_scenes",
+        "render_resumable",
+        "identity_qc",
+        "assemble",
+        "qc_video",
+        "emit_evidence"
+      ],
       "qualityScore": 85
     },
     {
       "id": "cinema_hybrid_identity_v1",
-      "missions": ["music_video", "game_trailer", "client_video"],
+      "missions": [
+        "music_video",
+        "game_trailer",
+        "client_video"
+      ],
       "execution": "hybrid",
       "priority": 60,
       "requirements": {
-        "runtimeStatus": ["PASS", "PARTIAL"],
+        "runtimeStatus": [
+          "PASS",
+          "PARTIAL"
+        ],
         "minimumVramGiB": 0,
-        "providerCapabilities": ["textToVideo", "referenceImage", "subjectIdentity"],
-        "engineModules": ["audioCore"],
+        "providerCapabilities": [
+          "textToVideo",
+          "referenceImage",
+          "subjectIdentity"
+        ],
+        "engineModules": [
+          "audioCore"
+        ],
         "cloudAllowed": true
       },
-      "stages": ["analyze_audio_local", "plan_scenes_local", "render_remote", "download_verified", "assemble_local", "qc_video", "emit_evidence"],
+      "stages": [
+        "analyze_audio_local",
+        "plan_scenes_local",
+        "render_remote",
+        "download_verified",
+        "assemble_local",
+        "qc_video",
+        "emit_evidence"
+      ],
       "qualityScore": 92
     },
     {
       "id": "restoration_local_v1",
-      "missions": ["video_restoration"],
+      "missions": [
+        "video_restoration"
+      ],
       "execution": "local",
       "priority": 75,
       "requirements": {
-        "runtimeStatus": ["PASS"],
+        "runtimeStatus": [
+          "PASS"
+        ],
         "minimumVramGiB": 4.0,
-        "providerCapabilities": ["videoRestoration"],
+        "providerCapabilities": [
+          "videoRestoration"
+        ],
         "engineModules": []
       },
-      "stages": ["inspect_media", "restore_frames", "restore_audio", "assemble", "qc_video"],
+      "stages": [
+        "inspect_media",
+        "restore_frames",
+        "restore_audio",
+        "assemble",
+        "qc_video"
+      ],
       "qualityScore": 80
     }
   ]
