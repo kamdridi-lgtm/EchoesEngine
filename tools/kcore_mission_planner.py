@@ -62,7 +62,7 @@ class Mission:
     mission_type: str
     require_identity: bool
     commercial_use: bool
-    cloud_alowed: bool
+    cloud_allowed: bool
     minimum_quality: int
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> "Mission":
@@ -125,20 +125,29 @@ def evaluate(pipeline: Mapping[str, Any], mission: Mission, runtime: RuntimeCont
     if mission.require_identity:
         required_caps.update({"referenceImage", "subjectIdentity"})
     missing_caps = sorted(required_caps - set(runtime.capabilities))
-    if missing_caps: blockers.append("MISSING_PROVIDER_CAPABILITIES:" + ",".join(missing_caps))
-    if required_caps and not runtime.real_model_loaded: blockers.append("REAL_MODEL_NOT_LOADED")
-    if mission.commercial_use and not runtime.commercial_use_allowed: blockers.append("COMMERCIAL_USE_NOT_APPROVED")
-    missing_modules = sorted(str(x) for x in req.get("engineModules") or [] if modules.get(str(x), "MISSING") not in PROVEN_MODULE_STATUSES)
-    if missing_modules: blockers.append("UNPROVEN_ENGINE_MODULES:" + ",".join(missing_modules))
+    if missing_caps:
+        blockers.append("MISSING_PROVIDER_CAPABILITIES:" + ",".join(missing_caps))
+    if required_caps and not runtime.real_model_loaded:
+        blockers.append("REAL_MODEL_NOT_LOADED")
+    if mission.commercial_use and not runtime.commercial_use_allowed:
+        blockers.append("COMMERCIAL_USE_NOT_APPROVED")
+    missing_modules = sorted(
+        str(x) for x in req.get("engineModules") or []
+        if modules.get(str(x), "MISSING") not in PROVEN_MODULE_STATUSES
+    )
+    if missing_modules:
+        blockers.append("UNPROVEN_ENGINE_MODULES:" + ",".join(missing_modules))
     score = int(pipeline.get("priority", 0) or 0) + (10 if execution == "local" else 0)
-    if mission.require_identity and {"referenceImage", "subjectIdentity"} <= required_caps: score += 20
+    if mission.require_identity and {"referenceImage", "subjectIdentity"} <= required_caps:
+        score += 20
     score += min(10, max(0, int(runtime.vram_gib - minimum_vram)))
     return not blockers, blockers, score
 
 def plan_mission(registry: Mapping[str, Any], mission_value: Mapping[str, Any], inventory: Mapping[str, Any], provider: Mapping[str, Any] | None) -> dict[str, Any]:
     validate_registry(registry)
     mission = Mission.from_mapping(mission_value)
-    if mission.mission_type not in {str(x) for x in registry["missionTypes"]}: raise PlanningError(f"unsupported missionType: {mission.mission_type}")
+    if mission.mission_type not in {str(x) for x in registry["missionTypes"]}:
+        raise PlanningError(f"unsupported missionType: {mission.mission_type}")
     runtime = RuntimeContext.from_evidence(inventory, provider)
     modules = {str(k): str(v.get("status") or "MISSING") for k, v in registry["engineModules"].items() if isinstance(v, Mapping)}
     evaluations: list[dict[str, Any]] = []
@@ -146,8 +155,18 @@ def plan_mission(registry: Mapping[str, Any], mission_value: Mapping[str, Any], 
         eligible, blockers, score = evaluate(pipeline, mission, runtime, modules)
         evaluations.append({"pipelineId": pipeline["id"], "execution": pipeline["execution"], "eligible": eligible, "score": score, "blockers": blockers})
     eligible = sorted((x for x in evaluations if x["eligible"]), key=lambda x: (-x["score"], x["pipelineId"]))
-    common = {"schema": SCHEMA, "jobId": mission.job_id, "missionType": mission.mission_type, "runtime": {"status": runtime.status, "vramGiB": runtime.vram_gib, "providerStatus": runtime.provider_status, "realModelLoaded": runtime.real_model_loaded, "capabilities": sorted(runtime.capabilities)}, "evaluations": evaluations, "mutationsAllowed": False, "requiresOperatorApproval": True, "secretsPersisted": False}
-    if not eligible: return {**common, "status": "BLOCKED", "selectedPipeline": None, "execution": None, "stages": [], "blockers": sorted({b for e in evaluations for b in e["blockers"]})}
+    common = {
+        "schema": SCHEMA,
+        "jobId": mission.job_id,
+        "missionType": mission.mission_type,
+        "runtime": {"status": runtime.status, "vramGiB": runtime.vram_gib, "providerStatus": runtime.provider_status, "realModelLoaded": runtime.real_model_loaded, "capabilities": sorted(runtime.capabilities)},
+        "evaluations": evaluations,
+        "mutationsAllowed": False,
+        "requiresOperatorApproval": True,
+        "secretsPersisted": False,
+    }
+    if not eligible:
+        return {**common, "status": "BLOCKED", "selectedPipeline": None, "execution": None, "stages": [], "blockers": sorted({b for e in evaluations for b in e["blockers"]})}
     selected = eligible[0]
     definition = next(p for p in registry["pipelines"] if p["id"] == selected["pipelineId"])
     return {**common, "status": "PLANNED", "selectedPipeline": selected["pipelineId"], "execution": selected["execution"], "stages": list(definition["stages"]), "requirements": definition["requirements"], "idempotencyKey": f"{mission.job_id}:{selected['pipelineId']}"}
