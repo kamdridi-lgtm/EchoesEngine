@@ -6,24 +6,66 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
+import time
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 
 MAX_AV_DRIFT_SECONDS = 0.35
+DEFAULT_MEDIA_TOOL_WAIT_SECONDS = 900.0
 
 
 def run(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, check=True, text=True, capture_output=True)
 
 
+def read_json(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        return payload if isinstance(payload, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def media_tool_wait_seconds() -> float:
+    raw = os.environ.get("ECHOES_CINEMA_MEDIA_TOOL_WAIT_SECONDS", "")
+    try:
+        return max(0.0, float(raw)) if raw else DEFAULT_MEDIA_TOOL_WAIT_SECONDS
+    except ValueError:
+        return DEFAULT_MEDIA_TOOL_WAIT_SECONDS
+
+
 def require_tool(name: str) -> str:
-    resolved = shutil.which(name)
-    if not resolved:
-        raise RuntimeError(f"required executable not found in PATH: {name}")
-    return resolved
+    """Wait for the nonblocking D-drive media worker instead of failing early."""
+
+    timeout = media_tool_wait_seconds()
+    deadline = time.monotonic() + timeout
+    runtime_root_raw = os.environ.get("ECHOES_CINEMA_RUNTIME_ROOT", "").strip()
+    status_path = Path(runtime_root_raw) / "ffmpeg-worker-status.json" if runtime_root_raw else None
+    last_status: dict[str, Any] = {}
+
+    while True:
+        resolved = shutil.which(name)
+        if resolved:
+            return resolved
+
+        if status_path is not None:
+            last_status = read_json(status_path)
+            if str(last_status.get("status") or "").upper() == "BLOCKED":
+                detail = str(last_status.get("error") or last_status.get("operatorAction") or "unknown integrity blocker")
+                raise RuntimeError(f"required executable {name} is blocked by pinned FFmpeg provisioning: {detail}")
+
+        if time.monotonic() >= deadline:
+            state = str(last_status.get("status") or "MISSING")
+            detail = str(last_status.get("error") or last_status.get("operatorAction") or "no worker status")
+            raise RuntimeError(
+                f"required executable not found in PATH after {int(timeout)} seconds: {name}; "
+                f"FFmpeg worker status={state}; detail={detail}"
+            )
+        time.sleep(2.0)
 
 
 def sha256_file(path: Path) -> str:

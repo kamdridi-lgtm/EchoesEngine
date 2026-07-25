@@ -27,6 +27,15 @@ function Get-StateProperty {
     return $property.Value
 }
 
+function Read-PidFile {
+    param([string]$Name)
+    $path = Join-Path $runtimeRoot $Name
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
+    $raw = (Get-Content -LiteralPath $path -Raw -ErrorAction SilentlyContinue).Trim()
+    if ($raw -match '^\d+$') { return [int]$raw }
+    return $null
+}
+
 function Stop-VerifiedProcess {
     param(
         [object]$ProcessId,
@@ -63,13 +72,14 @@ while ((Get-Date) -lt $deadline) {
 
 $state = Get-State
 if ($state) {
-    Stop-VerifiedProcess -ProcessId (Get-StateProperty -State $state -Name "providerPid") -RequiredCommandFragments @("modelscope_low_vram_provider.py", "modelscope_low_vram_provider_v2.py", "mock_health_provider.py") | Out-Null
+    Stop-VerifiedProcess -ProcessId (Get-StateProperty -State $state -Name "providerPid") -RequiredCommandFragments @("modelscope_low_vram_provider.py", "modelscope_low_vram_provider_v2.py", "mock_health_provider.py", "provider_bootstrap_health_bridge.py") | Out-Null
     Stop-VerifiedProcess -ProcessId (Get-StateProperty -State $state -Name "providerWorkerPid") -RequiredCommandFragments @("echoes-cinema-provider-worker.ps1") | Out-Null
     Stop-VerifiedProcess -ProcessId (Get-StateProperty -State $state -Name "servicePid") -RequiredCommandFragments @("cinema_control_center.py") | Out-Null
     Stop-VerifiedProcess -ProcessId (Get-StateProperty -State $state -Name "supervisorPid") -RequiredCommandFragments @("echoes-cinema-stack-supervisor.ps1") | Out-Null
 }
+Stop-VerifiedProcess -ProcessId (Read-PidFile -Name "ffmpeg-worker.pid") -RequiredCommandFragments @("echoes-cinema-ffmpeg-worker.ps1") | Out-Null
 
-foreach ($pidFile in @("provider.pid", "provider-worker.pid", "service.pid", "supervisor.pid")) {
+foreach ($pidFile in @("provider.pid", "provider-worker.pid", "service.pid", "supervisor.pid", "ffmpeg-worker.pid")) {
     Remove-Item -LiteralPath (Join-Path $runtimeRoot $pidFile) -Force -ErrorAction SilentlyContinue
 }
 Write-Host "Echoes Cinema stack stopped. Workspace preserved: $workspace"

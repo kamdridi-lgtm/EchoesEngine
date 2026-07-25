@@ -133,12 +133,13 @@ if (-not $workspaceDrive -or $workspaceDrive.TrimEnd("\").ToUpperInvariant() -eq
 }
 
 $installRoot = Join-Path $workspace ([string]$lock.installRelativePath).Replace("/", "\")
+$installParent = Split-Path -Parent $installRoot
 $binPath = Join-Path $installRoot "bin"
 $runtimeRoot = Join-Path $workspace "runtime"
 $tempRoot = Join-Path $workspace "temp\ffmpeg-provision"
 $backupRoot = Join-Path $workspace "backups\ffmpeg"
 $evidencePath = Join-Path $runtimeRoot "ffmpeg-runtime.json"
-foreach ($directory in @($runtimeRoot, $tempRoot, $backupRoot)) { New-Item -ItemType Directory -Path $directory -Force | Out-Null }
+foreach ($directory in @($runtimeRoot, $tempRoot, $backupRoot, $installParent)) { New-Item -ItemType Directory -Path $directory -Force | Out-Null }
 
 $current = Test-InstalledRuntime -BinPath $binPath -Lock $lock
 if ($current.healthy) {
@@ -168,7 +169,7 @@ if ($current.healthy) {
 
 $asset = Get-PinnedReleaseAsset -Lock $lock
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$archivePath = Join-Path $tempRoot "$($lock.assetName).$stamp.download"
+$archivePath = Join-Path $tempRoot "$stamp-$($lock.assetName)"
 $extractPath = Join-Path $tempRoot "extract-$stamp"
 $stagedInstall = Join-Path $tempRoot "install-$stamp"
 New-Item -ItemType Directory -Path $extractPath, (Join-Path $stagedInstall "bin") -Force | Out-Null
@@ -184,7 +185,9 @@ try {
     $ffprobeSource = Get-ChildItem -LiteralPath $extractPath -Filter "ffprobe.exe" -File -Recurse | Select-Object -First 1
     if (-not $ffmpegSource -or -not $ffprobeSource) { throw "Pinned FFmpeg archive does not contain ffmpeg.exe and ffprobe.exe." }
     if ($ffmpegSource.DirectoryName -ne $ffprobeSource.DirectoryName) { throw "FFmpeg and FFprobe were found in different archive directories." }
-    Copy-Item -LiteralPath (Join-Path $ffmpegSource.DirectoryName "*") -Destination (Join-Path $stagedInstall "bin") -Force -Recurse
+    Get-ChildItem -LiteralPath $ffmpegSource.DirectoryName -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $stagedInstall "bin") -Force -Recurse
+    }
     $staged = Test-InstalledRuntime -BinPath (Join-Path $stagedInstall "bin") -Lock $lock
     if (-not $staged.healthy) {
         throw "Extracted FFmpeg runtime does not report the pinned version. FFmpeg=$($staged.ffmpegVersionLine) FFprobe=$($staged.ffprobeVersionLine)"
@@ -221,8 +224,24 @@ try {
         systemDriveWritesAllowed = $false
     }
     Write-Output $binPath
+} catch {
+    Write-AtomicJson -Path $evidencePath -Payload @{
+        schema = "echoes.ffmpeg-runtime.v1"
+        status = "BROKEN"
+        timestampUtc = [DateTime]::UtcNow.ToString("o")
+        sourceRepository = $lock.repository
+        releaseTag = $lock.releaseTag
+        assetName = $lock.assetName
+        installRoot = $installRoot
+        binPath = $binPath
+        error = $_.Exception.Message
+        networkMetadataRequested = $true
+        systemDriveWritesAllowed = $false
+    }
+    throw
 } finally {
     Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $extractPath -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $stagedInstall -Recurse -Force -ErrorAction SilentlyContinue
 }
+exit 0
