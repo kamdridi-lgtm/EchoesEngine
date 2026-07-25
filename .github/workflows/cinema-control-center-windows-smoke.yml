@@ -32,6 +32,7 @@ jobs:
             tools/assemble_render.py
             tools/cinema_control_center.py
             tools/cinema_p0_autopilot.py
+            tools/cinema_real_input_audio.py
             tools/cinema_job_ledger.py
             tools/cinema_job_runner.py
             tools/cinema_job_scheduler.py
