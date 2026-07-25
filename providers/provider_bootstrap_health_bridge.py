@@ -64,7 +64,7 @@ def health_payload(status_path: Path) -> dict[str, Any]:
         "retryable": retryable,
         "operatorAction": operator_action,
         "automaticRetry": retryable,
-        "operatorRestartRequired": False,
+        "operatorRestartRequired": bool(worker.get("operatorRestartRequired", False)),
         "recoveryCount": int(worker.get("recoveryCount", 0) or 0),
         "nextRetryUtc": worker.get("nextRetryUtc"),
         "lastAttemptUtc": worker.get("timestampUtc"),
@@ -72,13 +72,15 @@ def health_payload(status_path: Path) -> dict[str, Any]:
         "workspaceFreeGiB": worker.get("workspaceFreeGiB"),
         "minimumFreeGiB": worker.get("minimumFreeGiB"),
         "lastLoadError": worker.get("error"),
+        "torchVersion": worker.get("torchVersion"),
+        "torchCudaVersion": worker.get("torchCudaVersion"),
         "bootstrapBridge": True,
         "workerStatus": worker_status,
     }
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "EchoesProviderBootstrapBridge/1.0"
+    server_version = "EchoesProviderBootstrapBridge/1.1"
 
     def _write_json(self, status: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, sort_keys=True).encode("utf-8")
@@ -97,12 +99,20 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         if self.path.rstrip("/") == "/v1/render":
+            health = health_payload(self.server.status_path)
             self._write_json(
                 503,
                 {
-                    "status": "PARTIAL",
+                    "schema": "echoes.render-provider-readiness.v1",
+                    "status": "BROKEN" if health.get("loadState") == "BLOCKED" else "PARTIAL",
                     "backendStatus": "PARTIAL",
-                    "error": "The real provider is still preparing. Render work was not accepted.",
+                    "error": "The real provider is not ready. Render work was not accepted.",
+                    "realModelLoaded": False,
+                    "loadState": health.get("loadState"),
+                    "failureClass": health.get("failureClass"),
+                    "retryable": health.get("retryable"),
+                    "operatorAction": health.get("operatorAction"),
+                    "operatorRestartRequired": health.get("operatorRestartRequired"),
                 },
             )
             return
@@ -124,6 +134,34 @@ def run_self_test() -> int:
     with tempfile.TemporaryDirectory() as temp:
         status_path = Path(temp) / "provider-worker-status.json"
         status_path.write_text(json.dumps({"status": "BOOTSTRAPPING", "recoveryCount": 0}), encoding="utf-8")
+        loading = health_payload(status_path)
+        assert loading["realModelLoaded"] is False
+        assert loading["loadState"] == "LOADING"
+        assert loading["bootstrapBridge"] is True
+        assert loading["operatorRestartRequired"] is False
+
+        status_path.write_text(
+            json.dumps(
+                {
+                    "status": "BLOCKED",
+                    "failureClass": "CUDA_RUNTIME_UNAVAILABLE",
+                    "retryable": False,
+                    "operatorRestartRequired": True,
+                    "operatorAction": "Restart after updating the NVIDIA driver.",
+                    "error": "torch.cuda.is_available() is false",
+                    "torchVersion": "2.x+cu128",
+                    "torchCudaVersion": "12.8",
+                }
+            ),
+            encoding="utf-8",
+        )
+        blocked = health_payload(status_path)
+        assert blocked["loadState"] == "BLOCKED"
+        assert blocked["automaticRetry"] is False
+        assert blocked["operatorRestartRequired"] is True
+        assert blocked["failureClass"] == "CUDA_RUNTIME_UNAVAILABLE"
+        assert blocked["torchCudaVersion"] == "12.8"
+
         server = Server(("127.0.0.1", 0), status_path)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -132,14 +170,13 @@ def run_self_test() -> int:
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=3) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             assert response.status == 200
-            assert payload["realModelLoaded"] is False
-            assert payload["loadState"] == "LOADING"
-            assert payload["bootstrapBridge"] is True
+            assert payload["loadState"] == "BLOCKED"
+            assert payload["operatorRestartRequired"] is True
         finally:
             server.shutdown()
             server.server_close()
             thread.join(timeout=3)
-    print("provider bootstrap health bridge self-test PASS")
+    print("provider bootstrap health bridge self-test PASS loading=online blocked=truthful render=fail-closed")
     return 0
 
 
