@@ -1,0 +1,17 @@
+{
+  "schema": "echoes.torch-runtime-lock.v1",
+  "torchVersion": "2.7.1",
+  "torchvisionVersion": "0.22.1",
+  "cudaTag": "cu118",
+  "expectedTorchCudaVersion": "11.8",
+  "indexUrl": "https://download.pytorch.org/whl/cu118",
+  "platforms": [
+    "Windows",
+    "Linux"
+  ],
+  "pythonVersions": [
+    "3.10",
+    "3.11"
+  ],
+  "purpose": "first-real-ai-video-proof-low-vram"
+}
