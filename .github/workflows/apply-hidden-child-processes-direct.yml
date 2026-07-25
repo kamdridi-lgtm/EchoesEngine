@@ -23,68 +23,63 @@ jobs:
           ref: fix/hidden-child-processes-direct-2026-07-25
 
       - name: Patch the real launcher sources
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_required(path: Path, old: str, new: str) -> None:
+              text = path.read_text(encoding="utf-8-sig")
+              if new in text:
+                  return
+              if old not in text:
+                  raise SystemExit(f"Required source token was not found in {path}: {old}")
+              path.write_text(text.replace(old, new), encoding="utf-8", newline="\n")
+
+          supervisor = Path("scripts/echoes-cinema-stack-supervisor.ps1")
+          replace_required(
+              supervisor,
+              "-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -PassThru",
+              "-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -WindowStyle Hidden -PassThru",
+          )
+
+          worker = Path("scripts/echoes-cinema-provider-worker.ps1")
+          replace_required(
+              worker,
+              "-RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru",
+              "-RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru",
+          )
+          replace_required(
+              worker,
+              "-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -PassThru",
+              "-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -WindowStyle Hidden -PassThru",
+          )
+          old_bootstrap = "            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $bootstrap -VenvPath $venvRoot -TorchIndexUrl $TorchIndexUrl\n            $bootstrapExit = $LASTEXITCODE"
+          new_bootstrap = "\n".join([
+              "            $bootstrapArguments = @(",
+              "                \"-NoProfile\", \"-ExecutionPolicy\", \"Bypass\",",
+              "                \"-File\", $bootstrap,",
+              "                \"-VenvPath\", $venvRoot,",
+              "                \"-TorchIndexUrl\", $TorchIndexUrl",
+              "            )",
+              "            $bootstrapProcess = Start-Process -FilePath \"powershell.exe\" -ArgumentList $bootstrapArguments -WindowStyle Hidden -Wait -PassThru",
+              "            $bootstrapExit = $bootstrapProcess.ExitCode",
+          ])
+          replace_required(worker, old_bootstrap, new_bootstrap)
+
+          text = worker.read_text(encoding="utf-8")
+          provider_old = "Start-Process -FilePath $venvPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru"
+          provider_new = "Start-Process -FilePath $venvPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru"
+          if provider_old in text:
+              worker.write_text(text.replace(provider_old, provider_new), encoding="utf-8", newline="\n")
+
+      - name: Parse and validate repaired PowerShell
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-
-          function Replace-Required {
-            param(
-              [string]$Path,
-              [string]$Old,
-              [string]$New
-            )
-            $text = Get-Content -LiteralPath $Path -Raw
-            if ($text.Contains($New)) {
-              Write-Host "Already repaired: $Path"
-              return
-            }
-            if (-not $text.Contains($Old)) {
-              throw "Required source token was not found in $Path"
-            }
-            $text = $text.Replace($Old, $New)
-            [System.IO.File]::WriteAllText($Path, $text, [System.Text.UTF8Encoding]::new($false))
-          }
-
           $supervisorPath = 'scripts/echoes-cinema-stack-supervisor.ps1'
-          Replace-Required -Path $supervisorPath `
-            -Old '-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -PassThru' `
-            -New '-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -WindowStyle Hidden -PassThru'
-
           $workerPath = 'scripts/echoes-cinema-provider-worker.ps1'
-          Replace-Required -Path $workerPath `
-            -Old '-RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru' `
-            -New '-RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru'
-          Replace-Required -Path $workerPath `
-            -Old '-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -PassThru' `
-            -New '-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -WindowStyle Hidden -PassThru'
-
-          $oldBootstrap = @'
-            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $bootstrap -VenvPath $venvRoot -TorchIndexUrl $TorchIndexUrl
-            $bootstrapExit = $LASTEXITCODE
-'@
-          $newBootstrap = @'
-            $bootstrapArguments = @(
-                "-NoProfile", "-ExecutionPolicy", "Bypass",
-                "-File", $bootstrap,
-                "-VenvPath", $venvRoot,
-                "-TorchIndexUrl", $TorchIndexUrl
-            )
-            $bootstrapProcess = Start-Process -FilePath "powershell.exe" -ArgumentList $bootstrapArguments -WindowStyle Hidden -Wait -PassThru
-            $bootstrapExit = $bootstrapProcess.ExitCode
-'@
-          Replace-Required -Path $workerPath -Old $oldBootstrap -New $newBootstrap
-
-          $worker = Get-Content -LiteralPath $workerPath -Raw
-          $providerOld = 'Start-Process -FilePath $venvPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru'
-          $providerNew = 'Start-Process -FilePath $venvPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru'
-          if ($worker.Contains($providerOld)) {
-            $worker = $worker.Replace($providerOld, $providerNew)
-            [System.IO.File]::WriteAllText($workerPath, $worker, [System.Text.UTF8Encoding]::new($false))
-          }
-
           [void][scriptblock]::Create((Get-Content -LiteralPath $supervisorPath -Raw))
           [void][scriptblock]::Create((Get-Content -LiteralPath $workerPath -Raw))
-
           $combined = (Get-Content -LiteralPath $supervisorPath -Raw) + (Get-Content -LiteralPath $workerPath -Raw)
           foreach ($token in @(
             '-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -WindowStyle Hidden -PassThru',
