@@ -5,8 +5,11 @@ on:
     paths:
       - "providers/ffmpeg-runtime-lock.json"
       - "scripts/ensure-ffmpeg-on-d.ps1"
+      - "scripts/echoes-cinema-ffmpeg-worker.ps1"
       - "scripts/start-echoes-cinema-stack.ps1"
+      - "scripts/stop-echoes-cinema-stack.ps1"
       - "scripts/one-click-echoes-cinema.ps1"
+      - "tools/assemble_render.py"
       - ".github/workflows/cinema-ffmpeg-runtime-provision.yml"
   push:
     branches:
@@ -14,8 +17,11 @@ on:
     paths:
       - "providers/ffmpeg-runtime-lock.json"
       - "scripts/ensure-ffmpeg-on-d.ps1"
+      - "scripts/echoes-cinema-ffmpeg-worker.ps1"
       - "scripts/start-echoes-cinema-stack.ps1"
+      - "scripts/stop-echoes-cinema-stack.ps1"
       - "scripts/one-click-echoes-cinema.ps1"
+      - "tools/assemble_render.py"
       - ".github/workflows/cinema-ffmpeg-runtime-provision.yml"
 
 permissions:
@@ -39,44 +45,54 @@ jobs:
           sparse-checkout: |
             providers/ffmpeg-runtime-lock.json
             scripts/ensure-ffmpeg-on-d.ps1
+            scripts/echoes-cinema-ffmpeg-worker.ps1
             scripts/start-echoes-cinema-stack.ps1
+            scripts/stop-echoes-cinema-stack.ps1
             scripts/one-click-echoes-cinema.ps1
+            tools/assemble_render.py
           sparse-checkout-cone-mode: false
 
-      - name: Parse PowerShell provisioning chain
+      - name: Parse provisioning and nonblocking launch chain
         shell: pwsh
         run: |
           foreach ($path in @(
             'scripts/ensure-ffmpeg-on-d.ps1',
+            'scripts/echoes-cinema-ffmpeg-worker.ps1',
             'scripts/start-echoes-cinema-stack.ps1',
+            'scripts/stop-echoes-cinema-stack.ps1',
             'scripts/one-click-echoes-cinema.ps1'
           )) {
             [void][scriptblock]::Create((Get-Content -LiteralPath $path -Raw))
             Write-Host "PASS $path"
           }
+          python -m py_compile tools/assemble_render.py
 
-      - name: Prove exact lock and required GitHub digest
+      - name: Prove exact lock and worker classifications
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           & scripts/ensure-ffmpeg-on-d.ps1 -SelfTest
           if ($LASTEXITCODE -ne 0) { throw "FFmpeg lock self-test failed" }
+          & scripts/echoes-cinema-ffmpeg-worker.ps1 -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "FFmpeg worker self-test failed" }
           $raw = & scripts/ensure-ffmpeg-on-d.ps1 -MetadataOnly
           if ($LASTEXITCODE -ne 0) { throw "Pinned FFmpeg release metadata lookup failed" }
           $metadata = ($raw -join "`n") | ConvertFrom-Json
           if ($metadata.status -ne 'PASS') { throw "Pinned FFmpeg metadata did not pass" }
           if ([string]$metadata.asset.digest -notmatch '^sha256:[0-9a-f]{64}$') { throw "Pinned asset digest is missing" }
           if ([string]$metadata.asset.assetName -ne 'ffmpeg-8.1.2-essentials_build.zip') { throw "Unexpected FFmpeg asset" }
-          Write-Host "Pinned FFmpeg metadata PASS digest=$($metadata.asset.digest)"
 
-      - name: Verify fail-closed storage and evidence contract
+      - name: Verify nonblocking, fail-closed, and packaging contract
         shell: pwsh
         run: |
           $lock = Get-Content -LiteralPath 'providers/ffmpeg-runtime-lock.json' -Raw
           $script = Get-Content -LiteralPath 'scripts/ensure-ffmpeg-on-d.ps1' -Raw
+          $worker = Get-Content -LiteralPath 'scripts/echoes-cinema-ffmpeg-worker.ps1' -Raw
           $start = Get-Content -LiteralPath 'scripts/start-echoes-cinema-stack.ps1' -Raw
+          $stop = Get-Content -LiteralPath 'scripts/stop-echoes-cinema-stack.ps1' -Raw
           $oneClick = Get-Content -LiteralPath 'scripts/one-click-echoes-cinema.ps1' -Raw
+          $assembler = Get-Content -LiteralPath 'tools/assemble_render.py' -Raw
           foreach ($token in @(
             '"repository": "GyanD/codexffmpeg"',
             '"releaseTag": "8.1.2"',
@@ -86,21 +102,24 @@ jobs:
             if (-not $lock.Contains($token)) { throw "FFmpeg lock missing token: $token" }
           }
           foreach ($token in @(
-            'asset.digest',
-            'Get-FileHash',
-            'SHA-256 mismatch',
-            'ffmpeg.exe',
-            'ffprobe.exe',
-            'backups\ffmpeg',
-            'networkMetadataRequested = $false',
-            'systemDriveWritesAllowed = $false'
+            'asset.digest', 'Get-FileHash', 'SHA-256 mismatch', 'ffmpeg.exe', 'ffprobe.exe',
+            'backups\ffmpeg', 'networkMetadataRequested = $false', 'systemDriveWritesAllowed = $false'
           )) {
             if (-not $script.Contains($token)) { throw "Provisioner missing safety token: $token" }
           }
-          if (-not $start.Contains('ensure-ffmpeg-on-d.ps1')) { throw 'Start stack does not provision FFmpeg' }
-          if (-not $start.Contains('$env:PATH = "$ffmpegBin;$env:PATH"')) { throw 'Start stack does not propagate pinned FFmpeg PATH' }
-          if (-not $oneClick.Contains('providers/ffmpeg-runtime-lock.json')) { throw 'One-click does not sync FFmpeg lock' }
-          if (-not $oneClick.Contains('scripts/ensure-ffmpeg-on-d.ps1')) { throw 'One-click does not sync FFmpeg provisioner' }
+          foreach ($token in @('RETRY_WAIT', 'FFMPEG_RUNTIME_INTEGRITY_BLOCKER', 'FFMPEG_RUNTIME_TRANSIENT', 'stop.signal')) {
+            if (-not $worker.Contains($token)) { throw "Worker missing recovery token: $token" }
+          }
+          if ($start.Contains('& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ensureFfmpeg')) { throw 'Start stack still blocks on synchronous FFmpeg provisioning' }
+          if (-not $start.Contains('Start-FfmpegWorker')) { throw 'Start stack does not launch background FFmpeg worker' }
+          if (-not $start.Contains('$env:PATH = "$ffmpegBin;$env:PATH"')) { throw 'Start stack does not propagate deterministic FFmpeg PATH' }
+          if (-not $stop.Contains('ffmpeg-worker.pid')) { throw 'Stop stack does not clean FFmpeg worker' }
+          foreach ($token in @('providers/ffmpeg-runtime-lock.json', 'scripts/ensure-ffmpeg-on-d.ps1', 'scripts/echoes-cinema-ffmpeg-worker.ps1')) {
+            if (-not $oneClick.Contains($token)) { throw "One-click missing FFmpeg package file: $token" }
+          }
+          foreach ($token in @('ECHOES_CINEMA_MEDIA_TOOL_WAIT_SECONDS', 'ffmpeg-worker-status.json', 'time.sleep(2.0)')) {
+            if (-not $assembler.Contains($token)) { throw "Assembler missing media wait token: $token" }
+          }
 
       - name: Download, verify, install, and reuse pinned Windows runtime
         if: runner.os == 'Windows'
