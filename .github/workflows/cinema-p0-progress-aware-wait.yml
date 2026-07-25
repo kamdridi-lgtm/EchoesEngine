@@ -49,7 +49,9 @@ jobs:
           tools/cinema_job_service_durable.py
 
       - name: Prove progress-aware wait policy
-        run: python tools/cinema_control_center.py --self-test
+        run: >-
+          python -c
+          "import sys; sys.path.insert(0, 'tools'); import cinema_control_center as control; raise SystemExit(control.self_test())"
 
       - name: Verify no fixed total wait regression
         shell: pwsh
