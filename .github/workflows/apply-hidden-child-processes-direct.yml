@@ -1,0 +1,110 @@
+name: Apply Direct Hidden Child Process Repair
+
+on:
+  push:
+    branches:
+      - fix/hidden-child-processes-direct-2026-07-25
+
+permissions:
+  contents: write
+
+jobs:
+  apply-direct-source-repair:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/hidden-child-processes-direct-2026-07-25
+
+      - name: Patch the real launcher sources
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          function Replace-Required {
+            param(
+              [string]$Path,
+              [string]$Old,
+              [string]$New
+            )
+            $text = Get-Content -LiteralPath $Path -Raw
+            if ($text.Contains($New)) {
+              Write-Host "Already repaired: $Path"
+              return
+            }
+            if (-not $text.Contains($Old)) {
+              throw "Required source token was not found in $Path"
+            }
+            $text = $text.Replace($Old, $New)
+            [System.IO.File]::WriteAllText($Path, $text, [System.Text.UTF8Encoding]::new($false))
+          }
+
+          $supervisorPath = 'scripts/echoes-cinema-stack-supervisor.ps1'
+          Replace-Required -Path $supervisorPath `
+            -Old '-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -PassThru' `
+            -New '-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -WindowStyle Hidden -PassThru'
+
+          $workerPath = 'scripts/echoes-cinema-provider-worker.ps1'
+          Replace-Required -Path $workerPath `
+            -Old '-RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru' `
+            -New '-RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru'
+          Replace-Required -Path $workerPath `
+            -Old '-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -PassThru' `
+            -New '-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -WindowStyle Hidden -PassThru'
+
+          $oldBootstrap = @'
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $bootstrap -VenvPath $venvRoot -TorchIndexUrl $TorchIndexUrl
+            $bootstrapExit = $LASTEXITCODE
+'@
+          $newBootstrap = @'
+            $bootstrapArguments = @(
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", $bootstrap,
+                "-VenvPath", $venvRoot,
+                "-TorchIndexUrl", $TorchIndexUrl
+            )
+            $bootstrapProcess = Start-Process -FilePath "powershell.exe" -ArgumentList $bootstrapArguments -WindowStyle Hidden -Wait -PassThru
+            $bootstrapExit = $bootstrapProcess.ExitCode
+'@
+          Replace-Required -Path $workerPath -Old $oldBootstrap -New $newBootstrap
+
+          $worker = Get-Content -LiteralPath $workerPath -Raw
+          $providerOld = 'Start-Process -FilePath $venvPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru'
+          $providerNew = 'Start-Process -FilePath $venvPython -ArgumentList $arguments -WorkingDirectory $workspace -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru'
+          if ($worker.Contains($providerOld)) {
+            $worker = $worker.Replace($providerOld, $providerNew)
+            [System.IO.File]::WriteAllText($workerPath, $worker, [System.Text.UTF8Encoding]::new($false))
+          }
+
+          [void][scriptblock]::Create((Get-Content -LiteralPath $supervisorPath -Raw))
+          [void][scriptblock]::Create((Get-Content -LiteralPath $workerPath -Raw))
+
+          $combined = (Get-Content -LiteralPath $supervisorPath -Raw) + (Get-Content -LiteralPath $workerPath -Raw)
+          foreach ($token in @(
+            '-RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr -WindowStyle Hidden -PassThru',
+            '-RedirectStandardOutput $providerWorkerStdout -RedirectStandardError $providerWorkerStderr -WindowStyle Hidden -PassThru',
+            '-RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru',
+            '-RedirectStandardOutput $bridgeStdout -RedirectStandardError $bridgeStderr -WindowStyle Hidden -PassThru',
+            '-WindowStyle Hidden -Wait -PassThru'
+          )) {
+            if (-not $combined.Contains($token)) { throw "Repair validation failed: $token" }
+          }
+          if ($combined.Contains('& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $bootstrap')) {
+            throw 'Visible bootstrap invocation remains after repair.'
+          }
+
+      - name: Commit direct source changes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'Echoes Cinema Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add scripts/echoes-cinema-stack-supervisor.ps1 scripts/echoes-cinema-provider-worker.ps1
+          if (git diff --cached --quiet) {
+            Write-Host 'Direct launcher sources were already repaired.'
+            exit 0
+          }
+          git commit -m 'Hide every Echoes Cinema child process window'
+          git push origin HEAD:fix/hidden-child-processes-direct-2026-07-25
