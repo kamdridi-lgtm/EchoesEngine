@@ -1,0 +1,100 @@
+name: Echoes K-Core Read-Only Plan Endpoint
+
+on:
+  pull_request:
+    paths:
+      - "config/echoes-capability-registry.v1.json"
+      - "tools/cinema_control_center.py"
+      - "tools/cinema_planning.py"
+      - "tools/kcore_mission_planner.py"
+      - "tests/test_kcore_plan_endpoint.py"
+      - ".github/workflows/echoes-kcore-plan-endpoint.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "config/echoes-capability-registry.v1.json"
+      - "tools/cinema_control_center.py"
+      - "tools/cinema_planning.py"
+      - "tools/kcore_mission_planner.py"
+      - "tests/test_kcore_plan_endpoint.py"
+      - ".github/workflows/echoes-kcore-plan-endpoint.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-plan-endpoint:
+    name: Read-only K-Core planning (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout planning and control-center sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            config/echoes-capability-registry.v1.json
+            providers/ffmpeg-runtime-lock.json
+            providers/requirements-diffusers.txt
+            providers/torch-runtime-lock.json
+            tests/test_kcore_plan_endpoint.py
+            tools
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile planning chain
+        run: >-
+          python -m py_compile
+          tools/cinema_control_center.py
+          tools/cinema_control_center_base.py
+          tools/cinema_runtime_inventory.py
+          tools/cinema_planning.py
+          tools/kcore_mission_planner.py
+          tools/cinema_job_service.py
+          tools/cinema_job_service_durable.py
+          tests/test_kcore_plan_endpoint.py
+
+      - name: Prove planner and authenticated read-only endpoint
+        run: |
+          python tools/kcore_mission_planner.py --self-test
+          python tools/cinema_planning.py
+          python tests/test_kcore_plan_endpoint.py
+
+      - name: Verify no execution or secret regression
+        shell: pwsh
+        run: |
+          $center = Get-Content -LiteralPath 'tools/cinema_control_center.py' -Raw
+          $planning = Get-Content -LiteralPath 'tools/cinema_planning.py' -Raw
+          foreach ($token in @(
+            '/v1/cinema/plan',
+            'require_authorized',
+            'kcore.plan-request.v1',
+            'readOnly',
+            'jobSubmitted',
+            'mutationsAllowed',
+            'INVALID_PLANNING_INPUT',
+            'PLANNING_SERVICE_UNAVAILABLE',
+            'provider-health'
+          )) {
+            if (-not (($center + $planning).Contains($token))) {
+              throw "Read-only planning contract token missing: $token"
+            }
+          }
+          if ($planning.Contains('subprocess') -or $planning.Contains('shell=True')) {
+            throw 'Planning bridge must never execute a process'
+          }
+          if ($center.Contains('ECHOES_RENDER_TOKEN =') -or $center.Contains('ECHOES_CINEMA_SERVICE_TOKEN =')) {
+            throw 'Planning entrypoint must not persist tokens'
+          }
+          Write-Host 'Authenticated read-only K-Core planning endpoint contract PASS'
