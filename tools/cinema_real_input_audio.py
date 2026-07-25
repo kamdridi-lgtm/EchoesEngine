@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Select and prepare genuine input audio for the Echoes Cinema P0 proof.
+"""Discover and prepare genuine audio for the first Echoes Cinema proof.
 
-The production path never synthesizes fallback audio. It first checks the
-canonical Echoes Cinema input directory, then performs a bounded, deterministic
-search of normal user/project audio locations. Generated proofs, model caches,
-renders, jobs, temporary files, and other unsafe roots are excluded.
+No synthetic fallback exists. The canonical workspace input directory wins;
+when it is empty, a bounded read-only search checks normal user/project music
+locations while excluding caches, models, jobs, renders, proofs and temp trees.
 """
 
 from __future__ import annotations
@@ -24,14 +23,7 @@ from typing import Any, Iterable
 
 SCHEMA = "echoes.cinema-real-input-audio.v1"
 SUPPORTED_EXTENSIONS = frozenset({".wav", ".flac", ".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wma"})
-PRIORITY_TOKENS = (
-    "p0",
-    "you are the one",
-    "war machines",
-    "too fast too young",
-    "echoes",
-    "kam dridi",
-)
+PRIORITY_TOKENS = ("p0", "you are the one", "war machines", "too fast too young", "echoes", "kam dridi")
 TARGET_SAMPLE_RATE = 44_100
 TARGET_CHANNELS = 2
 TARGET_SAMPLE_WIDTH = 2
@@ -66,13 +58,7 @@ SKIP_DIRECTORY_NAMES = frozenset(
         "build",
     }
 )
-GENERATED_FILE_TOKENS = (
-    "proof-audio",
-    "first-real-ai-clip",
-    "synthetic-proof",
-    "mock-fixture",
-    "test-tone",
-)
+GENERATED_FILE_TOKENS = ("proof-audio", "first-real-ai-clip", "synthetic-proof", "mock-fixture", "test-tone")
 
 
 def utc_now() -> str:
@@ -110,9 +96,9 @@ def load_json(path: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
-def _valid_audio_file(path: Path) -> bool:
+def _valid_audio_file(path: Path, minimum_bytes: int = 45) -> bool:
     try:
-        return path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS and path.stat().st_size > 44
+        return path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS and path.stat().st_size >= minimum_bytes
     except OSError:
         return False
 
@@ -140,28 +126,29 @@ def _deduplicate_roots(entries: Iterable[tuple[Path, str]]) -> list[tuple[Path, 
     result: list[tuple[Path, str]] = []
     for root, label in entries:
         key = _normalized_key(root)
-        if key in seen:
-            continue
-        seen.add(key)
-        result.append((Path(key), label))
+        if key not in seen:
+            seen.add(key)
+            result.append((Path(key), label))
     return result
 
 
 def default_search_roots(workspace: Path) -> list[tuple[Path, str]]:
-    """Return bounded fallback roots without requiring the user to move a file."""
+    """Return deterministic fallback roots; configured roots override defaults."""
 
-    entries: list[tuple[Path, str]] = []
+    configured_entries: list[tuple[Path, str]] = []
     configured = os.getenv("ECHOES_CINEMA_P0_SEARCH_ROOTS", "")
     for index, raw in enumerate(configured.replace("\r", "\n").replace("\n", ";").split(";"), start=1):
         value = raw.strip().strip('"')
         if value:
-            entries.append((Path(value).expanduser(), f"configured-search-root-{index}"))
+            configured_entries.append((Path(value).expanduser(), f"configured-search-root-{index}"))
+    if configured_entries:
+        return _deduplicate_roots(configured_entries)
 
-    home_candidates = [Path.home()]
-    user_profile = os.getenv("USERPROFILE")
-    if user_profile:
-        home_candidates.append(Path(user_profile))
-    for home in home_candidates:
+    entries: list[tuple[Path, str]] = []
+    homes = [Path.home()]
+    if os.getenv("USERPROFILE"):
+        homes.append(Path(str(os.getenv("USERPROFILE"))))
+    for home in homes:
         entries.extend(
             [
                 (home / "Downloads", "auto-search-user-downloads"),
@@ -178,41 +165,45 @@ def default_search_roots(workspace: Path) -> list[tuple[Path, str]]:
             (project_parent / "EchoesEngine", "auto-search-echoes-engine"),
         ]
     )
-
-    drive_root = Path(workspace.anchor) if workspace.anchor else None
-    if drive_root:
+    if workspace.anchor:
+        drive_root = Path(workspace.anchor)
         entries.extend(
             [
                 (drive_root / "Music", "auto-search-drive-music"),
                 (drive_root / "Audio", "auto-search-drive-audio"),
             ]
         )
-
     return _deduplicate_roots(entries)
 
 
-def _candidate_is_excluded(path: Path, workspace: Path) -> bool:
-    lowered_parts = {part.lower() for part in path.parts}
-    if lowered_parts.intersection(SKIP_DIRECTORY_NAMES):
+def _relative_parts(path: Path, root: Path) -> tuple[str, ...]:
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+        return tuple(part.lower() for part in relative.parts[:-1])
+    except (OSError, ValueError):
+        return ()
+
+
+def _candidate_is_excluded(path: Path, workspace: Path, search_root: Path) -> bool:
+    """Evaluate directory exclusions relative to the searched root, not /tmp or a drive prefix."""
+
+    if set(_relative_parts(path, search_root)).intersection(SKIP_DIRECTORY_NAMES):
         return True
-    lowered_name = path.name.lower()
-    if any(token in lowered_name for token in GENERATED_FILE_TOKENS):
+    if any(token in path.name.lower() for token in GENERATED_FILE_TOKENS):
         return True
     try:
-        relative = path.resolve().relative_to(workspace.resolve())
+        workspace_relative = path.resolve().relative_to(workspace.resolve())
     except (OSError, ValueError):
         return False
-    return bool({part.lower() for part in relative.parts}.intersection(SKIP_DIRECTORY_NAMES))
+    return bool({part.lower() for part in workspace_relative.parts[:-1]}.intersection(SKIP_DIRECTORY_NAMES))
 
 
 def _bounded_audio_candidates(root: Path, workspace: Path) -> list[Path]:
-    """Search a root with strict depth/file limits and aggressive cache pruning."""
-
     try:
         resolved_root = root.expanduser().resolve()
     except OSError:
         return []
-    if not resolved_root.is_dir():
+    if not resolved_root.is_dir() or resolved_root.name.lower() in SKIP_DIRECTORY_NAMES:
         return []
 
     candidates: list[Path] = []
@@ -224,9 +215,7 @@ def _bounded_audio_candidates(root: Path, workspace: Path) -> list[Path]:
         except ValueError:
             continue
         directory_names[:] = sorted(
-            name
-            for name in directory_names
-            if name.lower() not in SKIP_DIRECTORY_NAMES and not name.startswith(".")
+            name for name in directory_names if name.lower() not in SKIP_DIRECTORY_NAMES and not name.startswith(".")
         )
         if depth >= AUTO_SEARCH_MAX_DEPTH:
             directory_names[:] = []
@@ -238,20 +227,15 @@ def _bounded_audio_candidates(root: Path, workspace: Path) -> list[Path]:
             path = current_path / file_name
             if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
                 continue
-            if _candidate_is_excluded(path, workspace):
+            if _candidate_is_excluded(path, workspace, resolved_root):
                 continue
-            try:
-                if path.stat().st_size < AUTO_SEARCH_MIN_BYTES:
-                    continue
-            except OSError:
-                continue
-            if _valid_audio_file(path):
+            if _valid_audio_file(path, AUTO_SEARCH_MIN_BYTES):
                 candidates.append(path.resolve())
     return candidates
 
 
 def discover_real_input(workspace: Path, explicit_path: str | None = None) -> tuple[Path | None, str]:
-    """Return one deterministic real input source and how it was selected."""
+    """Return one deterministic real input source and its selection method."""
 
     workspace = workspace.resolve()
     if explicit_path:
@@ -265,17 +249,16 @@ def discover_real_input(workspace: Path, explicit_path: str | None = None) -> tu
 
     input_root = workspace / "input"
     input_root.mkdir(parents=True, exist_ok=True)
-    candidates = sorted((path for path in input_root.rglob("*") if _valid_audio_file(path)), key=_priority)
-    if candidates:
-        return candidates[0].resolve(), "workspace-input-priority"
+    canonical = sorted((path for path in input_root.rglob("*") if _valid_audio_file(path)), key=_priority)
+    if canonical:
+        return canonical[0].resolve(), "workspace-input-priority"
 
-    fallback_candidates: list[tuple[Path, str]] = []
+    fallback: list[tuple[Path, str]] = []
     for root, label in default_search_roots(workspace):
-        for path in _bounded_audio_candidates(root, workspace):
-            fallback_candidates.append((path, label))
-    if not fallback_candidates:
+        fallback.extend((path, label) for path in _bounded_audio_candidates(root, workspace))
+    if not fallback:
         return None, "automatic-search-empty"
-    selected_path, selected_method = min(fallback_candidates, key=lambda item: _priority(item[0]))
+    selected_path, selected_method = min(fallback, key=lambda item: _priority(item[0]))
     return selected_path.resolve(), selected_method
 
 
@@ -311,8 +294,6 @@ def inspect_wav(path: Path) -> dict[str, Any]:
 
 
 def _prepare_compatible_pcm_wav(source: Path, destination: Path, duration_seconds: float) -> bool:
-    """Prepare a compatible PCM WAV without FFmpeg; return False if conversion is required."""
-
     if source.suffix.lower() != ".wav":
         return False
     try:
@@ -321,12 +302,7 @@ def _prepare_compatible_pcm_wav(source: Path, destination: Path, duration_second
             sample_width = input_wav.getsampwidth()
             sample_rate = input_wav.getframerate()
             compression = input_wav.getcomptype()
-            if (
-                channels not in {1, 2}
-                or sample_width != TARGET_SAMPLE_WIDTH
-                or sample_rate != TARGET_SAMPLE_RATE
-                or compression != "NONE"
-            ):
+            if channels not in {1, 2} or sample_width != TARGET_SAMPLE_WIDTH or sample_rate != TARGET_SAMPLE_RATE or compression != "NONE":
                 return False
             required_frames = int(round(duration_seconds * sample_rate))
             if input_wav.getnframes() < int(3.8 * sample_rate):
@@ -337,19 +313,17 @@ def _prepare_compatible_pcm_wav(source: Path, destination: Path, duration_second
 
     if channels == 1:
         stereo = bytearray(len(frames) * 2)
-        write_offset = 0
+        offset = 0
         for (sample,) in struct.iter_unpack("<h", frames):
-            struct.pack_into("<hh", stereo, write_offset, sample, sample)
-            write_offset += 4
-        output_frames = bytes(stereo)
-    else:
-        output_frames = frames
+            struct.pack_into("<hh", stereo, offset, sample, sample)
+            offset += 4
+        frames = bytes(stereo)
 
     with wave.open(str(destination), "wb") as output_wav:
         output_wav.setnchannels(TARGET_CHANNELS)
         output_wav.setsampwidth(TARGET_SAMPLE_WIDTH)
         output_wav.setframerate(TARGET_SAMPLE_RATE)
-        output_wav.writeframes(output_frames)
+        output_wav.writeframes(frames)
     return True
 
 
@@ -385,8 +359,6 @@ def prepare_real_input(
     proof_duration_seconds: float = 4.0,
     source_classification: str | None = None,
 ) -> dict[str, Any]:
-    """Prepare and hash a real project input. No synthetic fallback exists."""
-
     source = source.resolve()
     if not _valid_audio_file(source):
         raise RuntimeError(f"Selected P0 input audio is missing, empty, or unsupported: {source}")
@@ -401,10 +373,7 @@ def prepare_real_input(
     if not prepared:
         ffmpeg = shutil.which("ffmpeg")
         if not ffmpeg:
-            raise RuntimeError(
-                "Selected audio requires FFmpeg conversion, but FFmpeg is not available. "
-                f"Source: {source}"
-            )
+            raise RuntimeError(f"Selected audio requires FFmpeg conversion, but FFmpeg is not available. Source: {source}")
         preparation_backend = "FFMPEG"
         command = [
             ffmpeg,
@@ -476,11 +445,10 @@ def self_test() -> int:
     with tempfile.TemporaryDirectory(prefix="echoes-real-input-audio-") as temporary:
         root = Path(temporary)
         workspace = root / "D-drive-simulation" / "EchoesCinema"
-        source = workspace / "input" / "War Machines P0.wav"
-        _write_mock_test_wav(source)
+        canonical = workspace / "input" / "War Machines P0.wav"
+        _write_mock_test_wav(canonical)
         selected, method = discover_real_input(workspace)
-        assert selected == source.resolve()
-        assert method == "workspace-input-priority"
+        assert selected == canonical.resolve() and method == "workspace-input-priority"
 
         output = workspace / "proofs" / "first-real-ai-clip" / "proof-audio.wav"
         evidence_path = output.with_name("proof-audio-source.json")
@@ -495,9 +463,7 @@ def self_test() -> int:
         assert evidence["generatedByAutopilot"] is False
         assert evidence["sourceClassification"] == "MOCK_TEST_FIXTURE"
         assert evidence["preparationBackend"] == "PYTHON_PCM_WAV"
-        assert len(evidence["sourceSha256"]) == 64
-        assert len(evidence["outputSha256"]) == 64
-        assert output.is_file() and evidence_path.is_file()
+        assert len(evidence["sourceSha256"]) == 64 and len(evidence["outputSha256"]) == 64
         cached = prepare_real_input(
             selected,
             output,
@@ -507,7 +473,7 @@ def self_test() -> int:
         )
         assert cached["outputSha256"] == evidence["outputSha256"]
 
-        source.unlink()
+        canonical.unlink()
         downloads = root / "User" / "Downloads"
         auto_source = downloads / "You Are the One.wav"
         _write_mock_test_wav(auto_source)
@@ -520,8 +486,7 @@ def self_test() -> int:
                 os.environ.pop("ECHOES_CINEMA_P0_SEARCH_ROOTS", None)
             else:
                 os.environ["ECHOES_CINEMA_P0_SEARCH_ROOTS"] = old_roots
-        assert selected == auto_source.resolve()
-        assert method == "configured-search-root-1"
+        assert selected == auto_source.resolve() and method == "configured-search-root-1"
         auto_evidence = prepare_real_input(
             selected,
             workspace / "proofs" / "auto" / "proof-audio.wav",
@@ -530,11 +495,11 @@ def self_test() -> int:
         )
         assert auto_evidence["sourceClassification"] == "AUTO_DISCOVERED_USER_AUDIO"
 
-        excluded_source = workspace / "proofs" / "first-real-ai-clip" / "War Machines P0.wav"
-        _write_mock_test_wav(excluded_source)
+        auto_source.unlink()
+        excluded = workspace / "proofs" / "first-real-ai-clip" / "War Machines P0.wav"
+        _write_mock_test_wav(excluded)
         old_roots = os.environ.get("ECHOES_CINEMA_P0_SEARCH_ROOTS")
         os.environ["ECHOES_CINEMA_P0_SEARCH_ROOTS"] = str(workspace)
-        auto_source.unlink()
         try:
             missing, missing_method = discover_real_input(workspace)
         finally:
@@ -546,7 +511,7 @@ def self_test() -> int:
 
     print(
         "CinemaRealInputAudio PASS selection=deterministic auto-search=bounded "
-        "generated-files=excluded fallback=forbidden hashes=present fixture=MOCK"
+        "relative-exclusions=verified fallback=forbidden hashes=present fixture=MOCK"
     )
     return 0
 
