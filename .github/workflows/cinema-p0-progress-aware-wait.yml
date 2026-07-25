@@ -1,0 +1,68 @@
+name: Echoes Cinema P0 Progress-Aware Provider Wait
+
+on:
+  pull_request:
+    paths:
+      - "tools/cinema_control_center.py"
+      - "tools/cinema_p0_autopilot.py"
+      - ".github/workflows/cinema-p0-progress-aware-wait.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "tools/cinema_control_center.py"
+      - "tools/cinema_p0_autopilot.py"
+      - ".github/workflows/cinema-p0-progress-aware-wait.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  progress-aware-provider-wait:
+    name: Provider progress inactivity policy (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+    steps:
+      - name: Checkout control-center sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile control center and autopilot
+        run: >-
+          python -m py_compile
+          tools/cinema_control_center.py
+          tools/cinema_p0_autopilot.py
+          tools/cinema_job_service.py
+          tools/cinema_job_service_durable.py
+
+      - name: Prove progress-aware wait policy
+        run: python tools/cinema_control_center.py --self-test
+
+      - name: Verify no fixed total wait regression
+        shell: pwsh
+        run: |
+          $source = Get-Content -LiteralPath "tools/cinema_control_center.py" -Raw
+          foreach ($token in @(
+            "PROGRESS_AWARE_INACTIVITY_TIMEOUT",
+            "provider_progress_signature",
+            "modelCacheBytes",
+            "nextRetryUtc",
+            "permanent_provider_blocker",
+            "no provider recovery progress was observed"
+          )) {
+            if (-not $source.Contains($token)) { throw "Missing progress-aware wait token: $token" }
+          }
+          if (-not $source.Contains("ProgressAwareP0Autopilot")) { throw "Control center is not using the resilient autopilot subclass" }
