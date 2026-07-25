@@ -2,8 +2,9 @@
 """Select and prepare genuine input audio for the Echoes Cinema P0 proof.
 
 The production path never synthesizes fallback audio. It discovers a non-empty
-user/project audio file, transcodes the first proof window with FFmpeg, validates
-the resulting WAV, and records source/output hashes for the evidence bundle.
+user/project audio file, prepares the first proof window, validates the WAV, and
+records source/output hashes. Compatible PCM WAV inputs use the Python standard
+library; compressed or incompatible formats use FFmpeg when available.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import hashlib
 import json
 import os
 import shutil
+import struct
 import subprocess
 import tempfile
 import wave
@@ -23,6 +25,9 @@ from typing import Any
 SCHEMA = "echoes.cinema-real-input-audio.v1"
 SUPPORTED_EXTENSIONS = frozenset({".wav", ".flac", ".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wma"})
 PRIORITY_TOKENS = ("p0", "war machines", "too fast too young", "echoes", "kam dridi")
+TARGET_SAMPLE_RATE = 44_100
+TARGET_CHANNELS = 2
+TARGET_SAMPLE_WIDTH = 2
 
 
 def utc_now() -> str:
@@ -92,7 +97,7 @@ def discover_real_input(workspace: Path, explicit_path: str | None = None) -> tu
     input_root = workspace / "input"
     input_root.mkdir(parents=True, exist_ok=True)
     candidates = sorted((path for path in input_root.rglob("*") if _valid_audio_file(path)), key=_priority)
-    return (candidates[0], "workspace-input-priority") if candidates else (None, "workspace-input-empty")
+    return (candidates[0].resolve(), "workspace-input-priority") if candidates else (None, "workspace-input-empty")
 
 
 def inspect_wav(path: Path) -> dict[str, Any]:
@@ -102,14 +107,17 @@ def inspect_wav(path: Path) -> dict[str, Any]:
             sample_width = handle.getsampwidth()
             sample_rate = handle.getframerate()
             frames = handle.getnframes()
+            compression = handle.getcomptype()
     except (OSError, wave.Error) as error:
         raise RuntimeError(f"Prepared proof audio is not a readable WAV: {error}") from error
     duration = frames / sample_rate if sample_rate else 0.0
-    if channels != 2:
+    if compression != "NONE":
+        raise RuntimeError(f"Prepared proof audio must be uncompressed PCM; compression={compression}")
+    if channels != TARGET_CHANNELS:
         raise RuntimeError(f"Prepared proof audio must be stereo; channels={channels}")
-    if sample_width != 2:
+    if sample_width != TARGET_SAMPLE_WIDTH:
         raise RuntimeError(f"Prepared proof audio must be 16-bit PCM; sampleWidth={sample_width}")
-    if sample_rate != 44_100:
+    if sample_rate != TARGET_SAMPLE_RATE:
         raise RuntimeError(f"Prepared proof audio must be 44100 Hz; sampleRate={sample_rate}")
     if duration < 3.8 or duration > 4.2:
         raise RuntimeError(f"Prepared proof audio duration must be approximately 4 seconds; duration={duration:.3f}")
@@ -119,7 +127,51 @@ def inspect_wav(path: Path) -> dict[str, Any]:
         "sampleRate": sample_rate,
         "frameCount": frames,
         "durationSeconds": round(duration, 6),
+        "compression": compression,
     }
+
+
+def _prepare_compatible_pcm_wav(source: Path, destination: Path, duration_seconds: float) -> bool:
+    """Prepare a compatible PCM WAV without FFmpeg; return False if conversion is required."""
+
+    if source.suffix.lower() != ".wav":
+        return False
+    try:
+        with wave.open(str(source), "rb") as input_wav:
+            channels = input_wav.getnchannels()
+            sample_width = input_wav.getsampwidth()
+            sample_rate = input_wav.getframerate()
+            compression = input_wav.getcomptype()
+            if (
+                channels not in {1, 2}
+                or sample_width != TARGET_SAMPLE_WIDTH
+                or sample_rate != TARGET_SAMPLE_RATE
+                or compression != "NONE"
+            ):
+                return False
+            required_frames = int(round(duration_seconds * sample_rate))
+            if input_wav.getnframes() < int(3.8 * sample_rate):
+                raise RuntimeError("Selected P0 WAV is shorter than the required proof window")
+            frames = input_wav.readframes(required_frames)
+    except wave.Error:
+        return False
+
+    if channels == 1:
+        stereo = bytearray(len(frames) * 2)
+        write_offset = 0
+        for (sample,) in struct.iter_unpack("<h", frames):
+            struct.pack_into("<hh", stereo, write_offset, sample, sample)
+            write_offset += 4
+        output_frames = bytes(stereo)
+    else:
+        output_frames = frames
+
+    with wave.open(str(destination), "wb") as output_wav:
+        output_wav.setnchannels(TARGET_CHANNELS)
+        output_wav.setsampwidth(TARGET_SAMPLE_WIDTH)
+        output_wav.setframerate(TARGET_SAMPLE_RATE)
+        output_wav.writeframes(output_frames)
+    return True
 
 
 def _cached_evidence_valid(evidence: dict[str, Any] | None, source: Path, output_wav: Path) -> bool:
@@ -146,7 +198,7 @@ def prepare_real_input(
     proof_duration_seconds: float = 4.0,
     source_classification: str = "DISCOVERED_PROJECT_AUDIO",
 ) -> dict[str, Any]:
-    """Transcode and hash a real project input. No synthetic fallback exists."""
+    """Prepare and hash a real project input. No synthetic fallback exists."""
 
     source = source.resolve()
     if not _valid_audio_file(source):
@@ -155,34 +207,42 @@ def prepare_real_input(
     if _cached_evidence_valid(existing, source, output_wav):
         return dict(existing or {})
 
-    ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
-        raise RuntimeError("FFmpeg is required to prepare the real P0 input audio")
     output_wav.parent.mkdir(parents=True, exist_ok=True)
     temporary = output_wav.with_name(output_wav.name + f".{os.getpid()}.tmp.wav")
-    command = [
-        ffmpeg,
-        "-y",
-        "-v",
-        "error",
-        "-i",
-        str(source),
-        "-t",
-        f"{proof_duration_seconds:.3f}",
-        "-vn",
-        "-ac",
-        "2",
-        "-ar",
-        "44100",
-        "-c:a",
-        "pcm_s16le",
-        str(temporary),
-    ]
-    completed = subprocess.run(command, capture_output=True, text=True, check=False)
-    if completed.returncode != 0:
-        temporary.unlink(missing_ok=True)
-        detail = completed.stderr.strip() or completed.stdout.strip() or f"exit code {completed.returncode}"
-        raise RuntimeError(f"FFmpeg could not prepare the selected P0 input audio: {detail}")
+    preparation_backend = "PYTHON_PCM_WAV"
+    prepared = _prepare_compatible_pcm_wav(source, temporary, proof_duration_seconds)
+    if not prepared:
+        ffmpeg = shutil.which("ffmpeg")
+        if not ffmpeg:
+            raise RuntimeError(
+                "Selected audio requires FFmpeg conversion, but FFmpeg is not available. "
+                f"Source: {source}"
+            )
+        preparation_backend = "FFMPEG"
+        command = [
+            ffmpeg,
+            "-y",
+            "-v",
+            "error",
+            "-i",
+            str(source),
+            "-t",
+            f"{proof_duration_seconds:.3f}",
+            "-vn",
+            "-ac",
+            str(TARGET_CHANNELS),
+            "-ar",
+            str(TARGET_SAMPLE_RATE),
+            "-c:a",
+            "pcm_s16le",
+            str(temporary),
+        ]
+        completed = subprocess.run(command, capture_output=True, text=True, check=False)
+        if completed.returncode != 0:
+            temporary.unlink(missing_ok=True)
+            detail = completed.stderr.strip() or completed.stdout.strip() or f"exit code {completed.returncode}"
+            raise RuntimeError(f"FFmpeg could not prepare the selected P0 input audio: {detail}")
+
     media = inspect_wav(temporary)
     os.replace(temporary, output_wav)
     payload: dict[str, Any] = {
@@ -192,6 +252,7 @@ def prepare_real_input(
         "truthStatus": "REAL_INPUT",
         "sourceClassification": source_classification,
         "selectionMethod": selection_method,
+        "preparationBackend": preparation_backend,
         "generatedByAutopilot": False,
         "syntheticFallbackAllowed": False,
         "sourcePath": str(source),
@@ -211,17 +272,16 @@ def prepare_real_input(
 
 def _write_mock_test_wav(path: Path, seconds: float = 5.0) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    sample_rate = 44_100
-    frames = int(sample_rate * seconds)
+    frames = int(TARGET_SAMPLE_RATE * seconds)
     with wave.open(str(path), "wb") as output:
-        output.setnchannels(1)
-        output.setsampwidth(2)
-        output.setframerate(sample_rate)
-        silence = b"\x00\x00" * min(frames, sample_rate)
+        output.setnchannels(TARGET_CHANNELS)
+        output.setsampwidth(TARGET_SAMPLE_WIDTH)
+        output.setframerate(TARGET_SAMPLE_RATE)
+        block = b"\x00\x00\x00\x00" * min(frames, TARGET_SAMPLE_RATE)
         remaining = frames
         while remaining:
-            count = min(remaining, sample_rate)
-            output.writeframesraw(silence[: count * 2])
+            count = min(remaining, TARGET_SAMPLE_RATE)
+            output.writeframesraw(block[: count * 4])
             remaining -= count
 
 
@@ -244,6 +304,7 @@ def self_test() -> int:
         assert evidence["status"] == "PASS"
         assert evidence["generatedByAutopilot"] is False
         assert evidence["sourceClassification"] == "MOCK_TEST_FIXTURE"
+        assert evidence["preparationBackend"] == "PYTHON_PCM_WAV"
         assert len(evidence["sourceSha256"]) == 64
         assert len(evidence["outputSha256"]) == 64
         assert output.is_file() and evidence_path.is_file()
