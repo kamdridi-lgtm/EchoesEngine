@@ -1,0 +1,75 @@
+name: Echoes Cinema One-Click Progress Monitor
+
+on:
+  pull_request:
+    paths:
+      - "scripts/one-click-echoes-cinema-monitor.ps1"
+      - "scripts/one-click-echoes-cinema.ps1"
+      - ".github/workflows/cinema-one-click-progress-monitor.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/one-click-echoes-cinema-monitor.ps1"
+      - "scripts/one-click-echoes-cinema.ps1"
+      - ".github/workflows/cinema-one-click-progress-monitor.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  progress-aware-monitor:
+    name: Progress-aware monitor (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+    steps:
+      - name: Checkout monitor sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/one-click-echoes-cinema-monitor.ps1
+            scripts/one-click-echoes-cinema.ps1
+          sparse-checkout-cone-mode: false
+
+      - name: Parse monitor and one-click scripts
+        shell: pwsh
+        run: |
+          [void][scriptblock]::Create((Get-Content -LiteralPath "scripts/one-click-echoes-cinema-monitor.ps1" -Raw))
+          [void][scriptblock]::Create((Get-Content -LiteralPath "scripts/one-click-echoes-cinema.ps1" -Raw))
+
+      - name: Prove progress-aware decision policy
+        shell: pwsh
+        run: |
+          & "scripts/one-click-echoes-cinema-monitor.ps1" -ProgressPolicySelfTest
+          if ($LASTEXITCODE -ne 0) { throw "One-click monitor progress policy self-test failed" }
+
+      - name: Verify fixed total timeout is gone
+        shell: pwsh
+        run: |
+          $monitor = Get-Content -LiteralPath "scripts/one-click-echoes-cinema-monitor.ps1" -Raw
+          $oneClick = Get-Content -LiteralPath "scripts/one-click-echoes-cinema.ps1" -Raw
+          foreach ($token in @(
+            "PROGRESS_AWARE_INACTIVITY_TIMEOUT",
+            "Get-ProviderProgressSignature",
+            "modelCacheBytes",
+            "lastProgressUtc",
+            "inactivityRemainingSeconds",
+            "No provider recovery progress was observed",
+            'schema = "echoes.cinema-one-click-monitor.v2"'
+          )) {
+            if (-not $monitor.Contains($token)) { throw "Monitor missing progress token: $token" }
+          }
+          if ($monitor.Contains('while ((Get-Date) -lt $deadline)')) {
+            throw "Fixed wall-clock monitor deadline is still present"
+          }
+          if (-not $oneClick.Contains('"-MaximumMinutes", "240"')) {
+            throw "One-click no longer supplies the backward-compatible inactivity window"
+          }
+          if (-not $monitor.Contains("workspaceFreeGiB = 50.0")) {
+            throw "Self-test no longer proves free-space noise is ignored"
+          }
