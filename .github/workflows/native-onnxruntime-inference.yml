@@ -74,8 +74,9 @@ jobs:
 
           version = os.environ["ORT_VERSION"]
           expected = os.environ["ORT_PACKAGE_SHA256"].strip().lower()
-          package = pathlib.Path("artifacts") / f"microsoft.ml.onnxruntime.{version}.nupkg"
-          package.parent.mkdir(parents=True, exist_ok=True)
+          artifacts = pathlib.Path("artifacts")
+          package = artifacts / f"microsoft.ml.onnxruntime.{version}.nupkg"
+          artifacts.mkdir(parents=True, exist_ok=True)
           url = (
               "https://api.nuget.org/v3-flatcontainer/"
               f"microsoft.ml.onnxruntime/{version}/"
@@ -84,6 +85,9 @@ jobs:
           with urllib.request.urlopen(url, timeout=120) as response:
               package.write_bytes(response.read())
           actual = hashlib.sha256(package.read_bytes()).hexdigest()
+          (artifacts / "ort-package-sha256.txt").write_text(
+              actual + "\n", encoding="utf-8"
+          )
           print(f"ONNXRUNTIME_PACKAGE_SHA256={actual}")
           if expected == "pin_after_first_verified_download":
               raise RuntimeError(f"Pin ORT_PACKAGE_SHA256 to {actual} and rerun")
@@ -171,6 +175,7 @@ jobs:
           name: native-onnxruntime-inference-${{ matrix.os }}
           path: |
             artifacts/reference-model.json
+            artifacts/ort-package-sha256.txt
             artifacts/onnx-runtime-proof.json
             artifacts/native-onnxruntime.log
           if-no-files-found: warn
