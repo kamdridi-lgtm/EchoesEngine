@@ -73,26 +73,47 @@ jobs:
             throw 'Production model integrity was not proven'
           }
 
-      - name: Discover real streaming inference evidence
+      - name: Execute real streaming VAD inference
         shell: pwsh
         run: |
-          $PSNativeCommandUseErrorActionPreference = $false
           python tools/prove_silero_vad.py `
             --model artifacts/silero-vad/model/silero_vad.onnx `
             --output-dir artifacts/silero-vad `
-            --expected-sample-sha256 PIN_AFTER_DISCOVERY 2>&1 | Tee-Object artifacts/silero-vad/inference.log
-          $code = $LASTEXITCODE
-          if ($code -ne 3) { throw "Expected sample discovery gate exit 3, received $code" }
+            --expected-sample-sha256 89f17d9c94c4b31eb320f424628bcbc920abaddbee6e2760fd868bfb1d9a2e47 2>&1 | Tee-Object artifacts/silero-vad/inference.log
+          if ($LASTEXITCODE -ne 0) { throw "Silero inference failed with exit $LASTEXITCODE" }
           $proof = Get-Content -LiteralPath 'artifacts/silero-vad/silero-vad-inference.json' -Raw | ConvertFrom-Json
-          if ($proof.schema -ne 'echoes.silero-vad-inference-proof.v1' -or $proof.status -ne 'DISCOVERY') {
-            throw 'Silero inference discovery proof is invalid'
+          if ($proof.schema -ne 'echoes.silero-vad-inference-proof.v1' -or $proof.status -ne 'PASS') {
+            throw 'Silero production inference proof is invalid'
           }
-          foreach ($name in @('probabilitiesFinite','probabilitiesBounded','resetDeterministic','recurrentStateChanged','invalidChunkBlocked')) {
-            if (-not $proof.checks.$name) { throw "Silero discovery check failed: $name" }
+          foreach ($name in @(
+            'probabilitiesFinite',
+            'probabilitiesBounded',
+            'resetDeterministic',
+            'recurrentStateChanged',
+            'invalidChunkBlocked',
+            'silenceRejected',
+            'speechDetected',
+            'semanticSeparation'
+          )) {
+            if (-not $proof.checks.$name) { throw "Silero production check failed: $name" }
           }
-          if ($proof.runtime.provider -ne 'CPUExecutionProvider') { throw 'Silero discovery must remain CPU-only' }
-          if ($proof.truthBoundary.productionModelInferenceProven -ne $false) {
-            throw 'Production inference must remain unproven until the sample is pinned'
+          if ($proof.runtime.version -ne '1.20.1' -or $proof.runtime.provider -ne 'CPUExecutionProvider') {
+            throw 'Silero proof runtime drifted or was not CPU-only'
+          }
+          if ($proof.sample.sha256 -ne '89f17d9c94c4b31eb320f424628bcbc920abaddbee6e2760fd868bfb1d9a2e47') {
+            throw 'Official speech sample digest drifted'
+          }
+          if ($proof.silence.maximum -gt 0.02 -or $proof.silence.aboveThreshold -ne 0) {
+            throw 'Silence rejection evidence is outside the accepted boundary'
+          }
+          if ($proof.officialSpeechSample.maximum -lt 0.99 -or $proof.officialSpeechSample.mean -lt 0.70 -or $proof.officialSpeechSample.aboveThreshold -lt 1400) {
+            throw 'Speech detection evidence is outside the accepted boundary'
+          }
+          if (-not $proof.truthBoundary.productionModelInferenceProven -or -not $proof.truthBoundary.voiceActivityProbabilityProven) {
+            throw 'Production VAD inference was not promoted by the proof'
+          }
+          foreach ($field in @('speechTimestampingProven','voiceConversionProven','gpuInferenceProven','tensorRtInferenceProven')) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "$field must remain false" }
           }
 
       - name: Upload Silero production evidence
