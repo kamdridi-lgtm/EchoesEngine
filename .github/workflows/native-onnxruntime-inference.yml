@@ -26,7 +26,7 @@ permissions:
 
 env:
   ORT_VERSION: "1.20.1"
-  ORT_PACKAGE_SHA256: "PIN_AFTER_FIRST_VERIFIED_DOWNLOAD"
+  ORT_PACKAGE_SHA256: "9c32108e9a1c78b090a95c2a219f244dd5f067d4caf68fb0f967103f3f20839c"
 
 jobs:
   native-inference:
@@ -89,8 +89,6 @@ jobs:
               actual + "\n", encoding="utf-8"
           )
           print(f"ONNXRUNTIME_PACKAGE_SHA256={actual}")
-          if expected == "pin_after_first_verified_download":
-              raise RuntimeError(f"Pin ORT_PACKAGE_SHA256 to {actual} and rerun")
           if actual != expected:
               raise RuntimeError(
                   f"ONNX Runtime package digest mismatch: expected {expected}, actual {actual}"
@@ -151,6 +149,8 @@ jobs:
       - name: Verify proof and capability truth boundary
         shell: pwsh
         run: |
+          $packageDigest = (Get-Content -LiteralPath 'artifacts/ort-package-sha256.txt' -Raw).Trim().ToLowerInvariant()
+          if ($packageDigest -ne $env:ORT_PACKAGE_SHA256) { throw 'Pinned ONNX Runtime package digest evidence drifted' }
           $proof = Get-Content -LiteralPath 'artifacts/onnx-runtime-proof.json' -Raw | ConvertFrom-Json
           if ($proof.schema -ne 'echoes.onnx-runtime-inference-proof.v1' -or $proof.status -ne 'PASS') {
             throw 'ONNX Runtime proof schema or status invalid'
@@ -163,6 +163,7 @@ jobs:
           $registry = Get-Content -LiteralPath 'config/echoes-capability-registry.v1.json' -Raw | ConvertFrom-Json
           $module = $registry.engineModules.onnxRuntimeInference
           if ($module.status -ne 'REAL') { throw 'onnxRuntimeInference must be REAL after proof is pinned and green' }
+          if ($module.packageSha256 -ne $env:ORT_PACKAGE_SHA256) { throw 'Registry ONNX Runtime package digest drifted' }
           if ($module.productionModelProvisioned -ne $false) { throw 'Production model must remain unproven' }
           if ($module.gpuInferenceProven -ne $false -or $module.tensorRtInferenceProven -ne $false) {
             throw 'GPU and TensorRT inference must remain unproven'
