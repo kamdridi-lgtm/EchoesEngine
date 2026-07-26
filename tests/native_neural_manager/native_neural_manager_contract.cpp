@@ -106,6 +106,7 @@ int main() {
     quality.requiredCapabilities = {"voiceConversion"};
     quality.providerPreference = {"cuda", "cpu"};
     quality.precisionPreference = {"fp16", "fp32"};
+    quality.inferenceProofModelIds = {"voice-small", "voice-large"};
     quality.availableVramGiB = 6.0;
     quality.reserveVramGiB = 0.25;
     quality.minimumQuality = 90;
@@ -145,6 +146,14 @@ int main() {
     const auto capabilityPlan = scheduler.plan(capability, inventory);
     require(capabilityPlan.status == "BLOCKED", "missing capability must block");
 
+    NeuralScheduleRequest unproven = commercial;
+    unproven.jobId = "voice-job-unproven";
+    unproven.inferenceProofModelIds.clear();
+    const auto unprovenPlan = scheduler.plan(unproven, inventory);
+    require(unprovenPlan.status == "BLOCKED", "integrity-only models must block");
+    require(std::find(unprovenPlan.blockers.begin(), unprovenPlan.blockers.end(), "MODEL_INFERENCE_NOT_PROVEN") != unprovenPlan.blockers.end(),
+            "inference proof blocker missing");
+
     require(OnnxModelManager::sha256File(smallPath) == small.expectedSha256, "SHA-256 must be deterministic");
     require(small.expectedSha256 == "e23c19511783c323478ccae4e222ce1d086d6f7a6ae58164053bc007a9f5130e",
             "SHA-256 implementation does not match the canonical fixture digest");
@@ -158,6 +167,7 @@ int main() {
               << " low-vram=blocked"
               << " provider=blocked"
               << " capability=blocked"
+              << " inference-proof=required"
               << " execution=not-authorized"
               << "\n";
     fs::remove_all(root, error);
