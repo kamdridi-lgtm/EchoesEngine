@@ -69,6 +69,7 @@ jobs:
           import hashlib
           import os
           import pathlib
+          import shutil
           import urllib.request
           import zipfile
 
@@ -97,14 +98,23 @@ jobs:
           destination.mkdir(parents=True, exist_ok=True)
           with zipfile.ZipFile(package) as archive:
               archive.extractall(destination)
+
+          if os.name == "nt":
+              native_library = destination / "runtimes/win-x64/native/onnxruntime.lib"
+          else:
+              native_library = destination / "runtimes/linux-x64/native/libonnxruntime.so"
+              soname_library = native_library.with_name("libonnxruntime.so.1")
+              if not soname_library.exists():
+                  shutil.copyfile(native_library, soname_library)
+              if hashlib.sha256(soname_library.read_bytes()).hexdigest() != hashlib.sha256(native_library.read_bytes()).hexdigest():
+                  raise RuntimeError("Linux ONNX Runtime SONAME normalization changed library bytes")
+
           required = [
               destination / "build/native/include/onnxruntime_cxx_api.h",
-              destination / (
-                  "runtimes/win-x64/native/onnxruntime.lib"
-                  if os.name == "nt"
-                  else "runtimes/linux-x64/native/libonnxruntime.so"
-              ),
+              native_library,
           ]
+          if os.name != "nt":
+              required.append(destination / "runtimes/linux-x64/native/libonnxruntime.so.1")
           missing = [str(path) for path in required if not path.is_file()]
           if missing:
               raise RuntimeError(f"ONNX Runtime package layout incomplete: {missing}")
