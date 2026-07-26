@@ -27,12 +27,26 @@
   "outputs": {
     "jsonSchema": "echoes.song-activity-timeline.v1",
     "csvExport": true,
-    "labels": ["speech", "non_speech"],
-    "editingCues": ["voice_focus", "music_or_ambient_focus"]
+    "labels": [
+      "speech",
+      "non_speech"
+    ],
+    "editingCues": [
+      "voice_focus",
+      "music_or_ambient_focus"
+    ]
   },
   "kcore": {
+    "globalModuleId": "songActivityTimeline",
     "planningStage": "build_voice_activity_timeline",
+    "hybridPlanningStage": "build_voice_activity_timeline_local",
     "requiredModelCapability": "speechTimestamping",
+    "requiredByPipelines": [
+      "lyric_video_local_v1",
+      "cinema_low_vram_text_v1",
+      "cinema_identity_local_v1",
+      "cinema_hybrid_identity_v1"
+    ],
     "requiresOperatorApproval": true,
     "executionAuthorized": false
   },
