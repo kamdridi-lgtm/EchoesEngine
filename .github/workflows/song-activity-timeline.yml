@@ -9,6 +9,7 @@ on:
       - "tools/song_activity_timeline.py"
       - "tools/prove_song_activity_timeline.py"
       - "tools/prove_song_activity_timeline_release_aware.py"
+      - "tools/validate_song_activity_timeline.py"
       - "tests/song_activity_timeline/**"
       - "config/models/silero-vad-6.2.1.json"
       - "config/echoes-capability-registry.v1.json"
@@ -22,6 +23,7 @@ on:
       - "tools/song_activity_timeline.py"
       - "tools/prove_song_activity_timeline.py"
       - "tools/prove_song_activity_timeline_release_aware.py"
+      - "tools/validate_song_activity_timeline.py"
       - "tests/song_activity_timeline/**"
       - "config/models/silero-vad-6.2.1.json"
       - "config/echoes-capability-registry.v1.json"
@@ -50,6 +52,7 @@ jobs:
             tools/song_activity_timeline.py
             tools/prove_song_activity_timeline.py
             tools/prove_song_activity_timeline_release_aware.py
+            tools/validate_song_activity_timeline.py
             tests/song_activity_timeline
             config/models/silero-vad-6.2.1.json
             config/echoes-capability-registry.v1.json
@@ -87,63 +90,10 @@ jobs:
             --expected-timeline-sha256 PIN_AFTER_DISCOVERY 2>&1 | Tee-Object artifacts/song-timeline/timeline.log
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 3) { throw "Expected activity timeline discovery exit 3, received $exitCode" }
-          $proof = Get-Content -LiteralPath 'artifacts/song-timeline/song-activity-timeline.json' -Raw | ConvertFrom-Json
-          if ($proof.schema -ne 'echoes.song-activity-timeline-proof.v1' -or $proof.status -ne 'DISCOVERY') {
-            throw 'Song activity timeline discovery proof is invalid'
-          }
-          foreach ($name in @(
-            'labelsValid',
-            'positiveDuration',
-            'bounded',
-            'ordered',
-            'nonOverlapping',
-            'gapFree',
-            'alternatingLabels',
-            'exactCoverage',
-            'durationExact',
-            'probabilitiesFinite',
-            'probabilitiesBounded',
-            'speechInsidePinnedContainersOrReleaseTail',
-            'speechSegmentsStartInsidePinnedContainers',
-            'recurrentReleaseTailWithinTolerance',
-            'bothSpeechWindowsDetected',
-            'timelineDeterministic',
-            'speechAndNonSpeechPresent',
-            'editingCuesTruthful',
-            'officialSamplePinned',
-            'productionModelPinned'
-          )) {
-            if (-not $proof.checks.$name) { throw "Timeline discovery check failed: $name" }
-          }
-          if ($proof.segmentation.recurrentReleaseToleranceMs -ne 750) {
-            throw 'Recurrent release-tail tolerance drifted'
-          }
-          if ($proof.segmentation.maximumObservedReleaseTailMs -gt 750) {
-            throw 'Observed recurrent release tail exceeded the accepted boundary'
-          }
-          if ($proof.fixture.durationSeconds -ne 180 -or $proof.fixture.userSongAnalyzed -ne $false) {
-            throw 'Fixture duration or truth boundary drifted'
-          }
-          if (-not $proof.summary.canonicalSha256 -or $proof.summary.spanCount -lt 3) {
-            throw 'Activity timeline discovery did not produce canonical spans'
-          }
-          if ($proof.truthBoundary.productionLengthTimelineProven -ne $false -or $proof.truthBoundary.voiceActivityTimelineProven -ne $false) {
-            throw 'Timeline must remain unproven until the digest is pinned'
-          }
-          foreach ($field in @(
-            'instrumentalClassificationProven',
-            'vocalIsolationProven',
-            'stemSeparationProven',
-            'voiceConversionProven',
-            'gpuInferenceProven',
-            'tensorRtInferenceProven',
-            'executionAuthorized'
-          )) {
-            if ($proof.truthBoundary.$field -ne $false) { throw "$field must remain false" }
-          }
-          if (-not $proof.truthBoundary.requiresOperatorApproval) {
-            throw 'Timeline execution must continue to require operator approval'
-          }
+          python tools/validate_song_activity_timeline.py `
+            --proof artifacts/song-timeline/song-activity-timeline.json `
+            --mode discovery 2>&1 | Tee-Object -Append artifacts/song-timeline/timeline.log
+          if ($LASTEXITCODE -ne 0) { throw "Song activity timeline validation failed with exit $LASTEXITCODE" }
 
       - name: Upload timeline discovery evidence
         if: always()
