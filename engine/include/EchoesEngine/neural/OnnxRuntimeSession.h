@@ -85,8 +85,10 @@ public:
             m_inputName = inputName.get();
             m_outputName = outputName.get();
 
-            const auto inputTensorInfo = m_session->GetInputTypeInfo(0).GetTensorTypeAndShapeInfo();
-            const auto outputTensorInfo = m_session->GetOutputTypeInfo(0).GetTensorTypeAndShapeInfo();
+            const auto inputTypeInfo = m_session->GetInputTypeInfo(0);
+            const auto outputTypeInfo = m_session->GetOutputTypeInfo(0);
+            const auto inputTensorInfo = inputTypeInfo.GetTensorTypeAndShapeInfo();
+            const auto outputTensorInfo = outputTypeInfo.GetTensorTypeAndShapeInfo();
             if (inputTensorInfo.GetElementType() != ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT) {
                 m_loadBlockers.push_back("MODEL_INPUT_TYPE_NOT_FLOAT");
             }
