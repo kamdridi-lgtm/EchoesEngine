@@ -1,0 +1,224 @@
+name: Echoes Silero VAD Production Proof
+
+on:
+  pull_request:
+    paths:
+      - "tools/provision_silero_vad.py"
+      - "tools/prove_silero_vad.py"
+      - "tests/silero_vad/**"
+      - "config/models/silero-vad-6.2.1.json"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/silero-vad-production-proof.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/provision_silero_vad.py"
+      - "tools/prove_silero_vad.py"
+      - "tests/silero_vad/**"
+      - "config/models/silero-vad-6.2.1.json"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/silero-vad-production-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  production-proof:
+    name: Silero VAD production inference (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-latest]
+    steps:
+      - name: Checkout production model contract
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            engine/include
+            tools/provision_silero_vad.py
+            tools/prove_silero_vad.py
+            tests/silero_vad
+            config/models/silero-vad-6.2.1.json
+            config/echoes-capability-registry.v1.json
+          sparse-checkout-cone-mode: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned ONNX runtime and inspector
+        run: >-
+          python -m pip install --disable-pip-version-check
+          "numpy==1.26.4" "onnx==1.16.2" "onnxruntime==1.20.1"
+
+      - name: Provision pinned official production model
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/silero-vad | Out-Null
+          python tools/provision_silero_vad.py `
+            --output-dir artifacts/silero-vad `
+            --expected-model-sha256 1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3 `
+            --expected-model-size 2327524 2>&1 | Tee-Object artifacts/silero-vad/provisioning.log
+          if ($LASTEXITCODE -ne 0) { throw "Silero provisioning failed with exit $LASTEXITCODE" }
+          $manifest = Get-Content -LiteralPath 'artifacts/silero-vad/silero-vad-provisioning.json' -Raw | ConvertFrom-Json
+          if ($manifest.schema -ne 'echoes.silero-vad-provisioning.v1' -or $manifest.status -ne 'PASS') {
+            throw 'Pinned Silero provisioning manifest is invalid'
+          }
+          if ($manifest.package.sha256 -ne '09de93c4d874bb19c53e62a47dd38be5f163cedad2b5599583231f2a84ef79cb') {
+            throw 'Official wheel digest drifted'
+          }
+          if ($manifest.selectedModel.sha256 -ne '1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3' -or $manifest.selectedModel.sizeBytes -ne 2327524) {
+            throw 'Official Silero model digest or size drifted'
+          }
+          if ($manifest.licence.declared -ne 'MIT' -or -not $manifest.licence.commercialUseAllowed) {
+            throw 'Silero licence evidence is missing or non-commercial'
+          }
+          if (-not $manifest.truthBoundary.productionModelIntegrityProven) {
+            throw 'Production model integrity was not proven'
+          }
+
+      - name: Execute real streaming VAD inference
+        shell: pwsh
+        run: |
+          python tools/prove_silero_vad.py `
+            --model artifacts/silero-vad/model/silero_vad.onnx `
+            --output-dir artifacts/silero-vad `
+            --expected-sample-sha256 89f17d9c94c4b31eb320f424628bcbc920abaddbee6e2760fd868bfb1d9a2e47 2>&1 | Tee-Object artifacts/silero-vad/inference.log
+          if ($LASTEXITCODE -ne 0) { throw "Silero inference failed with exit $LASTEXITCODE" }
+          $proof = Get-Content -LiteralPath 'artifacts/silero-vad/silero-vad-inference.json' -Raw | ConvertFrom-Json
+          if ($proof.schema -ne 'echoes.silero-vad-inference-proof.v1' -or $proof.status -ne 'PASS') {
+            throw 'Silero production inference proof is invalid'
+          }
+          foreach ($name in @(
+            'probabilitiesFinite',
+            'probabilitiesBounded',
+            'resetDeterministic',
+            'recurrentStateChanged',
+            'invalidChunkBlocked',
+            'silenceRejected',
+            'speechDetected',
+            'semanticSeparation'
+          )) {
+            if (-not $proof.checks.$name) { throw "Silero production check failed: $name" }
+          }
+          if ($proof.runtime.version -ne '1.20.1' -or $proof.runtime.provider -ne 'CPUExecutionProvider') {
+            throw 'Silero proof runtime drifted or was not CPU-only'
+          }
+          if ($proof.sample.sha256 -ne '89f17d9c94c4b31eb320f424628bcbc920abaddbee6e2760fd868bfb1d9a2e47') {
+            throw 'Official speech sample digest drifted'
+          }
+          if ($proof.silence.maximum -gt 0.02 -or $proof.silence.aboveThreshold -ne 0) {
+            throw 'Silence rejection evidence is outside the accepted boundary'
+          }
+          if ($proof.officialSpeechSample.maximum -lt 0.99 -or $proof.officialSpeechSample.mean -lt 0.70 -or $proof.officialSpeechSample.aboveThreshold -lt 1400) {
+            throw 'Speech detection evidence is outside the accepted boundary'
+          }
+          if (-not $proof.truthBoundary.productionModelInferenceProven -or -not $proof.truthBoundary.voiceActivityProbabilityProven) {
+            throw 'Production VAD inference was not promoted by the proof'
+          }
+          foreach ($field in @('speechTimestampingProven','voiceConversionProven','gpuInferenceProven','tensorRtInferenceProven')) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "$field must remain false" }
+          }
+
+      - name: Validate canonical production model manifest
+        shell: pwsh
+        run: |
+          $catalog = Get-Content -LiteralPath 'config/models/silero-vad-6.2.1.json' -Raw | ConvertFrom-Json
+          if ($catalog.schema -ne 'echoes.onnx-production-model.v1' -or $catalog.id -ne 'silero-vad-6.2.1') {
+            throw 'Canonical Silero model manifest is invalid'
+          }
+          if ($catalog.model.sha256 -ne '1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3' -or $catalog.model.sizeBytes -ne 2327524) {
+            throw 'Canonical Silero model evidence drifted'
+          }
+          if ($catalog.licence.spdx -ne 'MIT' -or -not $catalog.licence.commercialUseAllowed) {
+            throw 'Canonical Silero commercial licence evidence is invalid'
+          }
+          if (-not $catalog.proof.productionInferenceProven -or $catalog.proof.voiceConversionProven -ne $false) {
+            throw 'Canonical Silero truth boundary is invalid'
+          }
+          if ($catalog.execution.executionAuthorized -ne $false -or -not $catalog.execution.requiresOperatorApproval) {
+            throw 'Canonical Silero execution boundary is invalid'
+          }
+
+      - name: Enforce capability registry truth boundary
+        shell: pwsh
+        run: |
+          $registry = Get-Content -LiteralPath 'config/echoes-capability-registry.v1.json' -Raw | ConvertFrom-Json
+          if ($registry.version -ne '1.3.0') { throw 'Capability registry version must be 1.3.0' }
+          $module = $registry.engineModules.sileroVadProduction
+          if (-not $module -or $module.status -ne 'REAL') { throw 'sileroVadProduction must be REAL' }
+          foreach ($field in @(
+            'productionModelProvisioned',
+            'productionModelInferenceProven',
+            'voiceActivityProbabilityProven',
+            'schedulerSelectionProven'
+          )) {
+            if ($module.$field -ne $true) { throw "$field must be true after the production proof" }
+          }
+          foreach ($field in @(
+            'speechTimestampingProven',
+            'voiceConversionProven',
+            'gpuInferenceProven',
+            'tensorRtInferenceProven',
+            'executionAuthorized'
+          )) {
+            if ($module.$field -ne $false) { throw "$field must remain false" }
+          }
+          if (-not $module.requiresOperatorApproval) { throw 'Silero execution must still require operator approval' }
+          if ($module.modelSha256 -ne '1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3' -or $module.modelSizeBytes -ne 2327524) {
+            throw 'Registry Silero model evidence drifted'
+          }
+          if ($registry.engineModules.onnxRuntimeInference.productionModelProvisioned -ne $false) {
+            throw 'Native C++ reference inference must not claim this Python production model'
+          }
+
+      - name: Configure K-Core Silero contract
+        run: cmake -S tests/silero_vad -B build/silero-vad-kcore
+
+      - name: Build K-Core Silero contract
+        run: cmake --build build/silero-vad-kcore --config Release
+
+      - name: Prove K-Core fail-closed scheduling
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem build/silero-vad-kcore -Recurse -File |
+            Where-Object { $_.Name -in @('echoes_silero_kcore_contract.exe','echoes_silero_kcore_contract') } |
+            Select-Object -First 1
+          if (-not $exe) { throw 'K-Core Silero contract executable was not produced' }
+          & $exe.FullName `
+            'artifacts/silero-vad/model/silero_vad.onnx' `
+            '1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3' `
+            '2327524' 2>&1 | Tee-Object artifacts/silero-vad/kcore.log
+          if ($LASTEXITCODE -ne 0) { throw "K-Core Silero contract failed with exit $LASTEXITCODE" }
+          $text = Get-Content -LiteralPath 'artifacts/silero-vad/kcore.log' -Raw
+          foreach ($token in @(
+            'integrity=verified',
+            'selected=silero-vad-6.2.1',
+            'provider=cpu',
+            'precision=fp32',
+            'vram=0',
+            'concurrency=4',
+            'integrity-only=blocked',
+            'gpu=blocked',
+            'voice-conversion=blocked',
+            'execution=not-authorized'
+          )) {
+            if (-not $text.Contains($token)) { throw "Missing K-Core Silero proof token: $token" }
+          }
+
+      - name: Upload Silero production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: silero-vad-production-${{ matrix.os }}
+          path: |
+            artifacts/silero-vad/silero-vad-provisioning.json
+            artifacts/silero-vad/silero-vad-inference.json
+            artifacts/silero-vad/provisioning.log
+            artifacts/silero-vad/inference.log
+            artifacts/silero-vad/kcore.log
+          if-no-files-found: warn
+          retention-days: 14
