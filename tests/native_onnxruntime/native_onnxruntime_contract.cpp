@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -27,6 +28,15 @@ static void require(bool condition, const std::string& message) {
 
 static bool near(float left, float right, float tolerance = 1.0e-6f) {
     return std::abs(left - right) <= tolerance;
+}
+
+static std::string joinBlockers(const std::vector<std::string>& blockers) {
+    std::ostringstream output;
+    for (std::size_t index = 0; index < blockers.size(); ++index) {
+        if (index != 0U) output << " | ";
+        output << blockers[index];
+    }
+    return output.str();
 }
 
 static std::string hashFloats(const std::vector<float>& values) {
@@ -127,7 +137,11 @@ int main(int argc, char** argv) {
             "integrity manager must remain offline and non-executing");
 
     OnnxRuntimeSession session;
-    require(session.load(evidence.resolvedPath), "ONNX Runtime could not load the reference model");
+    if (!session.load(evidence.resolvedPath)) {
+        throw std::runtime_error(
+            "ONNX Runtime could not load the reference model: " +
+            joinBlockers(session.loadBlockers()));
+    }
     require(session.isLoaded(), "session did not report loaded state");
     require(session.declaredInputShape() == std::vector<std::int64_t>({1, 4}),
             "unexpected declared input shape");
