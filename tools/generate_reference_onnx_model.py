@@ -23,7 +23,13 @@ def build_model() -> onnx.ModelProto:
         helper.make_node("Mul", ["input", "scale"], ["scaled"], name="ScaleByTwo"),
         helper.make_node("Add", ["scaled", "bias"], ["output"], name="AddOne"),
     ]
-    graph = helper.make_graph(nodes, "EchoesReferenceTransform", [input_info], [output_info], [scale, bias])
+    graph = helper.make_graph(
+        nodes,
+        "EchoesReferenceTransform",
+        [input_info],
+        [output_info],
+        [scale, bias],
+    )
     model = helper.make_model(
         graph,
         producer_name="EchoesEngine",
@@ -49,7 +55,7 @@ def main() -> int:
     payload = args.output.read_bytes()
     metadata = {
         "schema": SCHEMA,
-        "path": str(args.output),
+        "path": args.output.as_posix(),
         "sizeBytes": len(payload),
         "sha256": hashlib.sha256(payload).hexdigest(),
         "input": {"name": "input", "shape": [1, 4], "type": "float32"},
