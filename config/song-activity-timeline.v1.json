@@ -1,0 +1,52 @@
+{
+  "schema": "echoes.song-activity-timeline-capability.v1",
+  "id": "song-activity-timeline-cpu-v1",
+  "status": "REAL",
+  "scope": "Deterministic CPU speech/non-speech timeline generation for local PCM WAV audio, with exact sample coverage and JSON/CSV editing exports.",
+  "runtime": {
+    "provider": "CPUExecutionProvider",
+    "sampleRate": 16000,
+    "model": "silero-vad-6.2.1",
+    "modelSha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3"
+  },
+  "proof": {
+    "fixtureDurationSeconds": 180,
+    "fixtureSha256": "301367d9d09603f4a99a9e997cbac219aa14a659e1c83ea4e794d82b42243b76",
+    "timelineSha256": "e904c24f6963775e4df86d1eb492b5a54e07af5d44f9f0ed9b4424ed17daf01c",
+    "timelineSpanCount": 81,
+    "speechSpanCount": 40,
+    "nonSpeechSpanCount": 41,
+    "speechSeconds": 98.144,
+    "nonSpeechSeconds": 81.856,
+    "maximumObservedRecurrentReleaseTailMs": 606.0,
+    "acceptedRecurrentReleaseTailMs": 750,
+    "windowsProof": true,
+    "linuxProof": true,
+    "genericLocalWavCliProven": true
+  },
+  "outputs": {
+    "jsonSchema": "echoes.song-activity-timeline.v1",
+    "csvExport": true,
+    "labels": ["speech", "non_speech"],
+    "editingCues": ["voice_focus", "music_or_ambient_focus"]
+  },
+  "kcore": {
+    "planningStage": "build_voice_activity_timeline",
+    "requiredModelCapability": "speechTimestamping",
+    "requiresOperatorApproval": true,
+    "executionAuthorized": false
+  },
+  "truthBoundary": {
+    "productionLengthFixtureProven": true,
+    "gapFreeActivityTimelineProven": true,
+    "localWavCliProven": true,
+    "userSongAnalyzed": false,
+    "instrumentalClassificationProven": false,
+    "vocalIsolationProven": false,
+    "stemSeparationProven": false,
+    "voiceConversionProven": false,
+    "gpuInferenceProven": false,
+    "tensorRtInferenceProven": false,
+    "autonomousExecutionProven": false
+  }
+}
