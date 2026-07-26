@@ -138,7 +138,7 @@ def main() -> int:
             "jobId": "timeline-lyric-proof",
             "missionType": "lyric_video",
             "requireIdentity": False,
-            "commercialUse": True,
+            "commercialUse": False,
             "cloudAllowed": False,
         },
         inventory,
