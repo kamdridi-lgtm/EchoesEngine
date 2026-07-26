@@ -10,8 +10,11 @@ on:
       - "tools/prove_song_activity_timeline.py"
       - "tools/prove_song_activity_timeline_release_aware.py"
       - "tools/validate_song_activity_timeline.py"
+      - "tools/build_song_activity_timeline.py"
+      - "tools/validate_built_song_activity_timeline.py"
       - "tests/song_activity_timeline/**"
       - "config/models/silero-vad-6.2.1.json"
+      - "config/song-activity-timeline.v1.json"
       - "config/echoes-capability-registry.v1.json"
       - ".github/workflows/song-activity-timeline.yml"
   push:
@@ -24,8 +27,11 @@ on:
       - "tools/prove_song_activity_timeline.py"
       - "tools/prove_song_activity_timeline_release_aware.py"
       - "tools/validate_song_activity_timeline.py"
+      - "tools/build_song_activity_timeline.py"
+      - "tools/validate_built_song_activity_timeline.py"
       - "tests/song_activity_timeline/**"
       - "config/models/silero-vad-6.2.1.json"
+      - "config/song-activity-timeline.v1.json"
       - "config/echoes-capability-registry.v1.json"
       - ".github/workflows/song-activity-timeline.yml"
 
@@ -33,8 +39,8 @@ permissions:
   contents: read
 
 jobs:
-  timeline-discovery:
-    name: Song activity timeline discovery (${{ matrix.os }})
+  timeline-proof:
+    name: Song activity timeline proof (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -53,8 +59,11 @@ jobs:
             tools/prove_song_activity_timeline.py
             tools/prove_song_activity_timeline_release_aware.py
             tools/validate_song_activity_timeline.py
+            tools/build_song_activity_timeline.py
+            tools/validate_built_song_activity_timeline.py
             tests/song_activity_timeline
             config/models/silero-vad-6.2.1.json
+            config/song-activity-timeline.v1.json
             config/echoes-capability-registry.v1.json
           sparse-checkout-cone-mode: true
 
@@ -81,30 +90,71 @@ jobs:
             --expected-model-size 2327524 2>&1 | Tee-Object artifacts/song-timeline/provisioning.log
           if ($LASTEXITCODE -ne 0) { throw "Silero provisioning failed with exit $LASTEXITCODE" }
 
-      - name: Discover production-length activity timeline
+      - name: Execute pinned production-length activity timeline
         shell: pwsh
         run: |
           python tools/prove_song_activity_timeline_release_aware.py `
             --model artifacts/song-timeline/model/silero_vad.onnx `
             --output-dir artifacts/song-timeline `
-            --expected-timeline-sha256 PIN_AFTER_DISCOVERY 2>&1 | Tee-Object artifacts/song-timeline/timeline.log
-          $exitCode = $LASTEXITCODE
-          if ($exitCode -ne 3) { throw "Expected activity timeline discovery exit 3, received $exitCode" }
+            --expected-timeline-sha256 e904c24f6963775e4df86d1eb492b5a54e07af5d44f9f0ed9b4424ed17daf01c 2>&1 | Tee-Object artifacts/song-timeline/timeline.log
+          if ($LASTEXITCODE -ne 0) { throw "Pinned activity timeline proof failed with exit $LASTEXITCODE" }
           python tools/validate_song_activity_timeline.py `
             --proof artifacts/song-timeline/song-activity-timeline.json `
-            --mode discovery 2>&1 | Tee-Object -Append artifacts/song-timeline/timeline.log
+            --mode pass `
+            --expected-sha256 e904c24f6963775e4df86d1eb492b5a54e07af5d44f9f0ed9b4424ed17daf01c 2>&1 | Tee-Object -Append artifacts/song-timeline/timeline.log
           if ($LASTEXITCODE -ne 0) { throw "Song activity timeline validation failed with exit $LASTEXITCODE" }
 
-      - name: Upload timeline discovery evidence
+      - name: Prove reusable local WAV timeline CLI
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/song-timeline/generic | Out-Null
+          python tools/build_song_activity_timeline.py `
+            --model artifacts/song-timeline/model/silero_vad.onnx `
+            --input artifacts/song-timeline/production-length-activity-fixture.wav `
+            --output-dir artifacts/song-timeline/generic `
+            --source-label ci-production-length-fixture `
+            --expected-input-sha256 301367d9d09603f4a99a9e997cbac219aa14a659e1c83ea4e794d82b42243b76 2>&1 | Tee-Object artifacts/song-timeline/generic-cli.log
+          if ($LASTEXITCODE -ne 0) { throw "Generic local WAV timeline CLI failed with exit $LASTEXITCODE" }
+          python tools/validate_built_song_activity_timeline.py `
+            --timeline artifacts/song-timeline/generic/song-activity-timeline.json `
+            --expected-timeline-sha256 e904c24f6963775e4df86d1eb492b5a54e07af5d44f9f0ed9b4424ed17daf01c `
+            --expected-input-sha256 301367d9d09603f4a99a9e997cbac219aa14a659e1c83ea4e794d82b42243b76 `
+            --expected-duration-seconds 180 2>&1 | Tee-Object -Append artifacts/song-timeline/generic-cli.log
+          if ($LASTEXITCODE -ne 0) { throw "Generic local WAV timeline validation failed with exit $LASTEXITCODE" }
+
+      - name: Enforce capability manifest truth boundary
+        shell: pwsh
+        run: |
+          $capability = Get-Content -LiteralPath 'config/song-activity-timeline.v1.json' -Raw | ConvertFrom-Json
+          if ($capability.schema -ne 'echoes.song-activity-timeline-capability.v1' -or $capability.status -ne 'REAL') {
+            throw 'Song activity timeline capability manifest is invalid'
+          }
+          if ($capability.proof.timelineSha256 -ne 'e904c24f6963775e4df86d1eb492b5a54e07af5d44f9f0ed9b4424ed17daf01c') {
+            throw 'Capability timeline digest drifted'
+          }
+          if (-not $capability.proof.windowsProof -or -not $capability.proof.linuxProof -or -not $capability.proof.genericLocalWavCliProven) {
+            throw 'Cross-platform or generic CLI proof is missing'
+          }
+          if ($capability.truthBoundary.userSongAnalyzed -ne $false -or $capability.truthBoundary.instrumentalClassificationProven -ne $false -or $capability.truthBoundary.vocalIsolationProven -ne $false) {
+            throw 'Capability truth boundary is overstated'
+          }
+          if ($capability.kcore.executionAuthorized -ne $false -or -not $capability.kcore.requiresOperatorApproval) {
+            throw 'K-Core execution boundary drifted'
+          }
+
+      - name: Upload song activity timeline evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: song-activity-timeline-discovery-${{ matrix.os }}
+          name: song-activity-timeline-${{ matrix.os }}
           path: |
             artifacts/song-timeline/silero-vad-provisioning.json
             artifacts/song-timeline/song-activity-timeline.json
             artifacts/song-timeline/song-activity-timeline.csv
+            artifacts/song-timeline/generic/song-activity-timeline.json
+            artifacts/song-timeline/generic/song-activity-timeline.csv
             artifacts/song-timeline/provisioning.log
             artifacts/song-timeline/timeline.log
+            artifacts/song-timeline/generic-cli.log
           if-no-files-found: error
           retention-days: 14
