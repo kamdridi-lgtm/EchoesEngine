@@ -1,6 +1,6 @@
 {
   "schema": "echoes.capability-registry.v1",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "truthPolicy": {
     "allowedStatuses": [
       "REAL",
@@ -70,11 +70,28 @@
       "modelInferenceProven": false,
       "networkProvisioningProven": false
     },
+    "onnxRuntimeInference": {
+      "kind": "ai",
+      "target": "native",
+      "status": "REAL",
+      "scope": "pinned native CPU reference-graph load and deterministic float-tensor inference proven on Windows and Linux",
+      "runtime": "Microsoft.ML.OnnxRuntime 1.20.1",
+      "packageSha256": "9c32108e9a1c78b090a95c2a219f244dd5f067d4caf68fb0f967103f3f20839c",
+      "referenceModelSha256": "e56584d83b364a79aff8693588494a4eff77705eb4020ee8a7e229a1ecdf069b",
+      "referenceModelSizeBytes": 275,
+      "cpuReferenceInferenceProven": true,
+      "productionModelProvisioned": false,
+      "voiceConversionProven": false,
+      "videoInferenceProven": false,
+      "gpuInferenceProven": false,
+      "tensorRtInferenceProven": false
+    },
     "neuralScheduler": {
       "kind": "orchestration",
       "target": "echoes+kcore",
       "status": "REAL",
-      "scope": "read-only selection of integrity-verified models by purpose, capability, provider, precision, quality, licence and VRAM budget",
+      "scope": "read-only selection of integrity-verified and inference-proven models by purpose, capability, provider, precision, quality, licence and VRAM budget",
+      "requiresInferenceProof": true,
       "executionProven": false,
       "requiresOperatorApproval": true
     },
