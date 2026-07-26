@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     vocalIsolation.requiredCapabilities.push_back("vocalIsolation");
     const auto isolationPlan = scheduler.plan(vocalIsolation, {evidence});
     require(isolationPlan.status == "BLOCKED", "Silero timestamps must not masquerade as vocal isolation");
-    require(contains(isolationPlan.blockers, "CAPABILITY_NOT_AVAILABLE"),
+    require(contains(isolationPlan.blockers, "CAPABILITIES_MISSING"),
             "Missing vocal-isolation capability blocker");
 
     std::cout << "EchoesSileroKCore PASS"
