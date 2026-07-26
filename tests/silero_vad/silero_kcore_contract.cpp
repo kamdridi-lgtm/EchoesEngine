@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
     descriptor.expectedSha256 = expectedSha;
     descriptor.expectedSizeBytes = expectedSize;
     descriptor.minimumVramGiB = 0.0;
-    descriptor.qualityScore = 92;
+    descriptor.qualityScore = 94;
     descriptor.maxConcurrency = 4;
     descriptor.commercialUseAllowed = true;
     descriptor.providers = {"cpu"};
@@ -48,6 +48,7 @@ int main(int argc, char** argv) {
     descriptor.capabilities = {
         "voiceActivityDetection",
         "voiceActivityProbability",
+        "speechTimestamping",
         "streamingInference",
         "recurrentState"
     };
@@ -61,10 +62,11 @@ int main(int argc, char** argv) {
             "Integrity inspection must remain offline and non-executing");
 
     NeuralScheduleRequest request;
-    request.jobId = "silero-vad-production-job";
+    request.jobId = "silero-vad-timestamp-production-job";
     request.purpose = "voice_activity_detection";
     request.requiredCapabilities = {
         "voiceActivityDetection",
+        "speechTimestamping",
         "streamingInference",
         "recurrentState"
     };
@@ -74,12 +76,12 @@ int main(int argc, char** argv) {
     request.commercialUse = true;
     request.availableVramGiB = 0.0;
     request.reserveVramGiB = 0.0;
-    request.minimumQuality = 90;
+    request.minimumQuality = 94;
     request.maximumConcurrency = 4;
 
     NeuralScheduler scheduler;
     const auto plan = scheduler.plan(request, {evidence});
-    require(plan.status == "PLANNED", "K-Core did not plan inference-proven Silero VAD");
+    require(plan.status == "PLANNED", "K-Core did not plan inference-proven Silero timestamps");
     require(plan.selectedModelId == descriptor.id, "K-Core selected the wrong model");
     require(plan.provider == "cpu" && plan.precision == "fp32", "K-Core runtime selection drifted");
     require(plan.reservedVramGiB == 0.0, "CPU VAD must not reserve VRAM");
@@ -113,9 +115,18 @@ int main(int argc, char** argv) {
     require(contains(wrongPurposePlan.blockers, "PURPOSE_NOT_SUPPORTED"),
             "Missing purpose blocker");
 
+    auto vocalIsolation = request;
+    vocalIsolation.jobId = "silero-vad-vocal-isolation-job";
+    vocalIsolation.requiredCapabilities.push_back("vocalIsolation");
+    const auto isolationPlan = scheduler.plan(vocalIsolation, {evidence});
+    require(isolationPlan.status == "BLOCKED", "Silero timestamps must not masquerade as vocal isolation");
+    require(contains(isolationPlan.blockers, "CAPABILITY_NOT_AVAILABLE"),
+            "Missing vocal-isolation capability blocker");
+
     std::cout << "EchoesSileroKCore PASS"
               << " integrity=verified"
               << " selected=silero-vad-6.2.1"
+              << " timestamps=selected"
               << " provider=cpu"
               << " precision=fp32"
               << " vram=0"
@@ -123,6 +134,7 @@ int main(int argc, char** argv) {
               << " integrity-only=blocked"
               << " gpu=blocked"
               << " voice-conversion=blocked"
+              << " vocal-isolation=blocked"
               << " execution=not-authorized"
               << "\n";
     return 0;
