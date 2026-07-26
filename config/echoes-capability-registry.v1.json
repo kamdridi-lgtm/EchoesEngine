@@ -1,6 +1,6 @@
 {
   "schema": "echoes.capability-registry.v1",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "truthPolicy": {
     "allowedStatuses": [
       "REAL",
@@ -90,7 +90,7 @@
       "kind": "ai-audio",
       "target": "python+onnxruntime+kcore",
       "status": "REAL",
-      "scope": "pinned Silero VAD 6.2.1 production model provisioning, recurrent 16 kHz CPU inference, silence rejection, speech probability detection and fail-closed K-Core selection proven on Windows and Linux",
+      "scope": "pinned Silero VAD 6.2.1 production model provisioning, recurrent 16 kHz CPU inference, voice probability detection, deterministic speech timestamps and fail-closed K-Core selection proven on Windows and Linux",
       "licence": "MIT",
       "commercialUseAllowed": true,
       "runtime": "onnxruntime 1.20.1 CPUExecutionProvider",
@@ -98,11 +98,15 @@
       "modelSha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
       "modelSizeBytes": 2327524,
       "officialSampleSha256": "89f17d9c94c4b31eb320f424628bcbc920abaddbee6e2760fd868bfb1d9a2e47",
+      "speechTimestampSegmentsSha256": "1777089516ef46cfd6ab0549ff1813671ac2fe94784e40d441df70421abe53d7",
+      "speechTimestampSegmentCount": 19,
+      "speechTimestampCoverage": 0.810466667,
       "productionModelProvisioned": true,
       "productionModelInferenceProven": true,
       "voiceActivityProbabilityProven": true,
+      "speechTimestampingProven": true,
       "schedulerSelectionProven": true,
-      "speechTimestampingProven": false,
+      "vocalIsolationProven": false,
       "voiceConversionProven": false,
       "gpuInferenceProven": false,
       "tensorRtInferenceProven": false,
@@ -180,17 +184,19 @@
         "minimumVramGiB": 0,
         "providerCapabilities": [],
         "engineModules": [
-          "audioCore"
+          "audioCore",
+          "sileroVadProduction"
         ]
       },
       "stages": [
         "analyze_audio",
+        "detect_speech_timestamps",
         "build_timeline",
         "render_typography",
         "assemble",
         "qc_video"
       ],
-      "qualityScore": 75
+      "qualityScore": 78
     },
     {
       "id": "cinema_low_vram_text_v1",
@@ -210,18 +216,20 @@
           "textToVideo"
         ],
         "engineModules": [
-          "audioCore"
+          "audioCore",
+          "sileroVadProduction"
         ]
       },
       "stages": [
         "analyze_audio",
+        "detect_speech_timestamps",
         "plan_scenes",
         "render_resumable",
         "assemble",
         "qc_video",
         "emit_evidence"
       ],
-      "qualityScore": 70
+      "qualityScore": 73
     },
     {
       "id": "cinema_identity_local_v1",
@@ -242,11 +250,13 @@
           "subjectIdentity"
         ],
         "engineModules": [
-          "audioCore"
+          "audioCore",
+          "sileroVadProduction"
         ]
       },
       "stages": [
         "analyze_audio",
+        "detect_speech_timestamps",
         "lock_subject_identity",
         "plan_scenes",
         "render_resumable",
@@ -255,7 +265,7 @@
         "qc_video",
         "emit_evidence"
       ],
-      "qualityScore": 85
+      "qualityScore": 88
     },
     {
       "id": "cinema_hybrid_identity_v1",
@@ -278,12 +288,14 @@
           "subjectIdentity"
         ],
         "engineModules": [
-          "audioCore"
+          "audioCore",
+          "sileroVadProduction"
         ],
         "cloudAllowed": true
       },
       "stages": [
         "analyze_audio_local",
+        "detect_speech_timestamps_local",
         "plan_scenes_local",
         "render_remote",
         "download_verified",
@@ -291,7 +303,7 @@
         "qc_video",
         "emit_evidence"
       ],
-      "qualityScore": 92
+      "qualityScore": 94
     },
     {
       "id": "restoration_local_v1",

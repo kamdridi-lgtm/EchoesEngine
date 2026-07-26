@@ -1,0 +1,157 @@
+name: Echoes Silero Speech Timestamps
+
+on:
+  pull_request:
+    paths:
+      - "tools/provision_silero_vad.py"
+      - "tools/prove_silero_vad.py"
+      - "tools/silero_speech_segments.py"
+      - "tools/prove_silero_speech_timestamps.py"
+      - "tests/silero_segments/**"
+      - "tests/silero_vad/**"
+      - "config/models/silero-vad-6.2.1.json"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/silero-speech-timestamps.yml"
+      - ".github/workflows/silero-vad-production-proof.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/provision_silero_vad.py"
+      - "tools/prove_silero_vad.py"
+      - "tools/silero_speech_segments.py"
+      - "tools/prove_silero_speech_timestamps.py"
+      - "tests/silero_segments/**"
+      - "tests/silero_vad/**"
+      - "config/models/silero-vad-6.2.1.json"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/silero-speech-timestamps.yml"
+      - ".github/workflows/silero-vad-production-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  timestamp-proof:
+    name: Silero speech timestamp proof (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-latest]
+    steps:
+      - name: Checkout timestamp contract
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/provision_silero_vad.py
+            tools/prove_silero_vad.py
+            tools/silero_speech_segments.py
+            tools/prove_silero_speech_timestamps.py
+            tests/silero_segments
+            config/models/silero-vad-6.2.1.json
+            config/echoes-capability-registry.v1.json
+          sparse-checkout-cone-mode: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned ONNX runtime and inspector
+        run: >-
+          python -m pip install --disable-pip-version-check
+          "numpy==1.26.4" "onnx==1.16.2" "onnxruntime==1.20.1"
+
+      - name: Validate deterministic segmentation core
+        run: python -m unittest discover -s tests/silero_segments -p "test_*.py" -v
+
+      - name: Provision pinned official production model
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/silero-timestamps | Out-Null
+          python tools/provision_silero_vad.py `
+            --output-dir artifacts/silero-timestamps `
+            --expected-model-sha256 1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3 `
+            --expected-model-size 2327524 2>&1 | Tee-Object artifacts/silero-timestamps/provisioning.log
+          if ($LASTEXITCODE -ne 0) { throw "Silero provisioning failed with exit $LASTEXITCODE" }
+
+      - name: Execute pinned speech timestamp proof
+        shell: pwsh
+        run: |
+          python tools/prove_silero_speech_timestamps.py `
+            --model artifacts/silero-timestamps/model/silero_vad.onnx `
+            --output-dir artifacts/silero-timestamps `
+            --expected-segments-sha256 1777089516ef46cfd6ab0549ff1813671ac2fe94784e40d441df70421abe53d7 2>&1 | Tee-Object artifacts/silero-timestamps/timestamps.log
+          if ($LASTEXITCODE -ne 0) { throw "Silero timestamp proof failed with exit $LASTEXITCODE" }
+          $proof = Get-Content -LiteralPath 'artifacts/silero-timestamps/silero-speech-timestamps.json' -Raw | ConvertFrom-Json
+          if ($proof.schema -ne 'echoes.silero-speech-timestamp-proof.v1' -or $proof.status -ne 'PASS') {
+            throw 'Silero timestamp proof is invalid'
+          }
+          foreach ($name in @(
+            'segmentsNonempty','segmentsSorted','segmentsNonOverlapping','segmentsBounded',
+            'segmentsPositiveDuration','timestampsDeterministic','canonicalDigestDeterministic',
+            'silenceProducesNoSegments','sampleShaPinned','probabilitiesFinite','probabilitiesBounded'
+          )) {
+            if (-not $proof.checks.$name) { throw "Timestamp proof check failed: $name" }
+          }
+          if ($proof.summary.segmentCount -ne 19 -or $proof.summary.totalSpeechSamples -ne 778048) {
+            throw 'Pinned timestamp count or speech duration drifted'
+          }
+          if ($proof.summary.segmentsSha256 -ne '1777089516ef46cfd6ab0549ff1813671ac2fe94784e40d441df70421abe53d7') {
+            throw 'Pinned timestamp digest drifted'
+          }
+          if ([math]::Abs([double]$proof.summary.speechCoverage - 0.810466667) -gt 0.000000001) {
+            throw 'Pinned timestamp coverage drifted'
+          }
+          if (-not $proof.truthBoundary.speechTimestampingProven) {
+            throw 'Speech timestamping was not promoted by the pinned proof'
+          }
+          foreach ($field in @('vocalIsolationProven','voiceConversionProven','gpuInferenceProven','tensorRtInferenceProven')) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "$field must remain false" }
+          }
+
+      - name: Enforce timestamp registry and model boundaries
+        shell: pwsh
+        run: |
+          $registry = Get-Content -LiteralPath 'config/echoes-capability-registry.v1.json' -Raw | ConvertFrom-Json
+          if ($registry.version -ne '1.4.0') { throw 'Capability registry version must be 1.4.0' }
+          $module = $registry.engineModules.sileroVadProduction
+          if (-not $module.speechTimestampingProven -or $module.speechTimestampSegmentCount -ne 19) {
+            throw 'Registry timestamp proof is missing'
+          }
+          if ($module.speechTimestampSegmentsSha256 -ne '1777089516ef46cfd6ab0549ff1813671ac2fe94784e40d441df70421abe53d7') {
+            throw 'Registry timestamp digest drifted'
+          }
+          foreach ($field in @('vocalIsolationProven','voiceConversionProven','gpuInferenceProven','tensorRtInferenceProven','executionAuthorized')) {
+            if ($module.$field -ne $false) { throw "$field must remain false in the registry" }
+          }
+          foreach ($pipelineId in @('lyric_video_local_v1','cinema_low_vram_text_v1','cinema_identity_local_v1','cinema_hybrid_identity_v1')) {
+            $pipeline = $registry.pipelines | Where-Object { $_.id -eq $pipelineId }
+            if (-not $pipeline -or -not ($pipeline.requirements.engineModules -contains 'sileroVadProduction')) {
+              throw "$pipelineId must require proven Silero timestamps"
+            }
+          }
+          $catalog = Get-Content -LiteralPath 'config/models/silero-vad-6.2.1.json' -Raw | ConvertFrom-Json
+          if (-not ($catalog.capabilities -contains 'speechTimestamping') -or -not $catalog.proof.speechTimestampingProven) {
+            throw 'Canonical model manifest does not record timestamping'
+          }
+          if ($catalog.proof.speechTimestampSegmentsSha256 -ne '1777089516ef46cfd6ab0549ff1813671ac2fe94784e40d441df70421abe53d7') {
+            throw 'Canonical model timestamp digest drifted'
+          }
+          foreach ($field in @('vocalIsolationProven','voiceConversionProven','gpuInferenceProven','tensorRtInferenceProven')) {
+            if ($catalog.proof.$field -ne $false) { throw "$field must remain false in the model manifest" }
+          }
+
+      - name: Upload timestamp evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: silero-speech-timestamps-${{ matrix.os }}
+          path: |
+            artifacts/silero-timestamps/silero-vad-provisioning.json
+            artifacts/silero-timestamps/silero-speech-timestamps.json
+            artifacts/silero-timestamps/provisioning.log
+            artifacts/silero-timestamps/timestamps.log
+          if-no-files-found: error
+          retention-days: 14

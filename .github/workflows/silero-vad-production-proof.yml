@@ -5,19 +5,25 @@ on:
     paths:
       - "tools/provision_silero_vad.py"
       - "tools/prove_silero_vad.py"
+      - "tools/silero_speech_segments.py"
+      - "tools/prove_silero_speech_timestamps.py"
       - "tests/silero_vad/**"
       - "config/models/silero-vad-6.2.1.json"
       - "config/echoes-capability-registry.v1.json"
       - ".github/workflows/silero-vad-production-proof.yml"
+      - ".github/workflows/silero-speech-timestamps.yml"
   push:
     branches: [main]
     paths:
       - "tools/provision_silero_vad.py"
       - "tools/prove_silero_vad.py"
+      - "tools/silero_speech_segments.py"
+      - "tools/prove_silero_speech_timestamps.py"
       - "tests/silero_vad/**"
       - "config/models/silero-vad-6.2.1.json"
       - "config/echoes-capability-registry.v1.json"
       - ".github/workflows/silero-vad-production-proof.yml"
+      - ".github/workflows/silero-speech-timestamps.yml"
 
 permissions:
   contents: read
@@ -93,14 +99,8 @@ jobs:
             throw 'Silero production inference proof is invalid'
           }
           foreach ($name in @(
-            'probabilitiesFinite',
-            'probabilitiesBounded',
-            'resetDeterministic',
-            'recurrentStateChanged',
-            'invalidChunkBlocked',
-            'silenceRejected',
-            'speechDetected',
-            'semanticSeparation'
+            'probabilitiesFinite','probabilitiesBounded','resetDeterministic','recurrentStateChanged',
+            'invalidChunkBlocked','silenceRejected','speechDetected','semanticSeparation'
           )) {
             if (-not $proof.checks.$name) { throw "Silero production check failed: $name" }
           }
@@ -120,7 +120,7 @@ jobs:
             throw 'Production VAD inference was not promoted by the proof'
           }
           foreach ($field in @('speechTimestampingProven','voiceConversionProven','gpuInferenceProven','tensorRtInferenceProven')) {
-            if ($proof.truthBoundary.$field -ne $false) { throw "$field must remain false" }
+            if ($proof.truthBoundary.$field -ne $false) { throw "$field must remain false in the probability-only proof" }
           }
 
       - name: Validate canonical production model manifest
@@ -136,8 +136,14 @@ jobs:
           if ($catalog.licence.spdx -ne 'MIT' -or -not $catalog.licence.commercialUseAllowed) {
             throw 'Canonical Silero commercial licence evidence is invalid'
           }
-          if (-not $catalog.proof.productionInferenceProven -or $catalog.proof.voiceConversionProven -ne $false) {
-            throw 'Canonical Silero truth boundary is invalid'
+          if (-not $catalog.proof.productionInferenceProven -or -not $catalog.proof.speechTimestampingProven) {
+            throw 'Canonical Silero inference or timestamp proof is missing'
+          }
+          if ($catalog.proof.speechTimestampSegmentsSha256 -ne '1777089516ef46cfd6ab0549ff1813671ac2fe94784e40d441df70421abe53d7') {
+            throw 'Canonical Silero timestamp digest drifted'
+          }
+          foreach ($field in @('vocalIsolationProven','voiceConversionProven','gpuInferenceProven','tensorRtInferenceProven')) {
+            if ($catalog.proof.$field -ne $false) { throw "$field must remain false" }
           }
           if ($catalog.execution.executionAuthorized -ne $false -or -not $catalog.execution.requiresOperatorApproval) {
             throw 'Canonical Silero execution boundary is invalid'
@@ -147,29 +153,23 @@ jobs:
         shell: pwsh
         run: |
           $registry = Get-Content -LiteralPath 'config/echoes-capability-registry.v1.json' -Raw | ConvertFrom-Json
-          if ($registry.version -ne '1.3.0') { throw 'Capability registry version must be 1.3.0' }
+          if ($registry.version -ne '1.4.0') { throw 'Capability registry version must be 1.4.0' }
           $module = $registry.engineModules.sileroVadProduction
           if (-not $module -or $module.status -ne 'REAL') { throw 'sileroVadProduction must be REAL' }
           foreach ($field in @(
-            'productionModelProvisioned',
-            'productionModelInferenceProven',
-            'voiceActivityProbabilityProven',
-            'schedulerSelectionProven'
+            'productionModelProvisioned','productionModelInferenceProven','voiceActivityProbabilityProven',
+            'speechTimestampingProven','schedulerSelectionProven'
           )) {
             if ($module.$field -ne $true) { throw "$field must be true after the production proof" }
           }
           foreach ($field in @(
-            'speechTimestampingProven',
-            'voiceConversionProven',
-            'gpuInferenceProven',
-            'tensorRtInferenceProven',
-            'executionAuthorized'
+            'vocalIsolationProven','voiceConversionProven','gpuInferenceProven','tensorRtInferenceProven','executionAuthorized'
           )) {
             if ($module.$field -ne $false) { throw "$field must remain false" }
           }
           if (-not $module.requiresOperatorApproval) { throw 'Silero execution must still require operator approval' }
-          if ($module.modelSha256 -ne '1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3' -or $module.modelSizeBytes -ne 2327524) {
-            throw 'Registry Silero model evidence drifted'
+          if ($module.speechTimestampSegmentsSha256 -ne '1777089516ef46cfd6ab0549ff1813671ac2fe94784e40d441df70421abe53d7') {
+            throw 'Registry Silero timestamp evidence drifted'
           }
           if ($registry.engineModules.onnxRuntimeInference.productionModelProvisioned -ne $false) {
             throw 'Native C++ reference inference must not claim this Python production model'
@@ -195,16 +195,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "K-Core Silero contract failed with exit $LASTEXITCODE" }
           $text = Get-Content -LiteralPath 'artifacts/silero-vad/kcore.log' -Raw
           foreach ($token in @(
-            'integrity=verified',
-            'selected=silero-vad-6.2.1',
-            'provider=cpu',
-            'precision=fp32',
-            'vram=0',
-            'concurrency=4',
-            'integrity-only=blocked',
-            'gpu=blocked',
-            'voice-conversion=blocked',
-            'execution=not-authorized'
+            'integrity=verified','selected=silero-vad-6.2.1','timestamps=selected','provider=cpu',
+            'precision=fp32','vram=0','concurrency=4','integrity-only=blocked','gpu=blocked',
+            'voice-conversion=blocked','vocal-isolation=blocked','execution=not-authorized'
           )) {
             if (-not $text.Contains($token)) { throw "Missing K-Core Silero proof token: $token" }
           }
