@@ -5,6 +5,8 @@ on:
     paths:
       - "tools/provision_silero_vad.py"
       - "tools/prove_silero_vad.py"
+      - "tests/silero_vad/**"
+      - "config/models/silero-vad-6.2.1.json"
       - "config/echoes-capability-registry.v1.json"
       - ".github/workflows/silero-vad-production-proof.yml"
   push:
@@ -12,6 +14,8 @@ on:
     paths:
       - "tools/provision_silero_vad.py"
       - "tools/prove_silero_vad.py"
+      - "tests/silero_vad/**"
+      - "config/models/silero-vad-6.2.1.json"
       - "config/echoes-capability-registry.v1.json"
       - ".github/workflows/silero-vad-production-proof.yml"
 
@@ -32,8 +36,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
+            engine/include
             tools/provision_silero_vad.py
             tools/prove_silero_vad.py
+            tests/silero_vad
+            config/models/silero-vad-6.2.1.json
             config/echoes-capability-registry.v1.json
           sparse-checkout-cone-mode: true
 
@@ -116,6 +123,60 @@ jobs:
             if ($proof.truthBoundary.$field -ne $false) { throw "$field must remain false" }
           }
 
+      - name: Validate canonical production model manifest
+        shell: pwsh
+        run: |
+          $catalog = Get-Content -LiteralPath 'config/models/silero-vad-6.2.1.json' -Raw | ConvertFrom-Json
+          if ($catalog.schema -ne 'echoes.onnx-production-model.v1' -or $catalog.id -ne 'silero-vad-6.2.1') {
+            throw 'Canonical Silero model manifest is invalid'
+          }
+          if ($catalog.model.sha256 -ne '1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3' -or $catalog.model.sizeBytes -ne 2327524) {
+            throw 'Canonical Silero model evidence drifted'
+          }
+          if ($catalog.licence.spdx -ne 'MIT' -or -not $catalog.licence.commercialUseAllowed) {
+            throw 'Canonical Silero commercial licence evidence is invalid'
+          }
+          if (-not $catalog.proof.productionInferenceProven -or $catalog.proof.voiceConversionProven -ne $false) {
+            throw 'Canonical Silero truth boundary is invalid'
+          }
+          if ($catalog.execution.executionAuthorized -ne $false -or -not $catalog.execution.requiresOperatorApproval) {
+            throw 'Canonical Silero execution boundary is invalid'
+          }
+
+      - name: Configure K-Core Silero contract
+        run: cmake -S tests/silero_vad -B build/silero-vad-kcore
+
+      - name: Build K-Core Silero contract
+        run: cmake --build build/silero-vad-kcore --config Release
+
+      - name: Prove K-Core fail-closed scheduling
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem build/silero-vad-kcore -Recurse -File |
+            Where-Object { $_.Name -in @('echoes_silero_kcore_contract.exe','echoes_silero_kcore_contract') } |
+            Select-Object -First 1
+          if (-not $exe) { throw 'K-Core Silero contract executable was not produced' }
+          & $exe.FullName `
+            'artifacts/silero-vad/model/silero_vad.onnx' `
+            '1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3' `
+            '2327524' 2>&1 | Tee-Object artifacts/silero-vad/kcore.log
+          if ($LASTEXITCODE -ne 0) { throw "K-Core Silero contract failed with exit $LASTEXITCODE" }
+          $text = Get-Content -LiteralPath 'artifacts/silero-vad/kcore.log' -Raw
+          foreach ($token in @(
+            'integrity=verified',
+            'selected=silero-vad-6.2.1',
+            'provider=cpu',
+            'precision=fp32',
+            'vram=0',
+            'concurrency=4',
+            'integrity-only=blocked',
+            'gpu=blocked',
+            'voice-conversion=blocked',
+            'execution=not-authorized'
+          )) {
+            if (-not $text.Contains($token)) { throw "Missing K-Core Silero proof token: $token" }
+          }
+
       - name: Upload Silero production evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -126,5 +187,6 @@ jobs:
             artifacts/silero-vad/silero-vad-inference.json
             artifacts/silero-vad/provisioning.log
             artifacts/silero-vad/inference.log
-          if-no-files-found: error
+            artifacts/silero-vad/kcore.log
+          if-no-files-found: warn
           retention-days: 14
