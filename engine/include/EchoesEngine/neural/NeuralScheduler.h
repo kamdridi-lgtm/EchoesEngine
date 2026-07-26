@@ -17,6 +17,7 @@ struct NeuralScheduleRequest {
     std::vector<std::string> requiredCapabilities;
     std::vector<std::string> providerPreference;
     std::vector<std::string> precisionPreference;
+    std::vector<std::string> inferenceProofModelIds;
     bool commercialUse = false;
     double availableVramGiB = 0.0;
     double reserveVramGiB = 0.5;
@@ -73,6 +74,12 @@ public:
             decision.modelId = evidence.descriptor.id;
             const auto& descriptor = evidence.descriptor;
             if (evidence.status != ModelEvidenceStatus::PASS) decision.blockers.push_back("MODEL_EVIDENCE_NOT_PASS");
+            if (std::find(
+                    request.inferenceProofModelIds.begin(),
+                    request.inferenceProofModelIds.end(),
+                    descriptor.id) == request.inferenceProofModelIds.end()) {
+                decision.blockers.push_back("MODEL_INFERENCE_NOT_PROVEN");
+            }
             if (descriptor.purpose != request.purpose) decision.blockers.push_back("PURPOSE_NOT_SUPPORTED");
             if (descriptor.qualityScore < request.minimumQuality) decision.blockers.push_back("QUALITY_BELOW_REQUEST");
             if (request.commercialUse && !descriptor.commercialUseAllowed) decision.blockers.push_back("COMMERCIAL_USE_NOT_APPROVED");
