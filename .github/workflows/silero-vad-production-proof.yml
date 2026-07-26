@@ -1,0 +1,84 @@
+name: Echoes Silero VAD Production Proof
+
+on:
+  pull_request:
+    paths:
+      - "tools/provision_silero_vad.py"
+      - "tests/silero_vad/**"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/silero-vad-production-proof.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/provision_silero_vad.py"
+      - "tests/silero_vad/**"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/silero-vad-production-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    name: Provision official Silero VAD (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-latest]
+    steps:
+      - name: Checkout production model contract
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/provision_silero_vad.py
+            config/echoes-capability-registry.v1.json
+          sparse-checkout-cone-mode: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned model inspector
+        run: python -m pip install --disable-pip-version-check "onnx==1.16.2"
+
+      - name: Discover verified production model
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/silero-vad | Out-Null
+          python tools/provision_silero_vad.py `
+            --output-dir artifacts/silero-vad `
+            --expected-model-sha256 PIN_AFTER_DISCOVERY `
+            --expected-model-size 0 2>&1 | Tee-Object artifacts/silero-vad/provisioning.log
+          if ($LASTEXITCODE -ne 3) {
+            throw "Expected discovery gate exit 3, received $LASTEXITCODE"
+          }
+          $manifest = Get-Content -LiteralPath 'artifacts/silero-vad/silero-vad-provisioning.json' -Raw | ConvertFrom-Json
+          if ($manifest.schema -ne 'echoes.silero-vad-provisioning.v1' -or $manifest.status -ne 'DISCOVERY') {
+            throw 'Silero discovery manifest is invalid'
+          }
+          if ($manifest.package.sha256 -ne '09de93c4d874bb19c53e62a47dd38be5f163cedad2b5599583231f2a84ef79cb') {
+            throw 'Official wheel digest drifted'
+          }
+          if ($manifest.licence.declared -ne 'MIT' -or -not $manifest.licence.commercialUseAllowed) {
+            throw 'Silero licence evidence is missing or non-commercial'
+          }
+          if (-not $manifest.selectedModel.sha256 -or $manifest.selectedModel.sizeBytes -le 0) {
+            throw 'Selected model digest or size missing'
+          }
+          if ($manifest.truthBoundary.productionModelInferenceProven -ne $false) {
+            throw 'Production inference must remain unproven during discovery'
+          }
+
+      - name: Upload production model discovery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: silero-vad-discovery-${{ matrix.os }}
+          path: |
+            artifacts/silero-vad/silero-vad-provisioning.json
+            artifacts/silero-vad/provisioning.log
+          if-no-files-found: error
+          retention-days: 14
