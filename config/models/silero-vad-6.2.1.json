@@ -24,27 +24,44 @@
     "bundledLicencePath": "silero_vad-6.2.1.dist-info/licenses/LICENSE"
   },
   "runtime": {
-    "providers": ["cpu"],
-    "precisions": ["fp32"],
+    "providers": [
+      "cpu"
+    ],
+    "precisions": [
+      "fp32"
+    ],
     "minimumVramGiB": 0.0,
     "maxConcurrency": 4,
-    "sampleRates": [8000, 16000],
+    "sampleRates": [
+      8000,
+      16000
+    ],
     "chunkSamplesAt16k": 512,
     "contextSamplesAt16k": 64,
-    "stateShape": [2, 1, 128]
+    "stateShape": [
+      2,
+      1,
+      128
+    ]
   },
   "capabilities": [
     "voiceActivityDetection",
     "voiceActivityProbability",
+    "speechTimestamping",
     "streamingInference",
     "recurrentState"
   ],
-  "qualityScore": 92,
+  "qualityScore": 94,
   "proof": {
     "requiredSchema": "echoes.silero-vad-inference-proof.v1",
+    "speechTimestampSchema": "echoes.silero-speech-timestamp-proof.v1",
     "officialSampleSha256": "89f17d9c94c4b31eb320f424628bcbc920abaddbee6e2760fd868bfb1d9a2e47",
+    "speechTimestampSegmentsSha256": "1777089516ef46cfd6ab0549ff1813671ac2fe94784e40d441df70421abe53d7",
+    "speechTimestampSegmentCount": 19,
+    "speechTimestampCoverage": 0.810466667,
     "productionInferenceProven": true,
-    "speechTimestampingProven": false,
+    "speechTimestampingProven": true,
+    "vocalIsolationProven": false,
     "voiceConversionProven": false,
     "gpuInferenceProven": false,
     "tensorRtInferenceProven": false
