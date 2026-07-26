@@ -1,0 +1,57 @@
+{
+  "schema": "echoes.onnx-production-model.v1",
+  "id": "silero-vad-6.2.1",
+  "displayName": "Silero VAD 6.2.1",
+  "purpose": "voice_activity_detection",
+  "source": {
+    "package": "silero-vad",
+    "version": "6.2.1",
+    "distribution": "silero_vad-6.2.1-py3-none-any.whl",
+    "distributionSha256": "09de93c4d874bb19c53e62a47dd38be5f163cedad2b5599583231f2a84ef79cb",
+    "modelArchivePath": "silero_vad/data/silero_vad.onnx"
+  },
+  "model": {
+    "relativePath": "models/silero-vad-6.2.1/silero_vad.onnx",
+    "sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
+    "sizeBytes": 2327524,
+    "onnxIrVersion": 8,
+    "opset": 16
+  },
+  "licence": {
+    "spdx": "MIT",
+    "commercialUseAllowed": true,
+    "attributionRequired": true,
+    "bundledLicencePath": "silero_vad-6.2.1.dist-info/licenses/LICENSE"
+  },
+  "runtime": {
+    "providers": ["cpu"],
+    "precisions": ["fp32"],
+    "minimumVramGiB": 0.0,
+    "maxConcurrency": 4,
+    "sampleRates": [8000, 16000],
+    "chunkSamplesAt16k": 512,
+    "contextSamplesAt16k": 64,
+    "stateShape": [2, 1, 128]
+  },
+  "capabilities": [
+    "voiceActivityDetection",
+    "voiceActivityProbability",
+    "streamingInference",
+    "recurrentState"
+  ],
+  "qualityScore": 92,
+  "proof": {
+    "requiredSchema": "echoes.silero-vad-inference-proof.v1",
+    "officialSampleSha256": "89f17d9c94c4b31eb320f424628bcbc920abaddbee6e2760fd868bfb1d9a2e47",
+    "productionInferenceProven": true,
+    "speechTimestampingProven": false,
+    "voiceConversionProven": false,
+    "gpuInferenceProven": false,
+    "tensorRtInferenceProven": false
+  },
+  "execution": {
+    "requiresOperatorApproval": true,
+    "executionAuthorized": false,
+    "networkProvisioningAtRuntime": false
+  }
+}
