@@ -8,6 +8,7 @@ on:
       - "tools/silero_speech_segments.py"
       - "tools/song_activity_timeline.py"
       - "tools/prove_song_activity_timeline.py"
+      - "tools/prove_song_activity_timeline_release_aware.py"
       - "tests/song_activity_timeline/**"
       - "config/models/silero-vad-6.2.1.json"
       - "config/echoes-capability-registry.v1.json"
@@ -20,6 +21,7 @@ on:
       - "tools/silero_speech_segments.py"
       - "tools/song_activity_timeline.py"
       - "tools/prove_song_activity_timeline.py"
+      - "tools/prove_song_activity_timeline_release_aware.py"
       - "tests/song_activity_timeline/**"
       - "config/models/silero-vad-6.2.1.json"
       - "config/echoes-capability-registry.v1.json"
@@ -47,6 +49,7 @@ jobs:
             tools/silero_speech_segments.py
             tools/song_activity_timeline.py
             tools/prove_song_activity_timeline.py
+            tools/prove_song_activity_timeline_release_aware.py
             tests/song_activity_timeline
             config/models/silero-vad-6.2.1.json
             config/echoes-capability-registry.v1.json
@@ -78,7 +81,7 @@ jobs:
       - name: Discover production-length activity timeline
         shell: pwsh
         run: |
-          python tools/prove_song_activity_timeline.py `
+          python tools/prove_song_activity_timeline_release_aware.py `
             --model artifacts/song-timeline/model/silero_vad.onnx `
             --output-dir artifacts/song-timeline `
             --expected-timeline-sha256 PIN_AFTER_DISCOVERY 2>&1 | Tee-Object artifacts/song-timeline/timeline.log
@@ -100,7 +103,9 @@ jobs:
             'durationExact',
             'probabilitiesFinite',
             'probabilitiesBounded',
-            'speechInsidePinnedContainers',
+            'speechInsidePinnedContainersOrReleaseTail',
+            'speechSegmentsStartInsidePinnedContainers',
+            'recurrentReleaseTailWithinTolerance',
             'bothSpeechWindowsDetected',
             'timelineDeterministic',
             'speechAndNonSpeechPresent',
@@ -109,6 +114,12 @@ jobs:
             'productionModelPinned'
           )) {
             if (-not $proof.checks.$name) { throw "Timeline discovery check failed: $name" }
+          }
+          if ($proof.segmentation.recurrentReleaseToleranceMs -ne 750) {
+            throw 'Recurrent release-tail tolerance drifted'
+          }
+          if ($proof.segmentation.maximumObservedReleaseTailMs -gt 750) {
+            throw 'Observed recurrent release tail exceeded the accepted boundary'
           }
           if ($proof.fixture.durationSeconds -ne 180 -or $proof.fixture.userSongAnalyzed -ne $false) {
             throw 'Fixture duration or truth boundary drifted'
