@@ -1,0 +1,149 @@
+name: Echoes Song Activity Timeline
+
+on:
+  pull_request:
+    paths:
+      - "tools/provision_silero_vad.py"
+      - "tools/prove_silero_vad.py"
+      - "tools/silero_speech_segments.py"
+      - "tools/song_activity_timeline.py"
+      - "tools/prove_song_activity_timeline.py"
+      - "tests/song_activity_timeline/**"
+      - "config/models/silero-vad-6.2.1.json"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/song-activity-timeline.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/provision_silero_vad.py"
+      - "tools/prove_silero_vad.py"
+      - "tools/silero_speech_segments.py"
+      - "tools/song_activity_timeline.py"
+      - "tools/prove_song_activity_timeline.py"
+      - "tests/song_activity_timeline/**"
+      - "config/models/silero-vad-6.2.1.json"
+      - "config/echoes-capability-registry.v1.json"
+      - ".github/workflows/song-activity-timeline.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  timeline-discovery:
+    name: Song activity timeline discovery (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-latest]
+    steps:
+      - name: Checkout activity timeline contract
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/provision_silero_vad.py
+            tools/prove_silero_vad.py
+            tools/silero_speech_segments.py
+            tools/song_activity_timeline.py
+            tools/prove_song_activity_timeline.py
+            tests/song_activity_timeline
+            config/models/silero-vad-6.2.1.json
+            config/echoes-capability-registry.v1.json
+          sparse-checkout-cone-mode: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned inference dependencies
+        run: >-
+          python -m pip install --disable-pip-version-check
+          "numpy==1.26.4" "onnx==1.16.2" "onnxruntime==1.20.1"
+
+      - name: Validate gap-free timeline core
+        run: python -m unittest discover -s tests/song_activity_timeline -p "test_*.py" -v
+
+      - name: Provision pinned Silero production model
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/song-timeline | Out-Null
+          python tools/provision_silero_vad.py `
+            --output-dir artifacts/song-timeline `
+            --expected-model-sha256 1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3 `
+            --expected-model-size 2327524 2>&1 | Tee-Object artifacts/song-timeline/provisioning.log
+          if ($LASTEXITCODE -ne 0) { throw "Silero provisioning failed with exit $LASTEXITCODE" }
+
+      - name: Discover production-length activity timeline
+        shell: pwsh
+        run: |
+          python tools/prove_song_activity_timeline.py `
+            --model artifacts/song-timeline/model/silero_vad.onnx `
+            --output-dir artifacts/song-timeline `
+            --expected-timeline-sha256 PIN_AFTER_DISCOVERY 2>&1 | Tee-Object artifacts/song-timeline/timeline.log
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 3) { throw "Expected activity timeline discovery exit 3, received $exitCode" }
+          $proof = Get-Content -LiteralPath 'artifacts/song-timeline/song-activity-timeline.json' -Raw | ConvertFrom-Json
+          if ($proof.schema -ne 'echoes.song-activity-timeline-proof.v1' -or $proof.status -ne 'DISCOVERY') {
+            throw 'Song activity timeline discovery proof is invalid'
+          }
+          foreach ($name in @(
+            'labelsValid',
+            'positiveDuration',
+            'bounded',
+            'ordered',
+            'nonOverlapping',
+            'gapFree',
+            'alternatingLabels',
+            'exactCoverage',
+            'durationExact',
+            'probabilitiesFinite',
+            'probabilitiesBounded',
+            'speechInsidePinnedContainers',
+            'bothSpeechWindowsDetected',
+            'timelineDeterministic',
+            'speechAndNonSpeechPresent',
+            'editingCuesTruthful',
+            'officialSamplePinned',
+            'productionModelPinned'
+          )) {
+            if (-not $proof.checks.$name) { throw "Timeline discovery check failed: $name" }
+          }
+          if ($proof.fixture.durationSeconds -ne 180 -or $proof.fixture.userSongAnalyzed -ne $false) {
+            throw 'Fixture duration or truth boundary drifted'
+          }
+          if (-not $proof.summary.canonicalSha256 -or $proof.summary.spanCount -lt 3) {
+            throw 'Activity timeline discovery did not produce canonical spans'
+          }
+          if ($proof.truthBoundary.productionLengthTimelineProven -ne $false -or $proof.truthBoundary.voiceActivityTimelineProven -ne $false) {
+            throw 'Timeline must remain unproven until the digest is pinned'
+          }
+          foreach ($field in @(
+            'instrumentalClassificationProven',
+            'vocalIsolationProven',
+            'stemSeparationProven',
+            'voiceConversionProven',
+            'gpuInferenceProven',
+            'tensorRtInferenceProven',
+            'executionAuthorized'
+          )) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "$field must remain false" }
+          }
+          if (-not $proof.truthBoundary.requiresOperatorApproval) {
+            throw 'Timeline execution must continue to require operator approval'
+          }
+
+      - name: Upload timeline discovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: song-activity-timeline-discovery-${{ matrix.os }}
+          path: |
+            artifacts/song-timeline/silero-vad-provisioning.json
+            artifacts/song-timeline/song-activity-timeline.json
+            artifacts/song-timeline/song-activity-timeline.csv
+            artifacts/song-timeline/provisioning.log
+            artifacts/song-timeline/timeline.log
+          if-no-files-found: error
+          retention-days: 14
