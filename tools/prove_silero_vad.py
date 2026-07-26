@@ -22,6 +22,10 @@ SAMPLE_RATE = 16000
 CHUNK_SAMPLES = 512
 CONTEXT_SAMPLES = 64
 THRESHOLD = 0.5
+SILENCE_MAX_LIMIT = 0.02
+SPEECH_MAX_MINIMUM = 0.99
+SPEECH_MEAN_MINIMUM = 0.70
+SPEECH_FRAMES_MINIMUM = 1400
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -113,7 +117,10 @@ class SileroVadRunner:
         remainder = samples.size % CHUNK_SAMPLES
         if remainder:
             samples = np.pad(samples, (0, CHUNK_SAMPLES - remainder))
-        return [self.process(samples[offset : offset + CHUNK_SAMPLES]) for offset in range(0, samples.size, CHUNK_SAMPLES)]
+        return [
+            self.process(samples[offset : offset + CHUNK_SAMPLES])
+            for offset in range(0, samples.size, CHUNK_SAMPLES)
+        ]
 
 
 def stats(values: list[float]) -> dict[str, Any]:
@@ -149,8 +156,9 @@ def main() -> int:
     silence = np.zeros(CHUNK_SAMPLES * 12, dtype=np.float32)
     silence_probs = runner.run_audio(silence)
     sample_probs = runner.run_audio(samples)
-    repeat_probs = runner.run_audio(samples[: CHUNK_SAMPLES * min(12, math.ceil(samples.size / CHUNK_SAMPLES))])
-    repeat_again = runner.run_audio(samples[: CHUNK_SAMPLES * min(12, math.ceil(samples.size / CHUNK_SAMPLES))])
+    repeat_length = CHUNK_SAMPLES * min(12, math.ceil(samples.size / CHUNK_SAMPLES))
+    repeat_probs = runner.run_audio(samples[:repeat_length])
+    repeat_again = runner.run_audio(samples[:repeat_length])
 
     finite = all(math.isfinite(value) for value in silence_probs + sample_probs)
     bounded = all(0.0 <= value <= 1.0 for value in silence_probs + sample_probs)
@@ -161,6 +169,19 @@ def main() -> int:
         runner.process(np.zeros(CHUNK_SAMPLES - 1, dtype=np.float32))
     except ValueError:
         invalid_chunk_blocked = True
+
+    silence_stats = stats(silence_probs)
+    sample_stats = stats(sample_probs)
+    silence_rejected = (
+        silence_stats["maximum"] <= SILENCE_MAX_LIMIT
+        and silence_stats["aboveThreshold"] == 0
+    )
+    speech_detected = (
+        sample_stats["maximum"] >= SPEECH_MAX_MINIMUM
+        and sample_stats["mean"] >= SPEECH_MEAN_MINIMUM
+        and sample_stats["aboveThreshold"] >= SPEECH_FRAMES_MINIMUM
+    )
+    semantic_separation = silence_rejected and speech_detected
 
     expected_sample_sha = args.expected_sample_sha256.strip().lower()
     pinned_sample = expected_sample_sha != SAMPLE_SHA_PLACEHOLDER.lower()
@@ -177,12 +198,15 @@ def main() -> int:
         blockers.append("RECURRENT_STATE_DID_NOT_CHANGE")
     if not invalid_chunk_blocked:
         blockers.append("INVALID_CHUNK_NOT_BLOCKED")
+    if not silence_rejected:
+        blockers.append("SILENCE_NOT_REJECTED")
+    if not speech_detected:
+        blockers.append("SPEECH_NOT_DETECTED")
 
-    silence_stats = stats(silence_probs)
-    sample_stats = stats(sample_probs)
+    passed = pinned_sample and not blockers
     proof = {
         "schema": SCHEMA,
-        "status": "PASS" if pinned_sample and not blockers else "DISCOVERY",
+        "status": "PASS" if passed else "DISCOVERY",
         "runtime": {
             "name": "onnxruntime",
             "version": ort.__version__,
@@ -209,6 +233,12 @@ def main() -> int:
             "stateShape": [2, 1, 128],
             "threshold": THRESHOLD,
         },
+        "acceptance": {
+            "silenceMaximumAtMost": SILENCE_MAX_LIMIT,
+            "speechMaximumAtLeast": SPEECH_MAX_MINIMUM,
+            "speechMeanAtLeast": SPEECH_MEAN_MINIMUM,
+            "speechFramesAboveThresholdAtLeast": SPEECH_FRAMES_MINIMUM,
+        },
         "silence": silence_stats,
         "officialSpeechSample": sample_stats,
         "checks": {
@@ -217,13 +247,16 @@ def main() -> int:
             "resetDeterministic": deterministic,
             "recurrentStateChanged": state_changed,
             "invalidChunkBlocked": invalid_chunk_blocked,
+            "silenceRejected": silence_rejected,
+            "speechDetected": speech_detected,
+            "semanticSeparation": semantic_separation,
         },
         "blockers": blockers,
         "truthBoundary": {
             "productionModelProvisioned": True,
             "productionModelIntegrityProven": True,
-            "productionModelInferenceProven": pinned_sample and not blockers,
-            "voiceActivityProbabilityProven": pinned_sample and not blockers,
+            "productionModelInferenceProven": passed,
+            "voiceActivityProbabilityProven": passed,
             "speechTimestampingProven": False,
             "voiceConversionProven": False,
             "gpuInferenceProven": False,
@@ -249,7 +282,7 @@ def main() -> int:
         f"silenceMax={silence_stats['maximum']:.9f} "
         f"speechMax={sample_stats['maximum']:.9f} "
         f"speechFrames={sample_stats['aboveThreshold']} "
-        "provider=cpu gpu=false tensorrt=false"
+        "semantic=separated provider=cpu gpu=false tensorrt=false"
     )
     return 0
 
