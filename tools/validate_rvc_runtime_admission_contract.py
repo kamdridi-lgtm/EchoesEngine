@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import copy
 import hashlib
 import json
 import shutil
@@ -113,7 +112,7 @@ def build_fixture(root: Path, provider: str = "cpu") -> dict[str, Path]:
         },
         "python": {"version": "3.12.7", "executable": str(runtime / ".venv" / "python")},
         "torch": {
-            "version": "2.7.1+cu118" if provider == "cuda" else "2.7.1+cpu",
+            "version": "2.7.1+cu118" if provider == "cuda" else "2.4.1+cpu",
             "cudaAvailable": provider == "cuda",
             "cudaVersion": "11.8" if provider == "cuda" else None,
         },
@@ -232,7 +231,9 @@ def main() -> int:
         code, report, log = invoke(tool, cpu, root / "cpu-report.json")
         require(code == 0, f"Valid CPU fixture failed: {log}")
         require(report.get("status") == "ADMITTED", "Valid CPU fixture was not admitted")
-        require((report.get("runtime") or {}).get("provider") == "cpu", "CPU provider drifted")
+        runtime_report = report.get("runtime") or {}
+        require(runtime_report.get("provider") == "cpu", "CPU provider drifted")
+        require(str(runtime_report.get("torchVersion") or "").startswith("2.4.1"), "CPU Torch contract drifted")
         truth = report.get("truthBoundary") or {}
         require(truth.get("conversionAdmitted") is True, "CPU admission not recorded")
         require(truth.get("conversionCommandIssued") is False, "Gate issued a conversion command")
@@ -246,8 +247,35 @@ def main() -> int:
         code, report, log = invoke(tool, cuda, root / "cuda-report.json")
         require(code == 0, f"Valid CUDA evidence fixture failed: {log}")
         require(report.get("status") == "ADMITTED", "Valid CUDA evidence fixture was not admitted")
-        require((report.get("runtime") or {}).get("cudaAvailable") is True, "CUDA evidence not retained")
+        runtime_report = report.get("runtime") or {}
+        require(runtime_report.get("cudaAvailable") is True, "CUDA evidence not retained")
+        require(str(runtime_report.get("torchVersion") or "").startswith("2.7.1"), "CUDA Torch contract drifted")
         results["validCudaEvidence"] = {"status": report.get("status"), "blockers": report.get("blockers")}
+
+        cpu_wrong_torch = cloned_fixture(root, "cpu wrong torch", provider="cpu")
+        manifest = load_json(cpu_wrong_torch["runtimeManifest"])
+        manifest["torch"]["version"] = "2.7.1+cpu"
+        write_json(cpu_wrong_torch["runtimeManifest"], manifest)
+        code, report, _ = invoke(tool, cpu_wrong_torch, root / "cpu-wrong-torch-report.json")
+        require(code == 2 and report.get("status") == "BLOCKED", "CPU wrong Torch did not block")
+        require(
+            "RVC_PROVIDER_TORCH_VERSION_MISMATCH" in (report.get("blockers") or []),
+            "Missing CPU Torch version blocker",
+        )
+        results["cpuTorchVersionMismatch"] = report.get("blockers")
+
+        cuda_wrong_torch = cloned_fixture(root, "cuda wrong torch", provider="cuda")
+        manifest = load_json(cuda_wrong_torch["runtimeManifest"])
+        manifest["torch"]["version"] = "2.4.1+cpu"
+        manifest["torch"]["cudaAvailable"] = False
+        manifest["torch"]["cudaVersion"] = None
+        write_json(cuda_wrong_torch["runtimeManifest"], manifest)
+        code, report, _ = invoke(tool, cuda_wrong_torch, root / "cuda-wrong-torch-report.json")
+        require(code == 2 and report.get("status") == "BLOCKED", "CUDA wrong Torch did not block")
+        blockers = report.get("blockers") or []
+        require("RVC_PROVIDER_TORCH_VERSION_MISMATCH" in blockers, "Missing CUDA Torch version blocker")
+        require("RVC_CUDA_TRUTH_INCONSISTENT" in blockers, "Missing CUDA truth blocker")
+        results["cudaTorchVersionMismatch"] = blockers
 
         not_ready = cloned_fixture(root, "input not ready")
         manifest = load_json(not_ready["inputManifest"])
