@@ -38,9 +38,9 @@ $arguments = @(
     "--results-root", ([IO.Path]::GetFullPath($ResultsRoot)),
     "--control-root", ([IO.Path]::GetFullPath($ControlRoot)),
     "--policy", $policy,
-    "--remote-policy-url", $RemotePolicyUrl
+    "--remote-policy-url", $RemotePolicyUrl,
+    "--interactive"
 )
-if ($Interactive) { $arguments += "--interactive" }
 if ($SkipRemotePolicy) { $arguments += "--skip-remote-policy" }
 
 & $python @arguments
