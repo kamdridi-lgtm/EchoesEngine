@@ -7,9 +7,12 @@ on:
       - "tools/provision_demucs_htdemucs.py"
       - "tools/separate_song_stems.py"
       - "tools/echoes_stem_autopilot.py"
+      - "tools/analyze_stem_quality.py"
+      - "tools/normalize_stem_truth_and_qc.py"
       - "tools/generate_stem_separation_smoke_wav.py"
       - "tools/validate_echoes_stem_autopilot.py"
       - "scripts/install-echoes-stem-runtime.ps1"
+      - "scripts/install-echoes-stem-qc-update.ps1"
       - "scripts/invoke-echoes-stem-autopilot.ps1"
       - "packaging/echoes-stems/**"
       - ".github/workflows/echoes-stem-autopilot-windows.yml"
@@ -20,7 +23,10 @@ on:
       - "tools/provision_demucs_htdemucs.py"
       - "tools/separate_song_stems.py"
       - "tools/echoes_stem_autopilot.py"
+      - "tools/analyze_stem_quality.py"
+      - "tools/normalize_stem_truth_and_qc.py"
       - "scripts/install-echoes-stem-runtime.ps1"
+      - "scripts/install-echoes-stem-qc-update.ps1"
       - "scripts/invoke-echoes-stem-autopilot.ps1"
       - "packaging/echoes-stems/**"
       - ".github/workflows/echoes-stem-autopilot-windows.yml"
@@ -58,10 +64,13 @@ jobs:
             tools/provision_demucs_htdemucs.py `
             tools/separate_song_stems.py `
             tools/echoes_stem_autopilot.py `
+            tools/analyze_stem_quality.py `
+            tools/normalize_stem_truth_and_qc.py `
             tools/generate_stem_separation_smoke_wav.py `
             tools/validate_echoes_stem_autopilot.py
           foreach ($script in @(
             'scripts/install-echoes-stem-runtime.ps1',
+            'scripts/install-echoes-stem-qc-update.ps1',
             'scripts/invoke-echoes-stem-autopilot.ps1'
           )) {
             $tokens = $null
@@ -81,10 +90,13 @@ jobs:
           }
           Copy-Item packaging/echoes-stems/START-ECHOES-STEMS.cmd $root
           Copy-Item scripts/install-echoes-stem-runtime.ps1 (Join-Path $root 'scripts')
+          Copy-Item scripts/install-echoes-stem-qc-update.ps1 (Join-Path $root 'scripts')
           Copy-Item scripts/invoke-echoes-stem-autopilot.ps1 (Join-Path $root 'scripts')
           Copy-Item tools/provision_demucs_htdemucs.py (Join-Path $root 'tools')
           Copy-Item tools/separate_song_stems.py (Join-Path $root 'tools')
           Copy-Item tools/echoes_stem_autopilot.py (Join-Path $root 'tools')
+          Copy-Item tools/analyze_stem_quality.py (Join-Path $root 'tools')
+          Copy-Item tools/normalize_stem_truth_and_qc.py (Join-Path $root 'tools')
           Copy-Item config/echoes-stem-runtime.v1.json (Join-Path $root 'config')
           $zip = Join-Path $stage 'Echoes-Stems-OneClick-Windows.zip'
           Compress-Archive -Path $root -DestinationPath $zip -Force
@@ -127,11 +139,11 @@ jobs:
           "STEM_SOURCE_SHA=$sha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "STEM_ANALYSIS_LEDGER=$ledgerPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Install runtime and execute real HTDemucs inference
+      - name: Install runtime, execute HTDemucs and apply truthful QC
         shell: pwsh
         run: |
           $log = Join-Path $env:STEM_PROOF_ROOT 'stem-install-complete.log'
-          $arguments = @(
+          $installArguments = @(
             '-NoProfile','-ExecutionPolicy','Bypass','-File',(Resolve-Path 'scripts/install-echoes-stem-runtime.ps1'),
             '-SourceRoot',$PWD,
             '-StemRuntimeRoot',$env:STEM_RUNTIME_ROOT,
@@ -141,10 +153,24 @@ jobs:
             '-PythonExecutable',(Get-Command python).Source,
             '-AllowNonDDrive','-SkipPrerequisiteInstall','-SkipScheduledTask','-NoOpen'
           )
-          $output = & powershell.exe @arguments 2>&1
-          $exitCode = $LASTEXITCODE
-          $output | Tee-Object -FilePath $log | Out-Host
-          "exitCode=$exitCode" | Add-Content -LiteralPath $log
+          $installOutput = & powershell.exe @installArguments 2>&1
+          $installExit = $LASTEXITCODE
+          $installOutput | Tee-Object -FilePath $log | Out-Host
+          "baseInstallExit=$installExit" | Add-Content -LiteralPath $log
+          $qcExit = 999
+          if ($installExit -eq 0) {
+            $qcArguments = @(
+              '-NoProfile','-ExecutionPolicy','Bypass','-File',(Resolve-Path 'scripts/install-echoes-stem-qc-update.ps1'),
+              '-SourceRoot',$PWD,
+              '-StemRuntimeRoot',$env:STEM_RUNTIME_ROOT,
+              '-ControlRoot',$env:STEM_CONTROL_ROOT
+            )
+            $qcOutput = & powershell.exe @qcArguments 2>&1
+            $qcExit = $LASTEXITCODE
+            $qcOutput | Tee-Object -FilePath $log -Append | Out-Host
+          }
+          "qcUpdateExit=$qcExit" | Add-Content -LiteralPath $log
+          $exitCode = if ($installExit -ne 0) { $installExit } else { $qcExit }
           "STEM_INSTALL_EXIT=$exitCode" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Inventory stem diagnostics
@@ -174,17 +200,19 @@ jobs:
             ${{ env.STEM_CONTROL_ROOT }}/stem-autopilot-report-latest.json
             ${{ env.STEM_CONTROL_ROOT }}/stem-autopilot-ledger.json
             ${{ env.STEM_CONTROL_ROOT }}/logs
+            ${{ env.STEM_RESULTS_ROOT }}/**/stem-quality-report.json
+            ${{ env.STEM_RESULTS_ROOT }}/**/stem-quality-normalization.log
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Require successful installation and inference
+      - name: Require successful installation, inference and QC
         shell: pwsh
         run: |
           if ([int]$env:STEM_INSTALL_EXIT -ne 0) {
-            throw "Stem runtime installation or inference failed: $env:STEM_INSTALL_EXIT"
+            throw "Stem runtime installation, inference or QC failed: $env:STEM_INSTALL_EXIT"
           }
 
-      - name: Validate initial separation evidence
+      - name: Validate initial separation and technical QC evidence
         shell: pwsh
         run: |
           python tools/validate_echoes_stem_autopilot.py `
@@ -202,17 +230,17 @@ jobs:
           Copy-Item (Join-Path $env:STEM_CONTROL_ROOT 'stem-autopilot-ledger.json') $proof
           Copy-Item (Join-Path $env:STEM_CONTROL_ROOT 'Echoes-Stem-Control-Bundle-Latest.zip') $proof
 
-      - name: Prove second pass is idempotent
+      - name: Prove second QC-aware pass is idempotent
         shell: pwsh
         run: |
-          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/invoke-echoes-stem-autopilot.ps1 `
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:STEM_RUNTIME_ROOT 'Run-Echoes-Stems.ps1') `
             -StemRuntimeRoot $env:STEM_RUNTIME_ROOT `
             -ResultsRoot $env:STEM_RESULTS_ROOT `
             -ControlRoot $env:STEM_CONTROL_ROOT `
             -AnalysisLedgerPath $env:STEM_ANALYSIS_LEDGER `
             -MaxFiles 2 `
             -DeclareUserSong
-          if ($LASTEXITCODE -ne 0) { throw "Stem idempotent rerun failed: $LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw "Stem idempotent QC rerun failed: $LASTEXITCODE" }
           python tools/validate_echoes_stem_autopilot.py `
             --runtime-root $env:STEM_RUNTIME_ROOT `
             --results-root $env:STEM_RESULTS_ROOT `
@@ -223,13 +251,22 @@ jobs:
             --expect-success 0 `
             --expect-already 1
 
-      - name: Prove package contains no audio
+      - name: Prove package contains QC and no audio
         shell: pwsh
         run: |
           $extract = Join-Path $env:RUNNER_TEMP 'stem-package-inspect'
           Expand-Archive -LiteralPath $env:STEM_PACKAGE_ZIP -DestinationPath $extract -Force
           $audio = Get-ChildItem -LiteralPath $extract -File -Recurse | Where-Object { $_.Extension.ToLowerInvariant() -in @('.wav','.mp3','.flac','.m4a','.aac','.ogg') }
           if ($audio) { throw "One-click stem package contains audio" }
+          foreach ($required in @(
+            'scripts\install-echoes-stem-qc-update.ps1',
+            'tools\analyze_stem_quality.py',
+            'tools\normalize_stem_truth_and_qc.py'
+          )) {
+            if (-not (Test-Path -LiteralPath (Join-Path $extract "Echoes-Stems-OneClick-Windows\$required") -PathType Leaf)) {
+              throw "One-click stem package lacks QC file: $required"
+            }
+          }
 
       - name: Upload one-click stem package
         uses: actions/upload-artifact@v4
@@ -239,7 +276,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload real stem evidence
+      - name: Upload real stem and QC evidence
         uses: actions/upload-artifact@v4
         with:
           name: echoes-stem-autopilot-windows-proof
@@ -249,6 +286,7 @@ jobs:
             ${{ env.STEM_CONTROL_ROOT }}/stem-autopilot-report-latest.json
             ${{ env.STEM_CONTROL_ROOT }}/stem-autopilot-ledger.json
             ${{ env.STEM_CONTROL_ROOT }}/Echoes-Stem-Control-Bundle-Latest.zip
+            ${{ env.STEM_RESULTS_ROOT }}/**/stem-quality-report.json
             ${{ env.STEM_PROOF_ROOT }}/initial-proof
           if-no-files-found: error
           retention-days: 14
