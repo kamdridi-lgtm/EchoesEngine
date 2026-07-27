@@ -1,6 +1,6 @@
 {
   "schema": "echoes.capability-registry.v1",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "truthPolicy": {
     "allowedStatuses": [
       "REAL",
@@ -113,6 +113,35 @@
       "requiresOperatorApproval": true,
       "executionAuthorized": false
     },
+    "songActivityTimeline": {
+      "kind": "ai-audio-analysis",
+      "target": "python+onnxruntime+kcore",
+      "status": "REAL",
+      "scope": "deterministic CPU speech/non-speech partitioning for complete local PCM WAV audio with exact sample coverage and JSON/CSV editing exports",
+      "capabilityManifest": "config/song-activity-timeline.v1.json",
+      "runtime": "onnxruntime 1.20.1 CPUExecutionProvider",
+      "model": "silero-vad-6.2.1",
+      "fixtureDurationSeconds": 180,
+      "fixtureSha256": "301367d9d09603f4a99a9e997cbac219aa14a659e1c83ea4e794d82b42243b76",
+      "timelineSha256": "e904c24f6963775e4df86d1eb492b5a54e07af5d44f9f0ed9b4424ed17daf01c",
+      "timelineSpanCount": 81,
+      "speechSpanCount": 40,
+      "nonSpeechSpanCount": 41,
+      "maximumObservedRecurrentReleaseTailMs": 606.0,
+      "acceptedRecurrentReleaseTailMs": 750,
+      "genericLocalWavCliProven": true,
+      "gapFreeActivityTimelineProven": true,
+      "crossPlatformProof": true,
+      "userSongAnalyzed": false,
+      "instrumentalClassificationProven": false,
+      "vocalIsolationProven": false,
+      "stemSeparationProven": false,
+      "voiceConversionProven": false,
+      "gpuInferenceProven": false,
+      "tensorRtInferenceProven": false,
+      "requiresOperatorApproval": true,
+      "executionAuthorized": false
+    },
     "neuralScheduler": {
       "kind": "orchestration",
       "target": "echoes+kcore",
@@ -185,13 +214,14 @@
         "providerCapabilities": [],
         "engineModules": [
           "audioCore",
-          "sileroVadProduction"
+          "sileroVadProduction",
+          "songActivityTimeline"
         ]
       },
       "stages": [
         "analyze_audio",
         "detect_speech_timestamps",
-        "build_timeline",
+        "build_voice_activity_timeline",
         "render_typography",
         "assemble",
         "qc_video"
@@ -217,12 +247,14 @@
         ],
         "engineModules": [
           "audioCore",
-          "sileroVadProduction"
+          "sileroVadProduction",
+          "songActivityTimeline"
         ]
       },
       "stages": [
         "analyze_audio",
         "detect_speech_timestamps",
+        "build_voice_activity_timeline",
         "plan_scenes",
         "render_resumable",
         "assemble",
@@ -251,12 +283,14 @@
         ],
         "engineModules": [
           "audioCore",
-          "sileroVadProduction"
+          "sileroVadProduction",
+          "songActivityTimeline"
         ]
       },
       "stages": [
         "analyze_audio",
         "detect_speech_timestamps",
+        "build_voice_activity_timeline",
         "lock_subject_identity",
         "plan_scenes",
         "render_resumable",
@@ -289,13 +323,15 @@
         ],
         "engineModules": [
           "audioCore",
-          "sileroVadProduction"
+          "sileroVadProduction",
+          "songActivityTimeline"
         ],
         "cloudAllowed": true
       },
       "stages": [
         "analyze_audio_local",
         "detect_speech_timestamps_local",
+        "build_voice_activity_timeline_local",
         "plan_scenes_local",
         "render_remote",
         "download_verified",
