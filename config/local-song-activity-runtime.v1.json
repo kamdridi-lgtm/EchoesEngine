@@ -1,0 +1,49 @@
+{
+  "schema": "echoes.local-song-activity-runtime-contract.v1",
+  "version": "1.0.0",
+  "platform": "windows-x64",
+  "defaultInstallRoot": "D:\\A.I\\EchoesEngineRuntime",
+  "python": {
+    "supportedVersions": ["3.10", "3.11"],
+    "virtualEnvironment": ".venv",
+    "dependencies": {
+      "numpy": "1.26.4",
+      "onnx": "1.16.2",
+      "onnxruntime": "1.20.1"
+    }
+  },
+  "model": {
+    "id": "silero-vad-6.2.1",
+    "filename": "silero_vad.onnx",
+    "sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
+    "sizeBytes": 2327524,
+    "provider": "CPUExecutionProvider"
+  },
+  "inputs": {
+    "native": [".wav"],
+    "ffmpegConversion": [".mp3", ".flac", ".m4a", ".aac", ".ogg"]
+  },
+  "outputs": [
+    "song-activity-timeline.json",
+    "song-activity-timeline.csv",
+    "analysis-run-manifest.json"
+  ],
+  "entrypoints": {
+    "install": "scripts/install-song-activity-runtime.ps1",
+    "analyze": "Analyze-EchoesSong.ps1"
+  },
+  "truthBoundary": {
+    "localRuntimePackageDefined": true,
+    "modelIntegrityRequired": true,
+    "operatorInvocationRequired": true,
+    "executionAuthorized": false,
+    "hpOmenExecutionProven": false,
+    "userSongAnalyzed": false,
+    "instrumentalClassificationProven": false,
+    "vocalIsolationProven": false,
+    "stemSeparationProven": false,
+    "voiceConversionProven": false,
+    "gpuInferenceProven": false,
+    "tensorRtInferenceProven": false
+  }
+}
