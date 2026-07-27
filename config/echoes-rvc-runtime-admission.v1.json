@@ -1,6 +1,6 @@
 {
   "schema": "echoes.rvc-runtime-admission-capability.v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "status": "PARTIAL",
   "purpose": "Admit a future local RVC conversion only when the prepared vocal input, pinned runtime installation and authorized voice model are all hash-verified.",
   "installRoot": "D:\\A.I\\EchoesRvcRuntime",
@@ -19,12 +19,24 @@
   "runtime": {
     "platform": "windows-x64",
     "python": "3.12",
-    "torch": "2.7.1",
     "preferredProvider": "cuda",
-    "preferredCuda": "11.8",
     "cpuFallback": true,
     "rtx50OrNewer": false,
-    "webUiPort": 7865
+    "webUiPort": 7865,
+    "providerProfiles": {
+      "cuda": {
+        "torch": "2.7.1+cu118",
+        "torchaudio": "2.7.1+cu118",
+        "cuda": "11.8",
+        "requirements": "requirments_cu118_py312.txt"
+      },
+      "cpu": {
+        "torch": "2.4.1+cpu",
+        "torchaudio": "2.4.1+cpu",
+        "directml": "0.2.5.dev240914",
+        "requirements": "requirments_cpu_py312.txt"
+      }
+    }
   },
   "assets": {
     "hubert": "assets/hubert_base/pytorch_model.bin",
@@ -46,10 +58,12 @@
     "admissionToolImplemented": true,
     "contractTestsImplemented": true,
     "pinnedUpstreamSelected": true,
+    "providerSpecificTorchContractDefined": true,
     "productionRuntimeInstalled": false,
     "hpOmenRuntimeInstalled": false,
     "python312RuntimeProven": false,
-    "torch271RuntimeProven": false,
+    "cudaTorch271RuntimeProven": false,
+    "cpuTorch241RuntimeProven": false,
     "cuda118InferenceProven": false,
     "cpuInferenceProven": false,
     "kamDridiVoiceModelVerified": false,
