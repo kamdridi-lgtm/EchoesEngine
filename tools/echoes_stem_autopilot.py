@@ -227,6 +227,9 @@ def main() -> int:
         with run_log.open("a", encoding="utf-8") as handle:
             handle.write(f"{utc_now()} {status} source={source_sha} stemJob={stem_job_id} device={used_device}\n")
 
+    proven_items = [
+        item for item in stem_items if isinstance(item, dict) and item.get("status") == "PASS"
+    ]
     finished = datetime.now(timezone.utc)
     report = {
         "schema": STEM_REPORT_SCHEMA,
@@ -243,16 +246,17 @@ def main() -> int:
             "alreadySeparatedFiles": already_done,
             "missingOrChangedSources": missing_source,
             "stemLedgerItems": len(stem_items),
+            "provenStemSets": len(proven_items),
         },
         "items": report_items,
         "truthBoundary": {
             "currentHostStemControllerExecuted": True,
             "scheduledExecutionObserved": False,
-            "userSongSeparated": successful > 0 and args.declare_user_song,
-            "vocalIsolationProven": successful > 0,
-            "stemSeparationProven": successful > 0,
-            "gpuInferenceProven": any(item.get("usedDevice") == "cuda" and item.get("status") == "PASS" for item in report_items),
-            "cpuInferenceProven": any(item.get("usedDevice") == "cpu" and item.get("status") == "PASS" for item in report_items),
+            "userSongSeparated": bool(proven_items) and args.declare_user_song,
+            "vocalIsolationProven": bool(proven_items),
+            "stemSeparationProven": bool(proven_items),
+            "gpuInferenceProven": any(item.get("usedDevice") == "cuda" for item in proven_items),
+            "cpuInferenceProven": any(item.get("usedDevice") == "cpu" for item in proven_items),
             "sourceAudioDeleted": False,
             "sourceAudioUploaded": False,
             "voiceConversionProven": False,
@@ -274,8 +278,8 @@ def main() -> int:
         copy_if_file(archive, stem_ledger_path, "stem-autopilot-ledger.json")
         copy_if_file(archive, runtime_manifest_path, "stem-runtime-manifest.json")
         copy_if_file(archive, run_log, "logs/stem-autopilot-run.log")
-        for item in report_items:
-            if item.get("status") not in {"PASS", "FAILED"}:
+        for item in stem_items:
+            if not isinstance(item, dict) or item.get("status") not in {"PASS", "FAILED"}:
                 continue
             job_id = str(item.get("stemJobId"))
             copy_if_file(archive, Path(str(item.get("manifestPath"))), f"jobs/{job_id}/stem-separation-manifest.json")
@@ -290,12 +294,14 @@ def main() -> int:
         f"Successful: {successful}",
         f"Failed: {failed}",
         f"Already separated: {already_done}",
+        f"Proven stem sets: {len(proven_items)}",
         f"Bundle: {bundle_path}",
     ]
     (control / "STEM-STATUS.txt").write_text("\n".join(status_lines) + "\n", encoding="utf-8")
     print(
         f"EchoesStemAutopilot {report['status']} candidates={len(candidates)} attempted={attempted} "
-        f"success={successful} failed={failed} already={already_done} audio-upload=false source-delete=false"
+        f"success={successful} failed={failed} already={already_done} proven={len(proven_items)} "
+        "audio-upload=false source-delete=false"
     )
     print(f"Control bundle: {bundle_path}")
     if args.interactive and os.name == "nt":
