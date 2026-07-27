@@ -1,6 +1,6 @@
 {
   "schema": "echoes.stem-runtime.v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "status": "REAL",
   "platform": "windows",
   "installRoot": "D:\\A.I\\EchoesStemRuntime",
@@ -43,10 +43,34 @@
     "realModelInferenceRequiredForPass": true,
     "hpOmenExecutionProven": false,
     "userSongSeparated": false,
+    "vocalStemGenerated": false,
     "vocalIsolationProven": false,
+    "vocalIsolationQualityProven": false,
+    "technicalStemQcProven": false,
+    "humanListeningReviewCompleted": false,
+    "acapellaReady": false,
     "stemSeparationProven": false,
     "gpuInferenceProven": false,
     "voiceConversionProven": false,
     "autonomousExecutionProven": false
+  },
+  "quality": {
+    "schema": "echoes.stem-technical-quality.v1",
+    "analysisSampleRate": 44100,
+    "analysisChannels": 2,
+    "metrics": [
+      "peak",
+      "rms",
+      "dcOffset",
+      "clippedFraction",
+      "nonFiniteSamples",
+      "stemEnergyRelativeToSource",
+      "reconstructionResidual",
+      "sourceToStemSumCorrelation"
+    ],
+    "technicalPassRequired": true,
+    "advisoriesBlockSeparation": false,
+    "subjectiveIsolationQualityClaimed": false,
+    "humanListeningReviewRequiredForAcapella": true
   }
 }
