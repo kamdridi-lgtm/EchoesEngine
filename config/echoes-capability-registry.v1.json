@@ -1,6 +1,7 @@
 {
   "schema": "echoes.capability-registry.v1",
   "version": "1.5.0",
+  "integrationRevision": "2026-07-27-kcore-stems",
   "truthPolicy": {
     "allowedStatuses": [
       "REAL",
@@ -18,6 +19,7 @@
     "game_trailer",
     "lyric_video",
     "audio_master",
+    "stem_separation",
     "video_restoration",
     "client_video"
   ],
@@ -142,6 +144,51 @@
       "requiresOperatorApproval": true,
       "executionAuthorized": false
     },
+    "htdemucsStemSeparation": {
+      "kind": "ai-audio-separation",
+      "target": "python+torch+demucs+ffmpeg+kcore",
+      "status": "REAL",
+      "scope": "pinned HTDemucs four-source separation with source preservation, exact model integrity evidence, deterministic manifests and idempotent Windows controller; real CPU inference proven on a controlled Windows fixture",
+      "capabilityManifest": "config/echoes-stem-runtime.v1.json",
+      "platformsProven": [
+        "windows-2022"
+      ],
+      "runtime": "Demucs 4.1.0 + PyTorch 2.7.1 + torchaudio 2.7.1",
+      "model": "htdemucs",
+      "modelSignature": "955717e8",
+      "modelSha256": "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4",
+      "modelSizeBytes": 84141911,
+      "licence": "MIT",
+      "commercialUseAllowed": true,
+      "sources": [
+        "vocals",
+        "drums",
+        "bass",
+        "other"
+      ],
+      "sampleRate": 44100,
+      "channels": 2,
+      "outputBitDepth": 24,
+      "sourcePreservationProven": true,
+      "sourceUploadDisabled": true,
+      "idempotentControllerProven": true,
+      "cpuInferenceProven": true,
+      "stemGeometryValidationProven": true,
+      "stemHashesRecorded": true,
+      "controlledFixtureSeparated": true,
+      "hpOmenExecutionProven": false,
+      "userSongSeparated": false,
+      "gpuInferenceProven": false,
+      "tensorRtInferenceProven": false,
+      "vocalIsolationQualityProven": false,
+      "voiceConversionProven": false,
+      "autonomousScheduledExecutionProven": false,
+      "requiresOperatorApproval": true,
+      "executionAuthorized": false,
+      "proofCommit": "71be8384ca8410fea35dcfc3ad3c20f9e81fc386",
+      "oneClickPackageSha256": "bf417072cd839dc64e03c2bb40d7d2ba1f6f4ed325f8d8f8f477917bf49fdfd1",
+      "ciWorkflowRunId": 30262399476
+    },
     "neuralScheduler": {
       "kind": "orchestration",
       "target": "echoes+kcore",
@@ -198,6 +245,37 @@
         "emit_manifest"
       ],
       "qualityScore": 85
+    },
+    {
+      "id": "stem_separation_windows_v1",
+      "missions": [
+        "stem_separation"
+      ],
+      "execution": "local",
+      "priority": 95,
+      "requirements": {
+        "runtimeStatus": [
+          "PASS"
+        ],
+        "minimumVramGiB": 0,
+        "providerCapabilities": [],
+        "engineModules": [
+          "audioCore",
+          "songActivityTimeline",
+          "htdemucsStemSeparation"
+        ]
+      },
+      "stages": [
+        "verify_source_analysis",
+        "verify_source_hash",
+        "provision_pinned_htdemucs",
+        "separate_four_stems",
+        "validate_stem_geometry",
+        "record_stem_hashes",
+        "verify_source_preserved",
+        "emit_stem_manifest"
+      ],
+      "qualityScore": 84
     },
     {
       "id": "lyric_video_local_v1",
