@@ -153,7 +153,7 @@ jobs:
         shell: pwsh
         run: |
           $registry = Get-Content -LiteralPath 'config/echoes-capability-registry.v1.json' -Raw | ConvertFrom-Json
-          if ($registry.version -ne '1.4.0') { throw 'Capability registry version must be 1.4.0' }
+          if ($registry.version -ne '1.5.0') { throw 'Capability registry version must be 1.5.0' }
           $module = $registry.engineModules.sileroVadProduction
           if (-not $module -or $module.status -ne 'REAL') { throw 'sileroVadProduction must be REAL' }
           foreach ($field in @(
@@ -170,6 +170,13 @@ jobs:
           if (-not $module.requiresOperatorApproval) { throw 'Silero execution must still require operator approval' }
           if ($module.speechTimestampSegmentsSha256 -ne '1777089516ef46cfd6ab0549ff1813671ac2fe94784e40d441df70421abe53d7') {
             throw 'Registry Silero timestamp evidence drifted'
+          }
+          $timelineModule = $registry.engineModules.songActivityTimeline
+          if (-not $timelineModule -or $timelineModule.status -ne 'REAL' -or -not $timelineModule.gapFreeActivityTimelineProven) {
+            throw 'Global song activity timeline module is not proven'
+          }
+          foreach ($field in @('instrumentalClassificationProven','vocalIsolationProven','stemSeparationProven','voiceConversionProven','executionAuthorized')) {
+            if ($timelineModule.$field -ne $false) { throw "$field must remain false in the global timeline module" }
           }
           if ($registry.engineModules.onnxRuntimeInference.productionModelProvisioned -ne $false) {
             throw 'Native C++ reference inference must not claim this Python production model'
