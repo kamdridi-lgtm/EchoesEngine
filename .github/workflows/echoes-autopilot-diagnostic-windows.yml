@@ -21,27 +21,47 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Run duplicate-hash installer scenario with complete output
+      - name: Run exact packaged seed-folder scenario with complete output
         shell: pwsh
         continue-on-error: true
         run: |
           $base = Join-Path $env:RUNNER_TEMP 'Echoes Autopilot Diagnostic With Spaces'
-          $seed = Join-Path $base 'seed songs'
+          $source = Join-Path $base 'Package Source'
+          $seed = Join-Path $source 'SONGS-TO-ANALYZE'
+          New-Item -ItemType Directory -Force -Path $seed | Out-Null
+          foreach ($relative in @(
+            'scripts/install-echoes-autopilot.ps1',
+            'scripts/invoke-echoes-autopilot.ps1',
+            'scripts/install-song-activity-runtime.ps1',
+            'scripts/analyze-song-activity.ps1',
+            'tools/echoes_autopilot.py',
+            'tools/provision_silero_vad.py',
+            'tools/prove_silero_vad.py',
+            'tools/silero_speech_segments.py',
+            'tools/song_activity_timeline.py',
+            'tools/build_song_activity_timeline.py',
+            'config/echoes-autopilot-policy.v1.json',
+            'config/local-song-activity-runtime.v1.json',
+            'config/models/silero-vad-6.2.1.json',
+            'requirements/song-activity-runtime-windows.txt'
+          )) {
+            $destination = Join-Path $source $relative
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
+            Copy-Item -LiteralPath $relative -Destination $destination
+          }
           $audioOne = Join-Path $seed 'Kam Dridi Diagnostic One.wav'
           $audioTwo = Join-Path $seed 'Kam Dridi Diagnostic Duplicate.wav'
-          New-Item -ItemType Directory -Force -Path $seed | Out-Null
           python tools/generate_local_song_activity_smoke_wav.py --output $audioOne
           Copy-Item -LiteralPath $audioOne -Destination $audioTwo
           $arguments = @(
-            '-NoProfile','-ExecutionPolicy','Bypass','-File',(Resolve-Path 'scripts/install-echoes-autopilot.ps1'),
-            '-SourceRoot',$PWD,
+            '-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $source 'scripts/install-echoes-autopilot.ps1'),
+            '-SourceRoot',$source,
             '-AutopilotRoot',(Join-Path $base 'Autopilot'),
             '-RuntimeRoot',(Join-Path $base 'Runtime'),
             '-InboxRoot',(Join-Path $base 'Inbox'),
             '-ResultsRoot',(Join-Path $base 'Results'),
             '-ControlRoot',(Join-Path $base 'Control'),
             '-PythonExecutable',(Get-Command python).Source,
-            '-InputPaths',$audioOne,$audioTwo,
             '-AllowNonDDrive','-SkipPrerequisiteInstall','-SkipScheduledTask','-SkipRemotePolicy','-NoOpen'
           )
           $output = & powershell.exe @arguments 2>&1
