@@ -1,0 +1,234 @@
+name: Echoes Stem Review Package Windows
+
+on:
+  pull_request:
+    paths:
+      - "config/echoes-stem-listening-review.v1.json"
+      - "tools/review_stem_acapella.py"
+      - "tools/generate_stem_review_package_fixture.py"
+      - "scripts/install-echoes-stem-review-update.ps1"
+      - "scripts/invoke-echoes-stem-review.ps1"
+      - "packaging/echoes-stems/START-ECHOES-STEM-REVIEW.cmd"
+      - ".github/workflows/echoes-stem-review-package-windows.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "config/echoes-stem-listening-review.v1.json"
+      - "tools/review_stem_acapella.py"
+      - "tools/generate_stem_review_package_fixture.py"
+      - "scripts/install-echoes-stem-review-update.ps1"
+      - "scripts/invoke-echoes-stem-review.ps1"
+      - "packaging/echoes-stems/START-ECHOES-STEM-REVIEW.cmd"
+      - ".github/workflows/echoes-stem-review-package-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  windows-review-package:
+    name: Stem review package (windows-2022)
+    runs-on: windows-2022
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout review package sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            config/echoes-stem-listening-review.v1.json
+            tools/review_stem_acapella.py
+            tools/generate_stem_review_package_fixture.py
+            scripts/install-echoes-stem-review-update.ps1
+            scripts/invoke-echoes-stem-review.ps1
+            packaging/echoes-stems/START-ECHOES-STEM-REVIEW.cmd
+          sparse-checkout-cone-mode: false
+
+      - name: Set up supported Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile Python and parse PowerShell
+        shell: pwsh
+        run: |
+          python -m py_compile tools/review_stem_acapella.py tools/generate_stem_review_package_fixture.py
+          foreach ($script in @(
+            'scripts/install-echoes-stem-review-update.ps1',
+            'scripts/invoke-echoes-stem-review.ps1'
+          )) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+          }
+
+      - name: Generate deterministic existing-runtime fixture
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'Echoes Stem Review Package With Spaces'
+          $fixturePath = Join-Path $root 'fixture.json'
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          python tools/generate_stem_review_package_fixture.py --root $root --output $fixturePath
+          $fixture = Get-Content -LiteralPath $fixturePath -Raw | ConvertFrom-Json
+          "REVIEW_FIXTURE_PATH=$fixturePath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "REVIEW_RUNTIME_ROOT=$($fixture.runtimeRoot)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "REVIEW_CONTROL_ROOT=$($fixture.controlRoot)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "REVIEW_SOURCE_SHA=$($fixture.sourceSha256)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "REVIEW_STEM_JOB_ID=$($fixture.stemJobId)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "REVIEW_MANIFEST_PATH=$($fixture.manifestPath)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "REVIEW_MANIFEST_SHA=$($fixture.manifestSha256)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install review update into existing stem runtime
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-echoes-stem-review-update.ps1 `
+            -SourceRoot $PWD `
+            -StemRuntimeRoot $env:REVIEW_RUNTIME_ROOT `
+            -ControlRoot $env:REVIEW_CONTROL_ROOT `
+            -PythonExecutable (Get-Command python).Source `
+            -AllowNonDDrive
+          if ($LASTEXITCODE -ne 0) { throw "Stem review update installation failed: $LASTEXITCODE" }
+
+      - name: Execute explicit approved review through installed launcher
+        shell: pwsh
+        run: |
+          $launcher = Join-Path $env:REVIEW_RUNTIME_ROOT 'Review-Echoes-Stem.ps1'
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File $launcher `
+            -StemRuntimeRoot $env:REVIEW_RUNTIME_ROOT `
+            -ControlRoot $env:REVIEW_CONTROL_ROOT `
+            -StemJobId $env:REVIEW_STEM_JOB_ID `
+            -Decision approve `
+            -Reviewer 'windows-package-contract-operator' `
+            -Notes 'Controlled package contract only; not a Kam Dridi production review.' `
+            -ConfirmListenedToVocals `
+            -ConfirmListenedToInstrumental `
+            -PythonExecutable (Get-Command python).Source
+          if ($LASTEXITCODE -ne 0) { throw "Installed stem review launcher failed: $LASTEXITCODE" }
+
+      - name: Validate installed evidence and no-audio bundle
+        shell: pwsh
+        run: |
+          $fixture = Get-Content -LiteralPath $env:REVIEW_FIXTURE_PATH -Raw | ConvertFrom-Json
+          $manifestHash = (Get-FileHash -LiteralPath $fixture.manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($manifestHash -ne $fixture.manifestSha256) { throw 'Original separation manifest was mutated' }
+          $jobRoot = Split-Path -Parent $fixture.manifestPath
+          $reviewPath = Join-Path $jobRoot 'stem-listening-review.json'
+          $reviewedManifestPath = Join-Path $jobRoot 'stem-separation-manifest-reviewed.json'
+          foreach ($required in @($reviewPath,$reviewedManifestPath)) {
+            if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Missing review evidence: $required" }
+          }
+          $review = Get-Content -LiteralPath $reviewPath -Raw | ConvertFrom-Json
+          if ($review.status -ne 'APPROVED') { throw 'Installed review was not APPROVED' }
+          if ($review.truthBoundary.humanListeningReviewCompleted -ne $true -or
+              $review.truthBoundary.acapellaReady -ne $true -or
+              $review.truthBoundary.voiceConversionInputReady -ne $true) {
+            throw 'Approved review did not open the expected preparation gates'
+          }
+          if ($review.truthBoundary.vocalIsolationQualityProven -ne $false -or
+              $review.truthBoundary.voiceConversionProven -ne $false -or
+              $review.truthBoundary.automaticApprovalUsed -ne $false) {
+            throw 'Review truth boundary drifted'
+          }
+          $ledger = Get-Content -LiteralPath (Join-Path $env:REVIEW_CONTROL_ROOT 'stem-autopilot-ledger.json') -Raw | ConvertFrom-Json
+          $item = @($ledger.items | Where-Object { $_.stemJobId -eq $env:REVIEW_STEM_JOB_ID })[0]
+          if ($item.listeningReviewStatus -ne 'APPROVED' -or
+              $item.humanListeningReviewCompleted -ne $true -or
+              $item.acapellaReady -ne $true -or
+              $item.voiceConversionInputReady -ne $true -or
+              $item.voiceConversionProven -ne $false) {
+            throw 'Stem ledger review fields are incorrect'
+          }
+          $runtimeManifest = Get-Content -LiteralPath (Join-Path $env:REVIEW_RUNTIME_ROOT 'stem-runtime-manifest.json') -Raw | ConvertFrom-Json
+          if ($runtimeManifest.listeningReviewUpdate.status -ne 'INSTALLED' -or
+              $runtimeManifest.listeningReviewUpdate.capabilityStatus -ne 'PARTIAL') {
+            throw 'Runtime review update was not recorded truthfully'
+          }
+          if ($runtimeManifest.truthBoundary.humanListeningReviewCompleted -ne $false -or
+              $runtimeManifest.truthBoundary.kamDridiVocalStemApproved -ne $false -or
+              $runtimeManifest.truthBoundary.acapellaReady -ne $false -or
+              $runtimeManifest.truthBoundary.voiceConversionProven -ne $false) {
+            throw 'Runtime manifest falsely promoted a controlled fixture'
+          }
+          $bundle = Join-Path $env:REVIEW_CONTROL_ROOT 'Echoes-Stem-Review-Control-Latest.zip'
+          if (-not (Test-Path -LiteralPath $bundle -PathType Leaf)) { throw 'Review control bundle is missing' }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [IO.Compression.ZipFile]::OpenRead($bundle)
+          try {
+            $names = @($archive.Entries | ForEach-Object { $_.FullName })
+            if (-not ($names | Where-Object { $_ -like '*stem-listening-review.json' })) { throw 'Bundle lacks review record' }
+            if (-not ($names | Where-Object { $_ -like '*stem-separation-manifest-reviewed.json' })) { throw 'Bundle lacks reviewed manifest copy' }
+            foreach ($name in $names) {
+              if (@('.wav','.mp3','.flac','.m4a','.aac','.ogg') -contains [IO.Path]::GetExtension($name).ToLowerInvariant()) {
+                throw "Review bundle contains audio: $name"
+              }
+            }
+          } finally {
+            $archive.Dispose()
+          }
+          $proof = [ordered]@{
+            schema = 'echoes.stem-review-windows-package-proof.v1'
+            status = 'PASS'
+            installRecorded = $true
+            installedLauncherExecuted = $true
+            originalManifestPreserved = $true
+            ledgerUpdated = $true
+            reviewStatus = 'APPROVED'
+            acapellaReadyForControlledFixture = $true
+            productionListeningReviewCompleted = $false
+            kamDridiVocalStemApproved = $false
+            vocalIsolationQualityProven = $false
+            voiceConversionProven = $false
+            bundleContainsAudio = $false
+          }
+          $proofPath = Join-Path $env:REVIEW_CONTROL_ROOT 'stem-review-windows-package-proof.json'
+          $proof | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $proofPath -Encoding utf8
+
+      - name: Assemble clean review update package
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP 'Echoes Stem Review Update Package'
+          $root = Join-Path $stage 'Echoes-Stem-Review-Update-Windows'
+          foreach ($directory in @('scripts','tools','config')) {
+            New-Item -ItemType Directory -Force -Path (Join-Path $root $directory) | Out-Null
+          }
+          Copy-Item packaging/echoes-stems/START-ECHOES-STEM-REVIEW.cmd $root
+          Copy-Item scripts/install-echoes-stem-review-update.ps1 (Join-Path $root 'scripts')
+          Copy-Item scripts/invoke-echoes-stem-review.ps1 (Join-Path $root 'scripts')
+          Copy-Item tools/review_stem_acapella.py (Join-Path $root 'tools')
+          Copy-Item config/echoes-stem-listening-review.v1.json (Join-Path $root 'config')
+          $zip = Join-Path $stage 'Echoes-Stem-Review-Update-Windows.zip'
+          Compress-Archive -Path $root -DestinationPath $zip -Force
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [IO.Compression.ZipFile]::OpenRead($zip)
+          try {
+            $names = @($archive.Entries | ForEach-Object { $_.FullName })
+            foreach ($required in @(
+              'Echoes-Stem-Review-Update-Windows/START-ECHOES-STEM-REVIEW.cmd',
+              'Echoes-Stem-Review-Update-Windows/scripts/install-echoes-stem-review-update.ps1',
+              'Echoes-Stem-Review-Update-Windows/scripts/invoke-echoes-stem-review.ps1',
+              'Echoes-Stem-Review-Update-Windows/tools/review_stem_acapella.py',
+              'Echoes-Stem-Review-Update-Windows/config/echoes-stem-listening-review.v1.json'
+            )) {
+              if ($required -notin $names) { throw "Review package file missing: $required" }
+            }
+            foreach ($name in $names) {
+              if (@('.wav','.mp3','.flac','.m4a','.aac','.ogg') -contains [IO.Path]::GetExtension($name).ToLowerInvariant()) {
+                throw "Review update package contains audio: $name"
+              }
+            }
+          } finally {
+            $archive.Dispose()
+          }
+          "REVIEW_PACKAGE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Upload Windows review package proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-stem-review-package-windows
+          path: |
+            ${{ env.REVIEW_CONTROL_ROOT }}/stem-review-windows-package-proof.json
+            ${{ env.REVIEW_CONTROL_ROOT }}/Echoes-Stem-Review-Control-Latest.zip
+            ${{ env.REVIEW_PACKAGE_ZIP }}
+          if-no-files-found: error
+          retention-days: 14
