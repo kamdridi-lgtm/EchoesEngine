@@ -56,17 +56,26 @@ jobs:
         run: |
           $contract = Get-Content -LiteralPath 'config/echoes-rvc-runtime-admission.v1.json' -Raw | ConvertFrom-Json
           if ($contract.schema -ne 'echoes.rvc-runtime-admission-capability.v1') { throw 'RVC admission schema mismatch' }
+          if ($contract.version -ne '1.1.0') { throw 'RVC admission version drifted' }
           if ($contract.status -ne 'PARTIAL') { throw 'RVC admission contract must remain PARTIAL' }
           if ($contract.upstream.repository -ne 'RVC-Project/Retrieval-based-Voice-Conversion-WebUI') { throw 'RVC upstream repository drifted' }
           if ($contract.upstream.commit -ne '4338f12c3c28c80b3ac015e2d0df66c41592746d') { throw 'RVC upstream commit drifted' }
           if ($contract.runtime.python -ne '3.12') { throw 'RVC Python contract drifted' }
-          if ($contract.runtime.torch -ne '2.7.1') { throw 'RVC Torch contract drifted' }
-          if ($contract.runtime.preferredCuda -ne '11.8') { throw 'RVC CUDA contract drifted' }
+          if ($contract.runtime.providerProfiles.cuda.torch -ne '2.7.1+cu118') { throw 'RVC CUDA Torch contract drifted' }
+          if ($contract.runtime.providerProfiles.cuda.torchaudio -ne '2.7.1+cu118') { throw 'RVC CUDA Torchaudio contract drifted' }
+          if ($contract.runtime.providerProfiles.cuda.cuda -ne '11.8') { throw 'RVC CUDA version contract drifted' }
+          if ($contract.runtime.providerProfiles.cuda.requirements -ne 'requirments_cu118_py312.txt') { throw 'RVC CUDA requirements contract drifted' }
+          if ($contract.runtime.providerProfiles.cpu.torch -ne '2.4.1+cpu') { throw 'RVC CPU Torch contract drifted' }
+          if ($contract.runtime.providerProfiles.cpu.torchaudio -ne '2.4.1+cpu') { throw 'RVC CPU Torchaudio contract drifted' }
+          if ($contract.runtime.providerProfiles.cpu.directml -ne '0.2.5.dev240914') { throw 'RVC DirectML contract drifted' }
+          if ($contract.runtime.providerProfiles.cpu.requirements -ne 'requirments_cpu_py312.txt') { throw 'RVC CPU requirements contract drifted' }
+          if ($contract.truthBoundary.providerSpecificTorchContractDefined -ne $true) { throw 'Provider-specific RVC contract is not recorded' }
           foreach ($field in @(
             'productionRuntimeInstalled',
             'hpOmenRuntimeInstalled',
             'python312RuntimeProven',
-            'torch271RuntimeProven',
+            'cudaTorch271RuntimeProven',
+            'cpuTorch241RuntimeProven',
             'cuda118InferenceProven',
             'cpuInferenceProven',
             'kamDridiVoiceModelVerified',
@@ -91,7 +100,16 @@ jobs:
           if ($proof.status -ne 'PASS') { throw 'RVC admission proof did not pass' }
           if ($proof.cases.validCpu.status -ne 'ADMITTED') { throw 'Valid CPU evidence was not admitted' }
           if ($proof.cases.validCudaEvidence.status -ne 'ADMITTED') { throw 'Valid CUDA evidence was not admitted' }
-          foreach ($case in @('inputNotReady','tamperedVocal','commitDrift','tamperedModel','unauthorizedVoice','runtimeSourceTamper')) {
+          foreach ($case in @(
+            'cpuTorchVersionMismatch',
+            'cudaTorchVersionMismatch',
+            'inputNotReady',
+            'tamperedVocal',
+            'commitDrift',
+            'tamperedModel',
+            'unauthorizedVoice',
+            'runtimeSourceTamper'
+          )) {
             if ($null -eq $proof.cases.$case -or @($proof.cases.$case).Count -eq 0) { throw "Blocked proof case missing: $case" }
           }
           foreach ($field in @(
