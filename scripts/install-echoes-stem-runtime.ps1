@@ -19,6 +19,7 @@ $ErrorActionPreference = "Stop"
 $InstallSchema = "echoes.stem-runtime-installation.v1"
 $DemucsVersion = "4.1.0"
 $DemucsWheelSha256 = "4916a804702033ce934a6cdfa7e38dde03f7a7a6e85f41d0120eefe9e2966758"
+$NumpyVersion = "1.26.4"
 $TorchVersion = "2.7.1"
 $TorchaudioVersion = "2.7.1"
 $ModelSha256 = "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4"
@@ -182,6 +183,7 @@ if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
 }
 
 Invoke-NativeChecked $venvPython @("-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--upgrade", "pip") "Stem pip bootstrap"
+Invoke-NativeChecked $venvPython @("-m", "pip", "install", "--disable-pip-version-check", "--no-input", "numpy==$NumpyVersion") "Pinned NumPy installation"
 
 $nvidiaSmi = Get-Command nvidia-smi -ErrorAction SilentlyContinue
 $gpuDetected = $null -ne $nvidiaSmi
@@ -216,10 +218,10 @@ Invoke-NativeChecked $venvPython @(
     "-m", "pip", "install", "--disable-pip-version-check", "--no-input", $demucsWheel.FullName
 ) "Pinned Demucs installation"
 
-$inventoryJson = & $venvPython -c 'import json,torch,torchaudio,demucs; print(json.dumps(dict(torch=torch.__version__,torchaudio=torchaudio.__version__,demucs=demucs.__version__,cudaAvailable=torch.cuda.is_available(),cudaRuntime=torch.version.cuda,deviceCount=torch.cuda.device_count(),deviceName=(torch.cuda.get_device_name(0) if torch.cuda.is_available() else None))))'
+$inventoryJson = & $venvPython -c 'import json,numpy,torch,torchaudio,demucs; print(json.dumps(dict(numpy=numpy.__version__,torch=torch.__version__,torchaudio=torchaudio.__version__,demucs=demucs.__version__,cudaAvailable=torch.cuda.is_available(),cudaRuntime=torch.version.cuda,deviceCount=torch.cuda.device_count(),deviceName=(torch.cuda.get_device_name(0) if torch.cuda.is_available() else None))))'
 if ($LASTEXITCODE -ne 0) { throw "Unable to inspect installed stem dependencies" }
 $inventory = $inventoryJson | ConvertFrom-Json
-if (-not ([string]$inventory.torch).StartsWith($TorchVersion) -or -not ([string]$inventory.torchaudio).StartsWith($TorchaudioVersion) -or $inventory.demucs -ne $DemucsVersion) {
+if ($inventory.numpy -ne $NumpyVersion -or -not ([string]$inventory.torch).StartsWith($TorchVersion) -or -not ([string]$inventory.torchaudio).StartsWith($TorchaudioVersion) -or $inventory.demucs -ne $DemucsVersion) {
     throw "Installed stem dependency versions drifted from the locked contract"
 }
 
@@ -266,6 +268,7 @@ $runtimeManifest = [ordered]@{
         executable = $venvPython
     }
     packages = [ordered]@{
+        numpy = $inventory.numpy
         demucs = $inventory.demucs
         demucsWheelSha256 = $wheelSha
         torch = $inventory.torch
@@ -351,9 +354,17 @@ $installStatus | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $
 
 if (-not $NoInitialRun) {
     if (Test-Path -LiteralPath $analysisLedger -PathType Leaf) {
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $launcherPath `
-            -StemRuntimeRoot $runtime -ResultsRoot $results -ControlRoot $control `
-            -AnalysisLedgerPath $analysisLedger -MaxFiles 2 -DeclareUserSong -Interactive:(!$NoOpen)
+        $initialArguments = @(
+            "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $launcherPath,
+            "-StemRuntimeRoot", $runtime,
+            "-ResultsRoot", $results,
+            "-ControlRoot", $control,
+            "-AnalysisLedgerPath", $analysisLedger,
+            "-MaxFiles", "2",
+            "-DeclareUserSong"
+        )
+        if (-not $NoOpen) { $initialArguments += "-Interactive" }
+        & powershell.exe @initialArguments
         if ($LASTEXITCODE -notin @(0, 2)) {
             throw "Initial Echoes Stem Autopilot run failed with exit code $LASTEXITCODE"
         }
@@ -362,6 +373,6 @@ if (-not $NoInitialRun) {
     }
 }
 
-Write-Host "EchoesStemRuntimeInstall PASS root=$runtime demucs=$($inventory.demucs) torch=$($inventory.torch) cuda=$($inventory.cudaAvailable) model=$ModelSha256"
+Write-Host "EchoesStemRuntimeInstall PASS root=$runtime numpy=$($inventory.numpy) demucs=$($inventory.demucs) torch=$($inventory.torch) cuda=$($inventory.cudaAvailable) model=$ModelSha256"
 Write-Host "Results: $results"
 Write-Host "Control: $(Join-Path $control 'Echoes-Stem-Control-Bundle-Latest.zip')"
