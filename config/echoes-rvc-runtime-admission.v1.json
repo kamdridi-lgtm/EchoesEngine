@@ -1,0 +1,63 @@
+{
+  "schema": "echoes.rvc-runtime-admission-capability.v1",
+  "version": "1.0.0",
+  "status": "PARTIAL",
+  "purpose": "Admit a future local RVC conversion only when the prepared vocal input, pinned runtime installation and authorized voice model are all hash-verified.",
+  "installRoot": "D:\\A.I\\EchoesRvcRuntime",
+  "upstream": {
+    "repository": "RVC-Project/Retrieval-based-Voice-Conversion-WebUI",
+    "commit": "4338f12c3c28c80b3ac015e2d0df66c41592746d",
+    "license": "MIT",
+    "requiredFiles": [
+      "README.md",
+      "LICENSE",
+      "webui.py",
+      "requirments_cu118_py312.txt",
+      "requirments_cpu_py312.txt"
+    ]
+  },
+  "runtime": {
+    "platform": "windows-x64",
+    "python": "3.12",
+    "torch": "2.7.1",
+    "preferredProvider": "cuda",
+    "preferredCuda": "11.8",
+    "cpuFallback": true,
+    "rtx50OrNewer": false,
+    "webUiPort": 7865
+  },
+  "assets": {
+    "hubert": "assets/hubert_base/pytorch_model.bin",
+    "rmvpe": "assets/rmvpe/rmvpe.pt",
+    "voiceModels": "assets/weights/*.pth",
+    "indices": "assets/indices/*.index"
+  },
+  "requiredEvidence": {
+    "rvcInputManifestSchema": "echoes.rvc-input-manifest.v1",
+    "rvcInputStatus": "READY",
+    "runtimeInstallationSchema": "echoes.rvc-runtime-installation.v1",
+    "runtimeInstallationStatus": "PASS",
+    "voiceModelManifestSchema": "echoes.rvc-voice-model.v1",
+    "voiceModelStatus": "VERIFIED",
+    "voiceOwnerAuthorizationRequired": true,
+    "allReferencedFilesSha256Required": true
+  },
+  "truthBoundary": {
+    "admissionToolImplemented": true,
+    "contractTestsImplemented": true,
+    "pinnedUpstreamSelected": true,
+    "productionRuntimeInstalled": false,
+    "hpOmenRuntimeInstalled": false,
+    "python312RuntimeProven": false,
+    "torch271RuntimeProven": false,
+    "cuda118InferenceProven": false,
+    "cpuInferenceProven": false,
+    "kamDridiVoiceModelVerified": false,
+    "rvcInferenceProven": false,
+    "voiceConversionProven": false,
+    "convertedAudioGenerated": false,
+    "audioUploaded": false,
+    "requiresOperatorApproval": true,
+    "executionAuthorized": false
+  }
+}
