@@ -176,11 +176,16 @@ if ($dependencies.numpy -ne "1.26.4" -or $dependencies.onnx -ne "1.16.2" -or $de
 }
 
 $sourceCommit = $null
+$gitMetadata = Join-Path $source ".git"
 $git = Get-Command git -ErrorAction SilentlyContinue
-if ($null -ne $git) {
-    $candidateCommit = & $git.Source -C $source rev-parse HEAD 2>$null
-    if ($LASTEXITCODE -eq 0 -and $candidateCommit) {
-        $sourceCommit = ([string]$candidateCommit).Trim()
+if ($null -ne $git -and (Test-Path -LiteralPath $gitMetadata)) {
+    try {
+        $candidateCommit = & $git.Source -C $source rev-parse HEAD 2>$null
+        if ($LASTEXITCODE -eq 0 -and $candidateCommit) {
+            $sourceCommit = ([string]$candidateCommit).Trim()
+        }
+    } catch {
+        $sourceCommit = $null
     }
 }
 $ffmpegCommand = Get-Command ffmpeg -ErrorAction SilentlyContinue
