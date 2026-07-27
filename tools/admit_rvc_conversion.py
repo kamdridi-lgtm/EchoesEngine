@@ -124,7 +124,6 @@ def main() -> int:
     runtime_manifest = load_json(runtime_path) if runtime_path.is_file() else {}
     model_manifest = load_json(model_manifest_path) if model_manifest_path.is_file() else {}
 
-    # Prepared vocal input evidence.
     checks["inputSchemaValid"] = input_manifest.get("schema") == "echoes.rvc-input-manifest.v1"
     checks["inputReady"] = input_manifest.get("status") == "READY"
     input_truth = input_manifest.get("truthBoundary") if isinstance(input_manifest.get("truthBoundary"), dict) else {}
@@ -157,7 +156,6 @@ def main() -> int:
     verify_hashed_file(checks, blockers, "sourceAudio", source_file, source_sha)
     verify_hashed_file(checks, blockers, "vocalInput", vocal_file, vocal_sha)
 
-    # Pinned runtime installation evidence.
     checks["runtimeSchemaValid"] = runtime_manifest.get("schema") == "echoes.rvc-runtime-installation.v1"
     checks["runtimePass"] = runtime_manifest.get("status") == "PASS"
     upstream = runtime_manifest.get("upstream") if isinstance(runtime_manifest.get("upstream"), dict) else {}
@@ -173,12 +171,17 @@ def main() -> int:
     python_info = runtime_manifest.get("python") if isinstance(runtime_manifest.get("python"), dict) else {}
     torch_info = runtime_manifest.get("torch") if isinstance(runtime_manifest.get("torch"), dict) else {}
     provider = str(runtime_manifest.get("provider") or "").lower()
+    torch_version = str(torch_info.get("version") or "")
+    cuda_available = torch_info.get("cudaAvailable") is True
+    cuda_version = str(torch_info.get("cudaVersion") or "")
     checks["python312"] = str(python_info.get("version") or "").startswith("3.12.")
-    checks["torch271"] = str(torch_info.get("version") or "").startswith("2.7.1")
     checks["providerSupported"] = provider in {"cpu", "cuda"}
-    checks["cudaTruthConsistent"] = provider != "cuda" or (
-        torch_info.get("cudaAvailable") is True and str(torch_info.get("cudaVersion") or "").startswith("11.8")
+    checks["providerTorchVersionValid"] = (
+        (provider == "cuda" and torch_version.startswith("2.7.1"))
+        or (provider == "cpu" and torch_version.startswith("2.4.1"))
     )
+    checks["cudaTruthConsistent"] = provider != "cuda" or (cuda_available and cuda_version.startswith("11.8"))
+    checks["cpuTruthConsistent"] = provider != "cpu" or (not cuda_available and not cuda_version)
     checks["cpuFallbackRecorded"] = runtime_manifest.get("cpuFallback") is True
     runtime_truth = runtime_manifest.get("truthBoundary") if isinstance(runtime_manifest.get("truthBoundary"), dict) else {}
     checks["runtimeNoConversionClaim"] = runtime_truth.get("voiceConversionProven") is False
@@ -194,9 +197,10 @@ def main() -> int:
         "RVC_SOURCE_CHECKOUT_MISSING": checks["sourceCheckoutPresent"],
         "RVC_SOURCE_CHECKOUT_OUTSIDE_RUNTIME": checks["sourceCheckoutInsideRuntime"],
         "RVC_PYTHON_312_NOT_PROVEN": checks["python312"],
-        "RVC_TORCH_271_NOT_PROVEN": checks["torch271"],
         "RVC_PROVIDER_UNSUPPORTED": checks["providerSupported"],
+        "RVC_PROVIDER_TORCH_VERSION_MISMATCH": checks["providerTorchVersionValid"],
         "RVC_CUDA_TRUTH_INCONSISTENT": checks["cudaTruthConsistent"],
+        "RVC_CPU_TRUTH_INCONSISTENT": checks["cpuTruthConsistent"],
         "RVC_CPU_FALLBACK_NOT_RECORDED": checks["cpuFallbackRecorded"],
         "RVC_RUNTIME_FALSELY_CLAIMS_CONVERSION": checks["runtimeNoConversionClaim"],
         "RVC_RUNTIME_FALSELY_CLAIMS_AUDIO_OUTPUT": checks["runtimeNoAudioOutputClaim"],
@@ -220,7 +224,6 @@ def main() -> int:
             add_blocker(blockers, f"RVC_REQUIRED_FILE_NOT_RECORDED:{relative}")
         verify_hashed_file(checks, blockers, key, file_path, file_sha)
 
-    # User-owned voice model evidence.
     checks["modelManifestSchemaValid"] = model_manifest.get("schema") == "echoes.rvc-voice-model.v1"
     checks["modelManifestVerified"] = model_manifest.get("status") == "VERIFIED"
     owner = str(model_manifest.get("voiceOwner") or "").strip()
@@ -319,7 +322,8 @@ def main() -> int:
     write_json_atomic(output_path, report)
     print(
         f"EchoesRvcAdmission {report['status']} provider={provider or 'unknown'} "
-        f"blockers={len(blockers)} execution=false conversion=false output={output_path}"
+        f"torch={torch_version or 'unknown'} blockers={len(blockers)} "
+        f"execution=false conversion=false output={output_path}"
     )
     return 0 if admitted else 2
 
