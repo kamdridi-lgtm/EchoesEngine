@@ -1,0 +1,204 @@
+name: Echoes Stem Autopilot Windows
+
+on:
+  pull_request:
+    paths:
+      - "config/echoes-stem-runtime.v1.json"
+      - "tools/provision_demucs_htdemucs.py"
+      - "tools/separate_song_stems.py"
+      - "tools/echoes_stem_autopilot.py"
+      - "tools/generate_stem_separation_smoke_wav.py"
+      - "tools/validate_echoes_stem_autopilot.py"
+      - "scripts/install-echoes-stem-runtime.ps1"
+      - "scripts/invoke-echoes-stem-autopilot.ps1"
+      - "packaging/echoes-stems/**"
+      - ".github/workflows/echoes-stem-autopilot-windows.yml"
+  push:
+    branches: [main]
+    paths:
+      - "config/echoes-stem-runtime.v1.json"
+      - "tools/provision_demucs_htdemucs.py"
+      - "tools/separate_song_stems.py"
+      - "tools/echoes_stem_autopilot.py"
+      - "scripts/install-echoes-stem-runtime.ps1"
+      - "scripts/invoke-echoes-stem-autopilot.ps1"
+      - "packaging/echoes-stems/**"
+      - ".github/workflows/echoes-stem-autopilot-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  real-stem-proof:
+    name: Real HTDemucs stem proof (windows-2022)
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - name: Checkout stem runtime sources
+        uses: actions/checkout@v4
+
+      - name: Set up supported Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile Python and parse PowerShell
+        shell: pwsh
+        run: |
+          python -m py_compile `
+            tools/provision_demucs_htdemucs.py `
+            tools/separate_song_stems.py `
+            tools/echoes_stem_autopilot.py `
+            tools/generate_stem_separation_smoke_wav.py `
+            tools/validate_echoes_stem_autopilot.py
+          foreach ($script in @(
+            'scripts/install-echoes-stem-runtime.ps1',
+            'scripts/invoke-echoes-stem-autopilot.ps1'
+          )) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+          }
+
+      - name: Assemble clean one-click stem package
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP 'Echoes Stems Package'
+          $root = Join-Path $stage 'Echoes-Stems-OneClick-Windows'
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          foreach ($directory in @('scripts','tools','config')) {
+            New-Item -ItemType Directory -Force -Path (Join-Path $root $directory) | Out-Null
+          }
+          Copy-Item packaging/echoes-stems/START-ECHOES-STEMS.cmd $root
+          Copy-Item scripts/install-echoes-stem-runtime.ps1 (Join-Path $root 'scripts')
+          Copy-Item scripts/invoke-echoes-stem-autopilot.ps1 (Join-Path $root 'scripts')
+          Copy-Item tools/provision_demucs_htdemucs.py (Join-Path $root 'tools')
+          Copy-Item tools/separate_song_stems.py (Join-Path $root 'tools')
+          Copy-Item tools/echoes_stem_autopilot.py (Join-Path $root 'tools')
+          Copy-Item config/echoes-stem-runtime.v1.json (Join-Path $root 'config')
+          $zip = Join-Path $stage 'Echoes-Stems-OneClick-Windows.zip'
+          Compress-Archive -Path $root -DestinationPath $zip -Force
+          "STEM_PACKAGE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Prepare isolated analysis ledger and source
+        shell: pwsh
+        run: |
+          $base = Join-Path $env:RUNNER_TEMP 'Echoes Stem Proof With Spaces'
+          $runtime = Join-Path $base 'Stem Runtime'
+          $results = Join-Path $base 'Results'
+          $control = Join-Path $base 'Control'
+          $source = Join-Path $base 'Kam Dridi Stem Smoke.wav'
+          New-Item -ItemType Directory -Force -Path $base | Out-Null
+          python tools/generate_stem_separation_smoke_wav.py --output $source --duration 2.0
+          $sha = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+          $ledger = [ordered]@{
+            schema = 'echoes.autopilot-ledger.v1'
+            version = 1
+            updatedAtUtc = [DateTime]::UtcNow.ToString('o')
+            items = @(
+              [ordered]@{
+                sha256 = $sha
+                sourcePath = $source
+                sourceName = [IO.Path]::GetFileName($source)
+                status = 'PASS'
+                attempts = 1
+                jobId = 'stem-smoke-analysis'
+              }
+            )
+          }
+          $ledgerPath = Join-Path $control 'autopilot-ledger.json'
+          New-Item -ItemType Directory -Force -Path $control | Out-Null
+          $ledger | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $ledgerPath -Encoding utf8
+          "STEM_PROOF_ROOT=$base" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "STEM_RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "STEM_RESULTS_ROOT=$results" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "STEM_CONTROL_ROOT=$control" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "STEM_SOURCE=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "STEM_SOURCE_SHA=$sha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "STEM_ANALYSIS_LEDGER=$ledgerPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install runtime and execute real HTDemucs inference
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-echoes-stem-runtime.ps1 `
+            -SourceRoot $PWD `
+            -StemRuntimeRoot $env:STEM_RUNTIME_ROOT `
+            -ResultsRoot $env:STEM_RESULTS_ROOT `
+            -ControlRoot $env:STEM_CONTROL_ROOT `
+            -AnalysisLedgerPath $env:STEM_ANALYSIS_LEDGER `
+            -PythonExecutable (Get-Command python).Source `
+            -AllowNonDDrive `
+            -SkipPrerequisiteInstall `
+            -SkipScheduledTask `
+            -NoOpen
+          if ($LASTEXITCODE -ne 0) { throw "Stem runtime installation failed: $LASTEXITCODE" }
+
+      - name: Validate initial separation evidence
+        shell: pwsh
+        run: |
+          python tools/validate_echoes_stem_autopilot.py `
+            --runtime-root $env:STEM_RUNTIME_ROOT `
+            --results-root $env:STEM_RESULTS_ROOT `
+            --control-root $env:STEM_CONTROL_ROOT `
+            --source $env:STEM_SOURCE `
+            --expected-source-sha256 $env:STEM_SOURCE_SHA `
+            --expect-attempted 1 `
+            --expect-success 1 `
+            --expect-already 0
+          $proof = Join-Path $env:STEM_PROOF_ROOT 'initial-proof'
+          New-Item -ItemType Directory -Force -Path $proof | Out-Null
+          Copy-Item (Join-Path $env:STEM_CONTROL_ROOT 'stem-autopilot-report-latest.json') $proof
+          Copy-Item (Join-Path $env:STEM_CONTROL_ROOT 'stem-autopilot-ledger.json') $proof
+          Copy-Item (Join-Path $env:STEM_CONTROL_ROOT 'Echoes-Stem-Control-Bundle-Latest.zip') $proof
+
+      - name: Prove second pass is idempotent
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/invoke-echoes-stem-autopilot.ps1 `
+            -StemRuntimeRoot $env:STEM_RUNTIME_ROOT `
+            -ResultsRoot $env:STEM_RESULTS_ROOT `
+            -ControlRoot $env:STEM_CONTROL_ROOT `
+            -AnalysisLedgerPath $env:STEM_ANALYSIS_LEDGER `
+            -MaxFiles 2 `
+            -DeclareUserSong
+          if ($LASTEXITCODE -ne 0) { throw "Stem idempotent rerun failed: $LASTEXITCODE" }
+          python tools/validate_echoes_stem_autopilot.py `
+            --runtime-root $env:STEM_RUNTIME_ROOT `
+            --results-root $env:STEM_RESULTS_ROOT `
+            --control-root $env:STEM_CONTROL_ROOT `
+            --source $env:STEM_SOURCE `
+            --expected-source-sha256 $env:STEM_SOURCE_SHA `
+            --expect-attempted 0 `
+            --expect-success 0 `
+            --expect-already 1
+
+      - name: Prove package contains no audio
+        shell: pwsh
+        run: |
+          $extract = Join-Path $env:RUNNER_TEMP 'stem-package-inspect'
+          Expand-Archive -LiteralPath $env:STEM_PACKAGE_ZIP -DestinationPath $extract -Force
+          $audio = Get-ChildItem -LiteralPath $extract -File -Recurse | Where-Object { $_.Extension.ToLowerInvariant() -in @('.wav','.mp3','.flac','.m4a','.aac','.ogg') }
+          if ($audio) { throw "One-click stem package contains audio" }
+
+      - name: Upload one-click stem package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Echoes-Stems-OneClick-Windows
+          path: ${{ env.STEM_PACKAGE_ZIP }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload real stem evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-stem-autopilot-windows-proof
+          path: |
+            ${{ env.STEM_RUNTIME_ROOT }}/stem-runtime-manifest.json
+            ${{ env.STEM_RUNTIME_ROOT }}/models/model-provisioning-manifest.json
+            ${{ env.STEM_CONTROL_ROOT }}/stem-autopilot-report-latest.json
+            ${{ env.STEM_CONTROL_ROOT }}/stem-autopilot-ledger.json
+            ${{ env.STEM_CONTROL_ROOT }}/Echoes-Stem-Control-Bundle-Latest.zip
+            ${{ env.STEM_PROOF_ROOT }}/initial-proof
+          if-no-files-found: error
+          retention-days: 14
