@@ -1,0 +1,164 @@
+name: Echoes RVC Full CPU Runtime Windows
+
+on:
+  pull_request:
+    paths:
+      - "scripts/install-echoes-rvc-runtime-foundation.ps1"
+      - "tools/validate_rvc_runtime_foundation.py"
+      - "tools/probe_rvc_cpu_runtime.py"
+      - ".github/workflows/echoes-rvc-full-cpu-runtime-windows.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/install-echoes-rvc-runtime-foundation.ps1"
+      - "tools/validate_rvc_runtime_foundation.py"
+      - "tools/probe_rvc_cpu_runtime.py"
+      - ".github/workflows/echoes-rvc-full-cpu-runtime-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  full-cpu-runtime:
+    name: Full RVC CPU DirectML runtime (windows-2022)
+    runs-on: windows-2022
+    timeout-minutes: 90
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONUTF8: "1"
+
+    steps:
+      - name: Checkout full RVC CPU proof sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/install-echoes-rvc-runtime-foundation.ps1
+            tools/validate_rvc_runtime_foundation.py
+            tools/probe_rvc_cpu_runtime.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile proof tools and parse PowerShell
+        shell: pwsh
+        run: |
+          python -m py_compile tools/validate_rvc_runtime_foundation.py tools/probe_rvc_cpu_runtime.py
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'scripts/install-echoes-rvc-runtime-foundation.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+
+      - name: Install complete pinned CPU DirectML runtime
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'Echoes RVC Full CPU Runtime With Spaces'
+          $runtime = Join-Path $root 'RVC Runtime'
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          $log = Join-Path $root 'full-cpu-install.log'
+          $arguments = @(
+            '-NoProfile','-ExecutionPolicy','Bypass','-File',(Resolve-Path 'scripts/install-echoes-rvc-runtime-foundation.ps1'),
+            '-SourceRoot',$PWD,
+            '-RvcRuntimeRoot',$runtime,
+            '-PythonExecutable',(Get-Command python).Source,
+            '-GitExecutable',(Get-Command git).Source,
+            '-ForceCpu','-AllowNonDDrive','-NoOpen'
+          )
+          $output = & powershell.exe @arguments 2>&1
+          $exitCode = $LASTEXITCODE
+          $output | Tee-Object -FilePath $log | Out-Host
+          "ECHOES_RVC_CPU_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ECHOES_RVC_CPU_RUNTIME=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ECHOES_RVC_CPU_INSTALL_LOG=$log" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ECHOES_RVC_CPU_INSTALL_EXIT=$exitCode" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Echoes full CPU install exit=$exitCode runtime=$runtime"
+
+      - name: Inventory complete runtime diagnostics
+        if: always()
+        shell: pwsh
+        run: |
+          $inventory = @()
+          if (Test-Path -LiteralPath $env:ECHOES_RVC_CPU_RUNTIME) {
+            $inventory = Get-ChildItem -LiteralPath $env:ECHOES_RVC_CPU_RUNTIME -Recurse -Force -ErrorAction SilentlyContinue |
+              Select-Object FullName,Length,LastWriteTimeUtc
+          }
+          $inventory | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $env:ECHOES_RVC_CPU_ROOT 'runtime-inventory.json') -Encoding utf8
+
+      - name: Upload installation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-full-cpu-install-diagnostics
+          path: |
+            ${{ env.ECHOES_RVC_CPU_INSTALL_LOG }}
+            ${{ env.ECHOES_RVC_CPU_ROOT }}/runtime-inventory.json
+            ${{ env.ECHOES_RVC_CPU_RUNTIME }}/control/dependency-install.log
+            ${{ env.ECHOES_RVC_CPU_RUNTIME }}/rvc-runtime-manifest.json
+            ${{ env.ECHOES_RVC_CPU_RUNTIME }}/RVC-RUNTIME-STATUS.txt
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Require successful complete installation
+        shell: pwsh
+        run: |
+          if ([int]$env:ECHOES_RVC_CPU_INSTALL_EXIT -ne 0) {
+            throw "Complete RVC CPU runtime installation failed: $env:ECHOES_RVC_CPU_INSTALL_EXIT"
+          }
+
+      - name: Validate provider-correct runtime manifest
+        shell: pwsh
+        run: |
+          python tools/validate_rvc_runtime_foundation.py `
+            --runtime-root $env:ECHOES_RVC_CPU_RUNTIME `
+            --expect-status PASS `
+            --expect-dependencies PASS `
+            --expect-provider cpu
+
+      - name: Probe imports and deterministic CPU tensor execution
+        shell: pwsh
+        run: |
+          $runtimePython = Join-Path $env:ECHOES_RVC_CPU_RUNTIME '.venv\Scripts\python.exe'
+          & $runtimePython tools/probe_rvc_cpu_runtime.py `
+            --runtime-root $env:ECHOES_RVC_CPU_RUNTIME `
+            --output (Join-Path $env:ECHOES_RVC_CPU_ROOT 'rvc-cpu-runtime-proof.json')
+          if ($LASTEXITCODE -ne 0) { throw "RVC CPU dependency probe failed: $LASTEXITCODE" }
+
+      - name: Verify no RVC inference or conversion claim
+        shell: pwsh
+        run: |
+          $proof = Get-Content -LiteralPath (Join-Path $env:ECHOES_RVC_CPU_ROOT 'rvc-cpu-runtime-proof.json') -Raw | ConvertFrom-Json
+          if ($proof.status -ne 'PASS') { throw 'RVC CPU dependency proof is not PASS' }
+          if ($proof.provider.torchVersionValid -ne $true) { throw 'CPU Torch 2.4.1 proof missing' }
+          if ($proof.provider.torchaudioVersionValid -ne $true) { throw 'CPU Torchaudio 2.4.1 proof missing' }
+          if ($proof.provider.directMlImported -ne $true) { throw 'DirectML import proof missing' }
+          if ($proof.cpuTensor.exact -ne $true -or $proof.cpuTensor.finite -ne $true) { throw 'CPU tensor proof failed' }
+          foreach ($field in @(
+            'directMlDeviceExecutionProven',
+            'hubertModelLoaded',
+            'rmvpeModelLoaded',
+            'voiceModelLoaded',
+            'rvcInferenceProven',
+            'voiceConversionProven',
+            'convertedAudioGenerated',
+            'audioUploaded',
+            'executionAuthorized'
+          )) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "CPU proof falsely promoted capability: $field" }
+          }
+
+      - name: Upload full CPU runtime proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-full-cpu-runtime-proof
+          path: |
+            ${{ env.ECHOES_RVC_CPU_ROOT }}/rvc-cpu-runtime-proof.json
+            ${{ env.ECHOES_RVC_CPU_RUNTIME }}/rvc-runtime-manifest.json
+            ${{ env.ECHOES_RVC_CPU_RUNTIME }}/RVC-RUNTIME-STATUS.txt
+          if-no-files-found: error
+          retention-days: 14
