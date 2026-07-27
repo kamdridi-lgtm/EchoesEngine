@@ -1,0 +1,38 @@
+{
+  "schema": "echoes.rvc-input-preparation-capability.v1",
+  "version": "1.0.0",
+  "status": "PARTIAL",
+  "purpose": "Prepare a hash-verified vocal-stem input manifest for future voice conversion only after an explicit approved listening review.",
+  "requiredEvidence": {
+    "reviewSchema": "echoes.stem-listening-review.v1",
+    "reviewStatus": "APPROVED",
+    "reviewDecision": "approve",
+    "reviewedSeparationManifestSchema": "echoes.stem-separation-run.v1",
+    "technicalStemQcRequired": true,
+    "sourceAndVocalStemFilesRequired": true,
+    "sourceAndVocalStemSha256Required": true,
+    "operatorListeningConfirmationsRequired": true
+  },
+  "outputs": {
+    "schema": "echoes.rvc-input-manifest.v1",
+    "audioCopied": false,
+    "audioUploaded": false,
+    "audioConverted": false,
+    "voiceModelLoaded": false
+  },
+  "truthBoundary": {
+    "preparationToolImplemented": true,
+    "contractTestsImplemented": true,
+    "approvedReviewRequired": true,
+    "automaticApprovalAllowed": false,
+    "productionRvcInputPrepared": false,
+    "kamDridiVocalStemPrepared": false,
+    "rvcRuntimeProven": false,
+    "voiceModelProvisioned": false,
+    "voiceModelInferenceProven": false,
+    "voiceConversionProven": false,
+    "convertedAudioGenerated": false,
+    "requiresOperatorApproval": true,
+    "executionAuthorized": false
+  }
+}
