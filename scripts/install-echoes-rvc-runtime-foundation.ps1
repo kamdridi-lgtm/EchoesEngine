@@ -142,6 +142,7 @@ if ($LASTEXITCODE -ne 0 -or $venvVersion -notmatch '^3\.12\.') {
 
 $provider = "uninstalled"
 $providerProfile = "uninstalled"
+$requirementsName = $null
 $torchInfo = [ordered]@{
     version = $null
     torchaudioVersion = $null
@@ -157,8 +158,9 @@ if (-not $SkipDependencyInstall) {
     $provider = if ($useCuda) { "cuda" } else { "cpu" }
     $providerProfile = if ($useCuda) { "cuda-torch271-cu118" } else { "cpu-directml-torch241" }
     $requirementsName = if ($useCuda) { "requirments_cu118_py312.txt" } else { "requirments_cpu_py312.txt" }
+    $requirementsGeneratedName = if ($useCuda) { "requirements-echoes-cu118.txt" } else { "requirements-echoes-cpu.txt" }
     $requirementsSource = Join-Path $source $requirementsName
-    $requirementsGenerated = Join-Path $control (if ($useCuda) { "requirements-echoes-cu118.txt" } else { "requirements-echoes-cpu.txt" })
+    $requirementsGenerated = Join-Path $control $requirementsGeneratedName
     $requirements = Get-Content -LiteralPath $requirementsSource -Raw
     $requirements = $requirements.Replace("https://mirrors.pku.edu.cn/pypi/simple", "https://pypi.org/simple")
     $requirements = $requirements.Replace("https://mirrors.nju.edu.cn/pytorch/whl/cu118", "https://download.pytorch.org/whl/cu118")
@@ -244,6 +246,11 @@ exit $LASTEXITCODE
 $launcher | Set-Content -LiteralPath $launcherPath -Encoding utf8
 
 $status = if ($dependencyStatus -eq "PASS") { "PASS" } else { "PARTIAL" }
+$dependencyRequirementsValue = $requirementsName
+$dependencyLogValue = $null
+if (Test-Path -LiteralPath $dependencyLog -PathType Leaf) {
+    $dependencyLogValue = $dependencyLog
+}
 $manifest = [ordered]@{
     schema = "echoes.rvc-runtime-installation.v1"
     version = "1.1.0"
@@ -273,8 +280,8 @@ $manifest = [ordered]@{
     dependencies = [ordered]@{
         status = $dependencyStatus
         skipped = [bool]$SkipDependencyInstall
-        requirements = if ($SkipDependencyInstall) { $null } else { $requirementsName }
-        log = if (Test-Path -LiteralPath $dependencyLog -PathType Leaf) { $dependencyLog } else { $null }
+        requirements = $dependencyRequirementsValue
+        log = $dependencyLogValue
     }
     installedFiles = $installedFiles
     launcher = $launcherPath
