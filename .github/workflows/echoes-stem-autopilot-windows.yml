@@ -42,6 +42,15 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install FFmpeg proof dependency
+        shell: pwsh
+        run: |
+          choco install ffmpeg -y --no-progress
+          $ffmpeg = Get-ChildItem -LiteralPath 'C:\ProgramData\chocolatey\lib' -Filter ffmpeg.exe -File -Recurse | Select-Object -First 1
+          $ffprobe = Get-ChildItem -LiteralPath 'C:\ProgramData\chocolatey\lib' -Filter ffprobe.exe -File -Recurse | Select-Object -First 1
+          if ($null -eq $ffmpeg -or $null -eq $ffprobe) { throw 'Chocolatey FFmpeg installation did not expose ffmpeg and ffprobe' }
+          $ffmpeg.Directory.FullName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Compile Python and parse PowerShell
         shell: pwsh
         run: |
