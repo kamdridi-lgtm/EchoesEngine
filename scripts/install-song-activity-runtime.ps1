@@ -166,7 +166,7 @@ if ($modelSha -ne $ExpectedModelSha256 -or $modelSize -ne $ExpectedModelSize) {
     throw "Installed Silero model digest or size does not match the pinned production model"
 }
 
-$dependencyJson = & $venvPython -c 'import json, numpy, onnx, onnxruntime; print(json.dumps({"numpy": numpy.__version__, "onnx": onnx.__version__, "onnxruntime": onnxruntime.__version__}))'
+$dependencyJson = & $venvPython -c 'import json, numpy, onnx, onnxruntime; print(json.dumps(dict(numpy=numpy.__version__, onnx=onnx.__version__, onnxruntime=onnxruntime.__version__)))'
 if ($LASTEXITCODE -ne 0) {
     throw "Unable to inspect installed Python dependencies"
 }
