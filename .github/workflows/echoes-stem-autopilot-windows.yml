@@ -121,18 +121,59 @@ jobs:
       - name: Install runtime and execute real HTDemucs inference
         shell: pwsh
         run: |
-          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-echoes-stem-runtime.ps1 `
-            -SourceRoot $PWD `
-            -StemRuntimeRoot $env:STEM_RUNTIME_ROOT `
-            -ResultsRoot $env:STEM_RESULTS_ROOT `
-            -ControlRoot $env:STEM_CONTROL_ROOT `
-            -AnalysisLedgerPath $env:STEM_ANALYSIS_LEDGER `
-            -PythonExecutable (Get-Command python).Source `
-            -AllowNonDDrive `
-            -SkipPrerequisiteInstall `
-            -SkipScheduledTask `
-            -NoOpen
-          if ($LASTEXITCODE -ne 0) { throw "Stem runtime installation failed: $LASTEXITCODE" }
+          $log = Join-Path $env:STEM_PROOF_ROOT 'stem-install-complete.log'
+          $arguments = @(
+            '-NoProfile','-ExecutionPolicy','Bypass','-File',(Resolve-Path 'scripts/install-echoes-stem-runtime.ps1'),
+            '-SourceRoot',$PWD,
+            '-StemRuntimeRoot',$env:STEM_RUNTIME_ROOT,
+            '-ResultsRoot',$env:STEM_RESULTS_ROOT,
+            '-ControlRoot',$env:STEM_CONTROL_ROOT,
+            '-AnalysisLedgerPath',$env:STEM_ANALYSIS_LEDGER,
+            '-PythonExecutable',(Get-Command python).Source,
+            '-AllowNonDDrive','-SkipPrerequisiteInstall','-SkipScheduledTask','-NoOpen'
+          )
+          $output = & powershell.exe @arguments 2>&1
+          $exitCode = $LASTEXITCODE
+          $output | Tee-Object -FilePath $log | Out-Host
+          "exitCode=$exitCode" | Add-Content -LiteralPath $log
+          "STEM_INSTALL_EXIT=$exitCode" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Inventory stem diagnostics
+        if: always()
+        shell: pwsh
+        run: |
+          $inventory = @()
+          foreach ($root in @($env:STEM_RUNTIME_ROOT,$env:STEM_RESULTS_ROOT,$env:STEM_CONTROL_ROOT)) {
+            if (Test-Path -LiteralPath $root) {
+              $inventory += Get-ChildItem -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue |
+                Select-Object FullName,Length,LastWriteTimeUtc
+            }
+          }
+          $inventory | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $env:STEM_PROOF_ROOT 'stem-diagnostic-inventory.json') -Encoding utf8
+
+      - name: Upload stem diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-stem-autopilot-windows-diagnostics
+          path: |
+            ${{ env.STEM_PROOF_ROOT }}/stem-install-complete.log
+            ${{ env.STEM_PROOF_ROOT }}/stem-diagnostic-inventory.json
+            ${{ env.STEM_RUNTIME_ROOT }}/stem-runtime-manifest.json
+            ${{ env.STEM_RUNTIME_ROOT }}/models/model-provisioning-manifest.json
+            ${{ env.STEM_CONTROL_ROOT }}/stem-autopilot-installation.json
+            ${{ env.STEM_CONTROL_ROOT }}/stem-autopilot-report-latest.json
+            ${{ env.STEM_CONTROL_ROOT }}/stem-autopilot-ledger.json
+            ${{ env.STEM_CONTROL_ROOT }}/logs
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Require successful installation and inference
+        shell: pwsh
+        run: |
+          if ([int]$env:STEM_INSTALL_EXIT -ne 0) {
+            throw "Stem runtime installation or inference failed: $env:STEM_INSTALL_EXIT"
+          }
 
       - name: Validate initial separation evidence
         shell: pwsh
