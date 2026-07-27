@@ -14,6 +14,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $ExpectedModelSha256 = "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3"
+$ExpectedModelSize = 2327524
 $AllowedCompressedExtensions = @(".mp3", ".flac", ".m4a", ".aac", ".ogg")
 
 function Get-Sha256([string]$Path) {
@@ -50,7 +51,8 @@ if ($runtimeManifest.schema -ne "echoes.local-song-activity-runtime-installation
     throw "The local runtime manifest is invalid or not PASS"
 }
 $modelSha = Get-Sha256 $modelPath
-if ($modelSha -ne $ExpectedModelSha256 -or $runtimeManifest.model.sha256 -ne $ExpectedModelSha256) {
+$modelSize = (Get-Item -LiteralPath $modelPath).Length
+if ($modelSha -ne $ExpectedModelSha256 -or $modelSize -ne $ExpectedModelSize -or $runtimeManifest.model.sha256 -ne $ExpectedModelSha256) {
     throw "The installed Silero model failed SHA-256 verification"
 }
 
@@ -126,7 +128,7 @@ $builderArguments = @(
     "--model", $modelPath,
     "--input", $analysisInput,
     "--output-dir", $timelineDirectory,
-    "--source-label", "$sourceLabelPrefix:$([IO.Path]::GetFileName($sourcePath))",
+    "--source-label", "${sourceLabelPrefix}:$([IO.Path]::GetFileName($sourcePath))",
     "--expected-input-sha256", $analysisInputSha
 )
 if ($DeclareUserSong) {
@@ -175,6 +177,7 @@ $analysisManifest = [ordered]@{
     model = [ordered]@{
         path = $modelPath
         sha256 = $modelSha
+        sizeBytes = $modelSize
         provider = "CPUExecutionProvider"
     }
     timeline = [ordered]@{
