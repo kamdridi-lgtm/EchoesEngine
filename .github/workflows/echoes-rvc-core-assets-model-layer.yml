@@ -104,6 +104,7 @@ jobs:
             tools/validate_rvc_runtime_foundation.py
             tools/provision_rvc_core_assets.py
             tools/probe_rvc_core_assets.py
+            tools/register_rvc_voice_model.py
           sparse-checkout-cone-mode: false
 
       - name: Set up Python 3.12
@@ -114,7 +115,7 @@ jobs:
       - name: Compile tools and parse PowerShell
         shell: pwsh
         run: |
-          python -m py_compile tools/provision_rvc_core_assets.py tools/probe_rvc_core_assets.py
+          python -m py_compile tools/provision_rvc_core_assets.py tools/probe_rvc_core_assets.py tools/register_rvc_voice_model.py
           $null = [scriptblock]::Create((Get-Content -LiteralPath 'scripts/prepare-echoes-rvc-model-layer.ps1' -Raw))
           $contract = Get-Content -LiteralPath 'config/echoes-rvc-core-assets.v1.json' -Raw | ConvertFrom-Json
           if ($contract.schema -ne 'echoes.rvc-core-assets-capability.v1') { throw 'Core-assets capability schema drifted' }
@@ -183,6 +184,65 @@ jobs:
             if ($proof.truthBoundary.$field -ne $false) { throw "Core asset proof falsely promoted capability: $field" }
           }
 
+      - name: Assemble clean Windows model-layer package
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP 'Echoes-RVC-Model-Layer-Windows'
+          $artifactDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          New-Item -ItemType Directory -Force -Path `
+            $package, `
+            (Join-Path $package 'config'), `
+            (Join-Path $package 'scripts'), `
+            (Join-Path $package 'tools'), `
+            $artifactDir | Out-Null
+          Copy-Item -LiteralPath 'config/echoes-rvc-core-assets.v1.json' -Destination (Join-Path $package 'config')
+          Copy-Item -LiteralPath 'scripts/prepare-echoes-rvc-model-layer.ps1' -Destination (Join-Path $package 'scripts')
+          Copy-Item -LiteralPath 'tools/provision_rvc_core_assets.py' -Destination (Join-Path $package 'tools')
+          Copy-Item -LiteralPath 'tools/probe_rvc_core_assets.py' -Destination (Join-Path $package 'tools')
+          Copy-Item -LiteralPath 'tools/register_rvc_voice_model.py' -Destination (Join-Path $package 'tools')
+
+          $starter = @'
+          @echo off
+          setlocal
+          set "ROOT=%~dp0"
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\prepare-echoes-rvc-model-layer.ps1" -SourceRoot "%ROOT%" -IncludeWindowsSupport -ReuseVerifiedFiles
+          if errorlevel 1 (
+            echo.
+            echo ECHOES RVC MODEL LAYER FAILED
+            pause
+            exit /b 1
+          )
+          echo.
+          echo ECHOES RVC CORE MODELS READY
+          pause
+          '@
+          $starter.Trim() | Set-Content -LiteralPath (Join-Path $package 'START-ECHOES-RVC-MODEL-LAYER.cmd') -Encoding ascii
+
+          $readme = @'
+          ECHOES RVC MODEL LAYER - WINDOWS
+
+          REQUIREMENT
+          Run the Echoes RVC Foundation installer first. Its runtime manifest must be PASS.
+
+          CORE MODELS
+          Double-click START-ECHOES-RVC-MODEL-LAYER.cmd.
+          This downloads pinned HuBERT, RMVPE, DirectML RMVPE, FFmpeg and FFprobe assets into D:\A.I\EchoesRvcRuntime.
+          Every file is validated and recorded with SHA-256. No user audio is read and no conversion runs.
+
+          REGISTER YOUR OWN VOICE MODEL
+          Open PowerShell in this extracted folder and run:
+
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\prepare-echoes-rvc-model-layer.ps1 -SourceRoot . -ModelFile "D:\PATH\Kam-Dridi-Voice.pth" -IndexFile "D:\PATH\Kam-Dridi-Voice.index" -VoiceOwner "Kam Dridi" -ModelName "Kam-Dridi-Voice" -ReuseVerifiedFiles -DeclareUserOwnedModel -ConfirmOwnerConsent -AuthorizeVoiceConversion -ForbidThirdPartyImpersonation
+
+          The registrar copies and hashes the model. It does not deserialize it and does not perform inference or conversion.
+          '@
+          $readme.Trim() | Set-Content -LiteralPath (Join-Path $package 'README-ECHOES-RVC-MODEL-LAYER.txt') -Encoding utf8
+
+          $zip = Join-Path $artifactDir 'Echoes-RVC-Model-Layer-Windows.zip'
+          Compress-Archive -LiteralPath $package -DestinationPath $zip -CompressionLevel Optimal -Force
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Echoes-RVC-Model-Layer-Windows.zip" | Set-Content -LiteralPath (Join-Path $artifactDir 'Echoes-RVC-Model-Layer-Windows.zip.sha256') -Encoding ascii
+
       - name: Upload core asset proof and manifests
         if: always()
         uses: actions/upload-artifact@v4
@@ -193,4 +253,14 @@ jobs:
             ${{ env.RVC_RUNTIME_ROOT }}/control/rvc-core-assets-smoke-proof.json
             ${{ env.RVC_RUNTIME_ROOT }}/control/dependency-install.log
           if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Windows model-layer package
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-model-layer-windows
+          path: |
+            artifacts/Echoes-RVC-Model-Layer-Windows.zip
+            artifacts/Echoes-RVC-Model-Layer-Windows.zip.sha256
+          if-no-files-found: error
           retention-days: 14
