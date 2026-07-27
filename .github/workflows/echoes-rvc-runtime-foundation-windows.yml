@@ -1,0 +1,160 @@
+name: Echoes RVC Runtime Foundation Windows
+
+on:
+  pull_request:
+    paths:
+      - "config/echoes-rvc-runtime-admission.v1.json"
+      - "scripts/install-echoes-rvc-runtime-foundation.ps1"
+      - "tools/validate_rvc_runtime_foundation.py"
+      - "packaging/echoes-rvc/**"
+      - ".github/workflows/echoes-rvc-runtime-foundation-windows.yml"
+  push:
+    branches: [main]
+    paths:
+      - "config/echoes-rvc-runtime-admission.v1.json"
+      - "scripts/install-echoes-rvc-runtime-foundation.ps1"
+      - "tools/validate_rvc_runtime_foundation.py"
+      - "packaging/echoes-rvc/**"
+      - ".github/workflows/echoes-rvc-runtime-foundation-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    name: Pinned RVC foundation (windows-2022)
+    runs-on: windows-2022
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout RVC foundation sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            config/echoes-rvc-runtime-admission.v1.json
+            scripts/install-echoes-rvc-runtime-foundation.ps1
+            tools/validate_rvc_runtime_foundation.py
+            packaging/echoes-rvc/START-ECHOES-RVC-FOUNDATION.cmd
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile validator and parse PowerShell
+        shell: pwsh
+        run: |
+          python -m py_compile tools/validate_rvc_runtime_foundation.py
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'scripts/install-echoes-rvc-runtime-foundation.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+
+      - name: Provision actual pinned source and isolated Python foundation
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'Echoes RVC Foundation With Spaces'
+          $runtime = Join-Path $root 'RVC Runtime'
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Resolve-Path 'scripts/install-echoes-rvc-runtime-foundation.ps1') `
+            -SourceRoot $PWD `
+            -RvcRuntimeRoot $runtime `
+            -PythonExecutable (Get-Command python).Source `
+            -GitExecutable (Get-Command git).Source `
+            -SkipDependencyInstall `
+            -AllowNonDDrive `
+            -NoOpen
+          if ($LASTEXITCODE -ne 0) { throw "RVC foundation installer failed: $LASTEXITCODE" }
+          "ECHOES_RVC_FOUNDATION_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ECHOES_RVC_RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Validate pinned checkout, hashes and truth boundary
+        shell: pwsh
+        run: |
+          python tools/validate_rvc_runtime_foundation.py `
+            --runtime-root $env:ECHOES_RVC_RUNTIME_ROOT `
+            --expect-status PARTIAL `
+            --expect-dependencies SKIPPED
+
+      - name: Prove source bootstrap is idempotent
+        shell: pwsh
+        run: |
+          $manifestBefore = Get-Content -LiteralPath (Join-Path $env:ECHOES_RVC_RUNTIME_ROOT 'rvc-runtime-manifest.json') -Raw | ConvertFrom-Json
+          $hashesBefore = @{}
+          foreach ($entry in $manifestBefore.installedFiles) { $hashesBefore[$entry.relativePath] = $entry.sha256 }
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Resolve-Path 'scripts/install-echoes-rvc-runtime-foundation.ps1') `
+            -SourceRoot $PWD `
+            -RvcRuntimeRoot $env:ECHOES_RVC_RUNTIME_ROOT `
+            -PythonExecutable (Get-Command python).Source `
+            -GitExecutable (Get-Command git).Source `
+            -SkipDependencyInstall `
+            -AllowNonDDrive `
+            -NoOpen
+          if ($LASTEXITCODE -ne 0) { throw "RVC idempotent foundation pass failed: $LASTEXITCODE" }
+          python tools/validate_rvc_runtime_foundation.py `
+            --runtime-root $env:ECHOES_RVC_RUNTIME_ROOT `
+            --expect-status PARTIAL `
+            --expect-dependencies SKIPPED
+          $manifestAfter = Get-Content -LiteralPath (Join-Path $env:ECHOES_RVC_RUNTIME_ROOT 'rvc-runtime-manifest.json') -Raw | ConvertFrom-Json
+          foreach ($entry in $manifestAfter.installedFiles) {
+            if ($hashesBefore[$entry.relativePath] -ne $entry.sha256) { throw "Pinned source hash changed on idempotent pass: $($entry.relativePath)" }
+          }
+
+      - name: Assemble clean one-click Windows package
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP 'Echoes RVC Foundation Package'
+          $package = Join-Path $stage 'Echoes-RVC-Foundation-Windows'
+          New-Item -ItemType Directory -Force -Path (Join-Path $package 'scripts') | Out-Null
+          New-Item -ItemType Directory -Force -Path (Join-Path $package 'tools') | Out-Null
+          New-Item -ItemType Directory -Force -Path (Join-Path $package 'config') | Out-Null
+          Copy-Item packaging/echoes-rvc/START-ECHOES-RVC-FOUNDATION.cmd $package
+          Copy-Item scripts/install-echoes-rvc-runtime-foundation.ps1 (Join-Path $package 'scripts')
+          Copy-Item tools/validate_rvc_runtime_foundation.py (Join-Path $package 'tools')
+          Copy-Item config/echoes-rvc-runtime-admission.v1.json (Join-Path $package 'config')
+          @'
+          ECHOES RVC FOUNDATION - WINDOWS
+
+          1. Extract the ZIP completely.
+          2. Double-click START-ECHOES-RVC-FOUNDATION.cmd.
+          3. The managed runtime is installed under D:\A.I\EchoesRvcRuntime.
+
+          The installer pins the official RVC source, creates an isolated Python 3.12 environment,
+          selects CUDA 11.8 when NVIDIA is available and retains CPU fallback.
+
+          This package does not contain audio or a voice model and does not perform conversion.
+          '@ | Set-Content -LiteralPath (Join-Path $package 'README-FIRST.txt') -Encoding utf8
+          $zip = Join-Path $stage 'Echoes-RVC-Foundation-Windows.zip'
+          Compress-Archive -Path $package -DestinationPath $zip -Force
+          $audioExtensions = @('.wav','.mp3','.flac','.m4a','.aac','.ogg')
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [IO.Compression.ZipFile]::OpenRead($zip)
+          try {
+            foreach ($entry in $archive.Entries) {
+              if ($audioExtensions -contains [IO.Path]::GetExtension($entry.FullName).ToLowerInvariant()) {
+                throw "RVC foundation package contains audio: $($entry.FullName)"
+              }
+            }
+          } finally { $archive.Dispose() }
+          $sha = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sha | Set-Content -LiteralPath (Join-Path $stage 'Echoes-RVC-Foundation-Windows.sha256.txt') -Encoding ascii
+          "ECHOES_RVC_PACKAGE_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ECHOES_RVC_PACKAGE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Echoes RVC foundation package SHA256=$sha"
+
+      - name: Upload Windows foundation package and proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-foundation-windows
+          path: |
+            ${{ env.ECHOES_RVC_PACKAGE_ZIP }}
+            ${{ env.ECHOES_RVC_PACKAGE_STAGE }}/Echoes-RVC-Foundation-Windows.sha256.txt
+            ${{ env.ECHOES_RVC_RUNTIME_ROOT }}/rvc-runtime-manifest.json
+            ${{ env.ECHOES_RVC_RUNTIME_ROOT }}/RVC-RUNTIME-STATUS.txt
+          if-no-files-found: error
+          retention-days: 14
