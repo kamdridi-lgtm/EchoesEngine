@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the Windows Echoes RVC source and Python foundation."""
+"""Validate the Windows Echoes RVC source and provider-correct Python foundation."""
 from __future__ import annotations
 
 import argparse
@@ -45,6 +45,7 @@ def main() -> int:
     parser.add_argument("--runtime-root", type=Path, required=True)
     parser.add_argument("--expect-status", choices=("PARTIAL", "PASS"), required=True)
     parser.add_argument("--expect-dependencies", choices=("SKIPPED", "PASS"), required=True)
+    parser.add_argument("--expect-provider", choices=("uninstalled", "cpu", "cuda"))
     args = parser.parse_args()
 
     runtime = args.runtime_root.resolve()
@@ -54,6 +55,7 @@ def main() -> int:
     manifest = load_json(manifest_path)
 
     require(manifest.get("schema") == "echoes.rvc-runtime-installation.v1", "Runtime schema mismatch")
+    require(str(manifest.get("version") or "").startswith("1."), "Runtime version mismatch")
     require(manifest.get("status") == args.expect_status, "Runtime status mismatch")
     require(Path(str(manifest.get("installRoot"))).resolve() == runtime, "Runtime root manifest mismatch")
 
@@ -102,14 +104,38 @@ def main() -> int:
     require(python_info.get("isolatedVirtualEnvironment") is True, "Venv isolation not recorded")
 
     dependencies = manifest.get("dependencies") or {}
+    provider = str(manifest.get("provider") or "")
+    provider_profile = str(manifest.get("providerProfile") or "")
+    torch = manifest.get("torch") or {}
     require(dependencies.get("status") == args.expect_dependencies, "Dependency status mismatch")
     require(bool(dependencies.get("skipped")) == (args.expect_dependencies == "SKIPPED"), "Dependency skip truth mismatch")
+    if args.expect_provider:
+        require(provider == args.expect_provider, "Expected provider mismatch")
+
     if args.expect_dependencies == "SKIPPED":
-        require(manifest.get("provider") == "uninstalled", "Skipped foundation falsely selected a provider")
-        require((manifest.get("torch") or {}).get("version") is None, "Skipped foundation falsely recorded Torch")
+        require(provider == "uninstalled", "Skipped foundation falsely selected a provider")
+        require(provider_profile == "uninstalled", "Skipped foundation falsely selected a provider profile")
+        require(torch.get("version") is None, "Skipped foundation falsely recorded Torch")
+        require(torch.get("torchaudioVersion") is None, "Skipped foundation falsely recorded Torchaudio")
+        require(dependencies.get("requirements") is None, "Skipped foundation falsely recorded requirements")
     else:
-        require(manifest.get("provider") in {"cpu", "cuda"}, "Installed runtime provider invalid")
-        require(str((manifest.get("torch") or {}).get("version") or "").startswith("2.7.1"), "Torch 2.7.1 not recorded")
+        require(provider in {"cpu", "cuda"}, "Installed runtime provider invalid")
+        torch_version = str(torch.get("version") or "")
+        torchaudio_version = str(torch.get("torchaudioVersion") or "")
+        if provider == "cuda":
+            require(provider_profile == "cuda-torch271-cu118", "CUDA provider profile mismatch")
+            require(torch_version.startswith("2.7.1"), "CUDA Torch 2.7.1 not recorded")
+            require(torchaudio_version.startswith("2.7.1"), "CUDA Torchaudio 2.7.1 not recorded")
+            require(torch.get("cudaAvailable") is True, "CUDA provider lacks CUDA availability")
+            require(str(torch.get("cudaVersion") or "").startswith("11.8"), "CUDA provider version mismatch")
+            require(dependencies.get("requirements") == "requirments_cu118_py312.txt", "CUDA requirements mismatch")
+        else:
+            require(provider_profile == "cpu-directml-torch241", "CPU provider profile mismatch")
+            require(torch_version.startswith("2.4.1"), "CPU Torch 2.4.1 not recorded")
+            require(torchaudio_version.startswith("2.4.1"), "CPU Torchaudio 2.4.1 not recorded")
+            require(torch.get("cudaAvailable") is False, "CPU provider falsely exposes CUDA")
+            require(torch.get("cudaVersion") in (None, ""), "CPU provider falsely records CUDA version")
+            require(dependencies.get("requirements") == "requirments_cpu_py312.txt", "CPU requirements mismatch")
 
     launcher = Path(str(manifest.get("launcher"))).resolve()
     require(launcher.is_file(), "RVC launcher is missing")
@@ -122,6 +148,7 @@ def main() -> int:
     require(truth.get("requiredSourceHashesRecorded") is True, "Source hash proof missing")
     require(truth.get("pythonRuntimeVerified") is True, "Python proof missing")
     require(truth.get("productionDependenciesInstalled") is (args.expect_dependencies == "PASS"), "Dependency truth drifted")
+    require(truth.get("providerSpecificTorchContractVerified") is (args.expect_dependencies == "PASS"), "Provider contract truth drifted")
     for field in (
         "hpOmenRuntimeInstalled",
         "kamDridiVoiceModelVerified",
@@ -138,8 +165,8 @@ def main() -> int:
 
     print(
         "EchoesRvcFoundationValidation PASS "
-        f"status={manifest.get('status')} dependencies={dependencies.get('status')} "
-        f"commit={PINNED_COMMIT} python={actual_version} conversion=false"
+        f"status={manifest.get('status')} dependencies={dependencies.get('status')} provider={provider} "
+        f"profile={provider_profile} commit={PINNED_COMMIT} python={actual_version} conversion=false"
     )
     return 0
 
