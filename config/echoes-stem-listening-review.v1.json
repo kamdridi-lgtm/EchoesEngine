@@ -1,0 +1,48 @@
+{
+  "schema": "echoes.stem-listening-review-capability.v1",
+  "version": "1.0.0",
+  "status": "PARTIAL",
+  "purpose": "Require an explicit operator listening decision before a technically valid vocal stem may be marked ready for downstream voice-conversion preparation.",
+  "inputs": {
+    "separationManifestSchema": "echoes.stem-separation-run.v1",
+    "technicalQualitySchema": "echoes.stem-technical-quality.v1",
+    "requiredStems": [
+      "vocals",
+      "drums",
+      "bass",
+      "other"
+    ],
+    "requiredTechnicalStatus": "PASS"
+  },
+  "reviewContract": {
+    "automaticApprovalForbidden": true,
+    "operatorIdentityRequired": true,
+    "explicitVocalListeningConfirmationRequired": true,
+    "explicitInstrumentalListeningConfirmationRequired": true,
+    "sourceAndStemSha256VerificationRequired": true,
+    "qualityReportSha256VerificationRequiredWhenRecorded": true,
+    "decisions": [
+      "approve",
+      "reject"
+    ]
+  },
+  "outputs": {
+    "reviewSchema": "echoes.stem-listening-review.v1",
+    "reviewedManifestCopy": true,
+    "originalManifestMutation": false,
+    "voiceConversionExecution": false
+  },
+  "truthBoundary": {
+    "reviewToolImplemented": true,
+    "contractTestsImplemented": true,
+    "productionListeningReviewCompleted": false,
+    "kamDridiVocalStemApproved": false,
+    "vocalIsolationQualityProven": false,
+    "acapellaReady": false,
+    "voiceConversionInputReady": false,
+    "voiceConversionProven": false,
+    "automaticApprovalAllowed": false,
+    "requiresOperatorApproval": true,
+    "executionAuthorized": false
+  }
+}
