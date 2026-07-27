@@ -1,0 +1,117 @@
+name: Echoes RVC Runtime Admission Contract
+
+on:
+  pull_request:
+    paths:
+      - "config/echoes-rvc-runtime-admission.v1.json"
+      - "tools/admit_rvc_conversion.py"
+      - "tools/validate_rvc_runtime_admission_contract.py"
+      - ".github/workflows/echoes-rvc-runtime-admission.yml"
+  push:
+    branches: [main]
+    paths:
+      - "config/echoes-rvc-runtime-admission.v1.json"
+      - "tools/admit_rvc_conversion.py"
+      - "tools/validate_rvc_runtime_admission_contract.py"
+      - ".github/workflows/echoes-rvc-runtime-admission.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  admission-contract:
+    name: RVC runtime admission (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout RVC admission sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            config/echoes-rvc-runtime-admission.v1.json
+            tools/admit_rvc_conversion.py
+            tools/validate_rvc_runtime_admission_contract.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile admission tools
+        run: >-
+          python -m py_compile
+          tools/admit_rvc_conversion.py
+          tools/validate_rvc_runtime_admission_contract.py
+
+      - name: Parse pinned capability contract
+        shell: pwsh
+        run: |
+          $contract = Get-Content -LiteralPath 'config/echoes-rvc-runtime-admission.v1.json' -Raw | ConvertFrom-Json
+          if ($contract.schema -ne 'echoes.rvc-runtime-admission-capability.v1') { throw 'RVC admission schema mismatch' }
+          if ($contract.status -ne 'PARTIAL') { throw 'RVC admission contract must remain PARTIAL' }
+          if ($contract.upstream.repository -ne 'RVC-Project/Retrieval-based-Voice-Conversion-WebUI') { throw 'RVC upstream repository drifted' }
+          if ($contract.upstream.commit -ne '4338f12c3c28c80b3ac015e2d0df66c41592746d') { throw 'RVC upstream commit drifted' }
+          if ($contract.runtime.python -ne '3.12') { throw 'RVC Python contract drifted' }
+          if ($contract.runtime.torch -ne '2.7.1') { throw 'RVC Torch contract drifted' }
+          if ($contract.runtime.preferredCuda -ne '11.8') { throw 'RVC CUDA contract drifted' }
+          foreach ($field in @(
+            'productionRuntimeInstalled',
+            'hpOmenRuntimeInstalled',
+            'python312RuntimeProven',
+            'torch271RuntimeProven',
+            'cuda118InferenceProven',
+            'cpuInferenceProven',
+            'kamDridiVoiceModelVerified',
+            'rvcInferenceProven',
+            'voiceConversionProven',
+            'convertedAudioGenerated',
+            'executionAuthorized'
+          )) {
+            if ($contract.truthBoundary.$field -ne $false) { throw "RVC truth boundary drifted: $field" }
+          }
+
+      - name: Prove fail-closed RVC admission
+        run: >-
+          python tools/validate_rvc_runtime_admission_contract.py
+          --tool tools/admit_rvc_conversion.py
+          --output artifacts/rvc-runtime-admission-proof.json
+
+      - name: Verify proof truth boundary
+        shell: pwsh
+        run: |
+          $proof = Get-Content -LiteralPath 'artifacts/rvc-runtime-admission-proof.json' -Raw | ConvertFrom-Json
+          if ($proof.status -ne 'PASS') { throw 'RVC admission proof did not pass' }
+          if ($proof.cases.validCpu.status -ne 'ADMITTED') { throw 'Valid CPU evidence was not admitted' }
+          if ($proof.cases.validCudaEvidence.status -ne 'ADMITTED') { throw 'Valid CUDA evidence was not admitted' }
+          foreach ($case in @('inputNotReady','tamperedVocal','commitDrift','tamperedModel','unauthorizedVoice','runtimeSourceTamper')) {
+            if ($null -eq $proof.cases.$case -or @($proof.cases.$case).Count -eq 0) { throw "Blocked proof case missing: $case" }
+          }
+          foreach ($field in @(
+            'productionRuntimeInstalled',
+            'hpOmenRuntimeInstalled',
+            'kamDridiVoiceModelVerified',
+            'cudaInferenceProven',
+            'cpuInferenceProven',
+            'rvcInferenceProven',
+            'voiceConversionProven',
+            'convertedAudioGenerated',
+            'executionAuthorized'
+          )) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "Proof falsely promoted capability: $field" }
+          }
+
+      - name: Upload RVC admission evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-runtime-admission-${{ matrix.os }}
+          path: artifacts/rvc-runtime-admission-proof.json
+          if-no-files-found: error
+          retention-days: 14
