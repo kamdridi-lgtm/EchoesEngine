@@ -115,7 +115,7 @@ jobs:
         shell: pwsh
         run: |
           $registry = Get-Content -LiteralPath 'config/echoes-capability-registry.v1.json' -Raw | ConvertFrom-Json
-          if ($registry.version -ne '1.4.0') { throw 'Capability registry version must be 1.4.0' }
+          if ($registry.version -ne '1.5.0') { throw 'Capability registry version must be 1.5.0' }
           $module = $registry.engineModules.sileroVadProduction
           if (-not $module.speechTimestampingProven -or $module.speechTimestampSegmentCount -ne 19) {
             throw 'Registry timestamp proof is missing'
@@ -126,10 +126,19 @@ jobs:
           foreach ($field in @('vocalIsolationProven','voiceConversionProven','gpuInferenceProven','tensorRtInferenceProven','executionAuthorized')) {
             if ($module.$field -ne $false) { throw "$field must remain false in the registry" }
           }
+          $timelineModule = $registry.engineModules.songActivityTimeline
+          if (-not $timelineModule -or $timelineModule.status -ne 'REAL' -or -not $timelineModule.gapFreeActivityTimelineProven) {
+            throw 'Global song activity timeline module is not proven'
+          }
+          foreach ($field in @('instrumentalClassificationProven','vocalIsolationProven','stemSeparationProven','voiceConversionProven','executionAuthorized')) {
+            if ($timelineModule.$field -ne $false) { throw "$field must remain false in the global timeline module" }
+          }
           foreach ($pipelineId in @('lyric_video_local_v1','cinema_low_vram_text_v1','cinema_identity_local_v1','cinema_hybrid_identity_v1')) {
             $pipeline = $registry.pipelines | Where-Object { $_.id -eq $pipelineId }
-            if (-not $pipeline -or -not ($pipeline.requirements.engineModules -contains 'sileroVadProduction')) {
-              throw "$pipelineId must require proven Silero timestamps"
+            if (-not $pipeline -or
+                -not ($pipeline.requirements.engineModules -contains 'sileroVadProduction') -or
+                -not ($pipeline.requirements.engineModules -contains 'songActivityTimeline')) {
+              throw "$pipelineId must require proven Silero timestamps and the global activity timeline"
             }
           }
           $catalog = Get-Content -LiteralPath 'config/models/silero-vad-6.2.1.json' -Raw | ConvertFrom-Json
