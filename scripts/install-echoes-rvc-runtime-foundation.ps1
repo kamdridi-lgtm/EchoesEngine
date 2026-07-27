@@ -141,8 +141,10 @@ if ($LASTEXITCODE -ne 0 -or $venvVersion -notmatch '^3\.12\.') {
 }
 
 $provider = "uninstalled"
+$providerProfile = "uninstalled"
 $torchInfo = [ordered]@{
     version = $null
+    torchaudioVersion = $null
     cudaAvailable = $false
     cudaVersion = $null
 }
@@ -153,7 +155,9 @@ if (-not $SkipDependencyInstall) {
     $nvidia = Get-Command nvidia-smi -ErrorAction SilentlyContinue
     $useCuda = (-not $ForceCpu) -and ($null -ne $nvidia)
     $provider = if ($useCuda) { "cuda" } else { "cpu" }
-    $requirementsSource = Join-Path $source (if ($useCuda) { "requirments_cu118_py312.txt" } else { "requirments_cpu_py312.txt" })
+    $providerProfile = if ($useCuda) { "cuda-torch271-cu118" } else { "cpu-directml-torch241" }
+    $requirementsName = if ($useCuda) { "requirments_cu118_py312.txt" } else { "requirments_cpu_py312.txt" }
+    $requirementsSource = Join-Path $source $requirementsName
     $requirementsGenerated = Join-Path $control (if ($useCuda) { "requirements-echoes-cu118.txt" } else { "requirements-echoes-cpu.txt" })
     $requirements = Get-Content -LiteralPath $requirementsSource -Raw
     $requirements = $requirements.Replace("https://mirrors.pku.edu.cn/pypi/simple", "https://pypi.org/simple")
@@ -166,9 +170,12 @@ if (-not $SkipDependencyInstall) {
         @("-m", "pip", "install", "--upgrade", "pip", "setuptools<81", "wheel")
     )
     if ($useCuda) {
-        $commands += ,@("-m", "pip", "install", "torch==2.7.1+cu118", "torchaudio==2.7.1+cu118", "--index-url", "https://download.pytorch.org/whl/cu118", "--extra-index-url", "https://pypi.org/simple")
-    } else {
-        $commands += ,@("-m", "pip", "install", "torch==2.7.1+cpu", "torchaudio==2.7.1+cpu", "--index-url", "https://download.pytorch.org/whl/cpu", "--extra-index-url", "https://pypi.org/simple")
+        $commands += ,@(
+            "-m", "pip", "install",
+            "torch==2.7.1+cu118", "torchaudio==2.7.1+cu118",
+            "--index-url", "https://download.pytorch.org/whl/cu118",
+            "--extra-index-url", "https://pypi.org/simple"
+        )
     }
     $commands += ,@("-m", "pip", "install", "-r", $requirementsGenerated)
 
@@ -185,13 +192,30 @@ if (-not $SkipDependencyInstall) {
     $torchJson = & $venvPython -c "import json,torch,torchaudio; print(json.dumps({'torch':torch.__version__,'torchaudio':torchaudio.__version__,'cudaAvailable':torch.cuda.is_available(),'cudaVersion':torch.version.cuda}))"
     if ($LASTEXITCODE -ne 0) { throw "Installed RVC Torch/Torchaudio import proof failed" }
     $parsedTorch = $torchJson | ConvertFrom-Json
-    if (-not ([string]$parsedTorch.torch).StartsWith("2.7.1")) { throw "Installed Torch version drifted: $($parsedTorch.torch)" }
-    if ($useCuda -and ($parsedTorch.cudaAvailable -ne $true -or -not ([string]$parsedTorch.cudaVersion).StartsWith("11.8"))) {
-        throw "CUDA 11.8 Torch was installed but CUDA execution is unavailable"
+    $actualTorch = [string]$parsedTorch.torch
+    $actualTorchaudio = [string]$parsedTorch.torchaudio
+
+    if ($useCuda) {
+        if (-not $actualTorch.StartsWith("2.7.1") -or -not $actualTorchaudio.StartsWith("2.7.1")) {
+            throw "CUDA RVC provider requires Torch/Torchaudio 2.7.1; actual torch=$actualTorch torchaudio=$actualTorchaudio"
+        }
+        if ($parsedTorch.cudaAvailable -ne $true -or -not ([string]$parsedTorch.cudaVersion).StartsWith("11.8")) {
+            throw "CUDA 11.8 Torch was installed but CUDA execution is unavailable"
+        }
+    } else {
+        if (-not $actualTorch.StartsWith("2.4.1") -or -not $actualTorchaudio.StartsWith("2.4.1")) {
+            throw "CPU/DirectML RVC provider requires Torch/Torchaudio 2.4.1; actual torch=$actualTorch torchaudio=$actualTorchaudio"
+        }
+        if ($parsedTorch.cudaAvailable -eq $true -or $null -ne $parsedTorch.cudaVersion) {
+            throw "CPU/DirectML RVC provider unexpectedly reports CUDA"
+        }
+        & $venvPython -c "import torch_directml; print(torch_directml.__version__ if hasattr(torch_directml,'__version__') else 'available')" | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "CPU/DirectML RVC provider cannot import torch_directml" }
     }
+
     $torchInfo = [ordered]@{
-        version = [string]$parsedTorch.torch
-        torchaudioVersion = [string]$parsedTorch.torchaudio
+        version = $actualTorch
+        torchaudioVersion = $actualTorchaudio
         cudaAvailable = [bool]$parsedTorch.cudaAvailable
         cudaVersion = if ($null -eq $parsedTorch.cudaVersion) { $null } else { [string]$parsedTorch.cudaVersion }
     }
@@ -222,7 +246,7 @@ $launcher | Set-Content -LiteralPath $launcherPath -Encoding utf8
 $status = if ($dependencyStatus -eq "PASS") { "PASS" } else { "PARTIAL" }
 $manifest = [ordered]@{
     schema = "echoes.rvc-runtime-installation.v1"
-    version = "1.0.0"
+    version = "1.1.0"
     status = $status
     installedAtUtc = [DateTime]::UtcNow.ToString("o")
     installRoot = $runtime
@@ -244,10 +268,12 @@ $manifest = [ordered]@{
     }
     torch = $torchInfo
     provider = $provider
+    providerProfile = $providerProfile
     cpuFallback = $true
     dependencies = [ordered]@{
         status = $dependencyStatus
         skipped = [bool]$SkipDependencyInstall
+        requirements = if ($SkipDependencyInstall) { $null } else { $requirementsName }
         log = if (Test-Path -LiteralPath $dependencyLog -PathType Leaf) { $dependencyLog } else { $null }
     }
     installedFiles = $installedFiles
@@ -257,6 +283,7 @@ $manifest = [ordered]@{
         pinnedCommitVerified = $true
         requiredSourceHashesRecorded = $true
         pythonRuntimeVerified = $true
+        providerSpecificTorchContractVerified = $dependencyStatus -eq "PASS"
         torchImportVerified = $dependencyStatus -eq "PASS"
         productionDependenciesInstalled = $dependencyStatus -eq "PASS"
         hpOmenRuntimeInstalled = $false
@@ -280,14 +307,18 @@ Runtime: $runtime
 Pinned source: $PinnedRepositoryName@$PinnedCommit
 Status: $status
 Provider: $provider
+Provider profile: $providerProfile
+
+CUDA profile: Torch/Torchaudio 2.7.1 with CUDA 11.8.
+CPU/DirectML profile: Torch/Torchaudio 2.4.1 with DirectML 0.2.5.
 
 PARTIAL means the official source and Python 3.12 environment are ready, but dependencies are not fully installed.
-PASS means pinned dependencies imported successfully. It does not mean a voice model was approved or a conversion occurred.
+PASS means provider-correct dependencies imported successfully. It does not mean a voice model was approved or a conversion occurred.
 
 The launcher refuses to start while status is not PASS.
 "@
 $readme | Set-Content -LiteralPath (Join-Path $runtime "RVC-RUNTIME-STATUS.txt") -Encoding utf8
 
-Write-Host "EchoesRvcFoundation $status runtime=$runtime commit=$head provider=$provider dependencies=$dependencyStatus conversion=false"
+Write-Host "EchoesRvcFoundation $status runtime=$runtime commit=$head provider=$provider profile=$providerProfile dependencies=$dependencyStatus conversion=false"
 if (-not $NoOpen) { Start-Process explorer.exe -ArgumentList $runtime }
 exit 0
