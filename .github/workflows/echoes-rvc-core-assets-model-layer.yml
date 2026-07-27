@@ -1,0 +1,266 @@
+name: Echoes RVC Core Assets and Model Layer
+
+on:
+  pull_request:
+    paths:
+      - "config/echoes-rvc-core-assets.v1.json"
+      - "scripts/prepare-echoes-rvc-model-layer.ps1"
+      - "tools/provision_rvc_core_assets.py"
+      - "tools/probe_rvc_core_assets.py"
+      - "tools/register_rvc_voice_model.py"
+      - "tools/validate_rvc_voice_model_registration.py"
+      - ".github/workflows/echoes-rvc-core-assets-model-layer.yml"
+  push:
+    branches: [main]
+    paths:
+      - "config/echoes-rvc-core-assets.v1.json"
+      - "scripts/prepare-echoes-rvc-model-layer.ps1"
+      - "tools/provision_rvc_core_assets.py"
+      - "tools/probe_rvc_core_assets.py"
+      - "tools/register_rvc_voice_model.py"
+      - "tools/validate_rvc_voice_model_registration.py"
+      - ".github/workflows/echoes-rvc-core-assets-model-layer.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  voice-model-registration-contract:
+    name: Voice-model registration contract (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Checkout registration sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/register_rvc_voice_model.py
+            tools/validate_rvc_voice_model_registration.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile registration tools
+        run: >-
+          python -m py_compile
+          tools/register_rvc_voice_model.py
+          tools/validate_rvc_voice_model_registration.py
+
+      - name: Prove fail-closed voice-model registration
+        run: >-
+          python tools/validate_rvc_voice_model_registration.py
+          --tool tools/register_rvc_voice_model.py
+          --output artifacts/rvc-voice-model-registration-proof.json
+
+      - name: Verify registration truth boundary
+        shell: pwsh
+        run: |
+          $proof = Get-Content -LiteralPath 'artifacts/rvc-voice-model-registration-proof.json' -Raw | ConvertFrom-Json
+          if ($proof.status -ne 'PASS') { throw 'Voice-model registration proof did not pass' }
+          if ($proof.cases.validRegistration.status -ne 'VERIFIED') { throw 'Valid registration was not verified' }
+          if ($proof.cases.missingConsent -ne 'BLOCKED') { throw 'Missing consent was not blocked' }
+          foreach ($field in @(
+            'realKamDridiModelRegistered',
+            'modelDeserializationAttempted',
+            'voiceModelLoadProven',
+            'rvcInferenceProven',
+            'voiceConversionProven',
+            'convertedAudioGenerated',
+            'executionAuthorized'
+          )) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "Registration proof falsely promoted capability: $field" }
+          }
+
+      - name: Upload registration proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-voice-model-registration-${{ matrix.os }}
+          path: artifacts/rvc-voice-model-registration-proof.json
+          if-no-files-found: error
+          retention-days: 14
+
+  real-core-assets-smoke:
+    name: Real pinned HuBERT RMVPE smoke (windows-2022)
+    runs-on: windows-2022
+    timeout-minutes: 60
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONUTF8: "1"
+    steps:
+      - name: Checkout RVC model-layer sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            config/echoes-rvc-core-assets.v1.json
+            scripts/install-echoes-rvc-runtime-foundation.ps1
+            scripts/prepare-echoes-rvc-model-layer.ps1
+            tools/validate_rvc_runtime_foundation.py
+            tools/provision_rvc_core_assets.py
+            tools/probe_rvc_core_assets.py
+            tools/register_rvc_voice_model.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile tools and parse PowerShell
+        shell: pwsh
+        run: |
+          python -m py_compile tools/provision_rvc_core_assets.py tools/probe_rvc_core_assets.py tools/register_rvc_voice_model.py
+          $null = [scriptblock]::Create((Get-Content -LiteralPath 'scripts/prepare-echoes-rvc-model-layer.ps1' -Raw))
+          $contract = Get-Content -LiteralPath 'config/echoes-rvc-core-assets.v1.json' -Raw | ConvertFrom-Json
+          if ($contract.schema -ne 'echoes.rvc-core-assets-capability.v1') { throw 'Core-assets capability schema drifted' }
+          if ($contract.status -ne 'PARTIAL') { throw 'Core-assets capability must remain PARTIAL' }
+          if ($contract.assetSource.revision -ne '5836e9ea8ad6b7852f906acfa440e65a36e72396') { throw 'Pinned Hugging Face revision drifted' }
+
+      - name: Install complete CPU DirectML runtime
+        shell: pwsh
+        run: |
+          $runtime = Join-Path $env:RUNNER_TEMP 'Echoes RVC Core Assets Runtime'
+          $python = (Get-Command python).Source
+          & 'scripts/install-echoes-rvc-runtime-foundation.ps1' `
+            -SourceRoot $env:GITHUB_WORKSPACE `
+            -RvcRuntimeRoot $runtime `
+            -PythonExecutable $python `
+            -ForceCpu `
+            -AllowNonDDrive `
+            -NoOpen
+          if ($LASTEXITCODE -ne 0) { throw "RVC runtime installation failed: $LASTEXITCODE" }
+          "RVC_RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Validate complete runtime before asset download
+        shell: pwsh
+        run: |
+          $runtime = $env:RVC_RUNTIME_ROOT
+          python tools/validate_rvc_runtime_foundation.py `
+            --runtime-root $runtime `
+            --expect-status PASS `
+            --expect-dependencies PASS
+
+      - name: Download pinned HuBERT and RMVPE assets
+        shell: pwsh
+        run: |
+          $runtime = $env:RVC_RUNTIME_ROOT
+          $python = Join-Path $runtime '.venv\Scripts\python.exe'
+          $manifest = Join-Path $runtime 'control\rvc-core-assets-manifest.json'
+          & $python tools/provision_rvc_core_assets.py `
+            --runtime-root $runtime `
+            --runtime-manifest (Join-Path $runtime 'rvc-runtime-manifest.json') `
+            --output $manifest
+          if ($LASTEXITCODE -ne 0) { throw "Pinned core asset provisioning failed: $LASTEXITCODE" }
+
+      - name: Prove real synthetic HuBERT and RMVPE loading
+        shell: pwsh
+        run: |
+          $runtime = $env:RVC_RUNTIME_ROOT
+          $python = Join-Path $runtime '.venv\Scripts\python.exe'
+          $manifest = Join-Path $runtime 'control\rvc-core-assets-manifest.json'
+          $proof = Join-Path $runtime 'control\rvc-core-assets-smoke-proof.json'
+          & $python tools/probe_rvc_core_assets.py `
+            --runtime-root $runtime `
+            --assets-manifest $manifest `
+            --output $proof
+          if ($LASTEXITCODE -ne 0) { throw "RVC core asset smoke failed: $LASTEXITCODE" }
+
+      - name: Verify smoke truth boundary
+        shell: pwsh
+        run: |
+          $proofPath = Join-Path $env:RVC_RUNTIME_ROOT 'control\rvc-core-assets-smoke-proof.json'
+          $proof = Get-Content -LiteralPath $proofPath -Raw | ConvertFrom-Json
+          if ($proof.status -ne 'PASS') { throw 'Core asset smoke proof did not pass' }
+          foreach ($field in @('hubertLoadProven','hubertSyntheticFeatureExtractionProven','rmvpeLoadProven','rmvpeSyntheticPitchExtractionProven','syntheticAudioOnly')) {
+            if ($proof.truthBoundary.$field -ne $true) { throw "Core asset proof missing: $field" }
+          }
+          foreach ($field in @('userAudioRead','voiceModelLoaded','voiceIndexLoaded','fullRvcPipelineExecuted','rvcInferenceProven','voiceConversionProven','convertedAudioGenerated','audioUploaded','executionAuthorized')) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "Core asset proof falsely promoted capability: $field" }
+          }
+
+      - name: Assemble clean Windows model-layer package
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP 'Echoes-RVC-Model-Layer-Windows'
+          $artifactDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          New-Item -ItemType Directory -Force -Path `
+            $package, `
+            (Join-Path $package 'config'), `
+            (Join-Path $package 'scripts'), `
+            (Join-Path $package 'tools'), `
+            $artifactDir | Out-Null
+          Copy-Item -LiteralPath 'config/echoes-rvc-core-assets.v1.json' -Destination (Join-Path $package 'config')
+          Copy-Item -LiteralPath 'scripts/prepare-echoes-rvc-model-layer.ps1' -Destination (Join-Path $package 'scripts')
+          Copy-Item -LiteralPath 'tools/provision_rvc_core_assets.py' -Destination (Join-Path $package 'tools')
+          Copy-Item -LiteralPath 'tools/probe_rvc_core_assets.py' -Destination (Join-Path $package 'tools')
+          Copy-Item -LiteralPath 'tools/register_rvc_voice_model.py' -Destination (Join-Path $package 'tools')
+
+          $starter = @'
+          @echo off
+          setlocal
+          set "ROOT=%~dp0"
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\prepare-echoes-rvc-model-layer.ps1" -SourceRoot "%ROOT%" -IncludeWindowsSupport -ReuseVerifiedFiles
+          if errorlevel 1 (
+            echo.
+            echo ECHOES RVC MODEL LAYER FAILED
+            pause
+            exit /b 1
+          )
+          echo.
+          echo ECHOES RVC CORE MODELS READY
+          pause
+          '@
+          $starter.Trim() | Set-Content -LiteralPath (Join-Path $package 'START-ECHOES-RVC-MODEL-LAYER.cmd') -Encoding ascii
+
+          $readme = @'
+          ECHOES RVC MODEL LAYER - WINDOWS
+
+          REQUIREMENT
+          Run the Echoes RVC Foundation installer first. Its runtime manifest must be PASS.
+
+          CORE MODELS
+          Double-click START-ECHOES-RVC-MODEL-LAYER.cmd.
+          This downloads pinned HuBERT, RMVPE, DirectML RMVPE, FFmpeg and FFprobe assets into D:\A.I\EchoesRvcRuntime.
+          Every file is validated and recorded with SHA-256. No user audio is read and no conversion runs.
+
+          REGISTER YOUR OWN VOICE MODEL
+          Open PowerShell in this extracted folder and run:
+
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\prepare-echoes-rvc-model-layer.ps1 -SourceRoot . -ModelFile "D:\PATH\Kam-Dridi-Voice.pth" -IndexFile "D:\PATH\Kam-Dridi-Voice.index" -VoiceOwner "Kam Dridi" -ModelName "Kam-Dridi-Voice" -ReuseVerifiedFiles -DeclareUserOwnedModel -ConfirmOwnerConsent -AuthorizeVoiceConversion -ForbidThirdPartyImpersonation
+
+          The registrar copies and hashes the model. It does not deserialize it and does not perform inference or conversion.
+          '@
+          $readme.Trim() | Set-Content -LiteralPath (Join-Path $package 'README-ECHOES-RVC-MODEL-LAYER.txt') -Encoding utf8
+
+          $zip = Join-Path $artifactDir 'Echoes-RVC-Model-Layer-Windows.zip'
+          Compress-Archive -LiteralPath $package -DestinationPath $zip -CompressionLevel Optimal -Force
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Echoes-RVC-Model-Layer-Windows.zip" | Set-Content -LiteralPath (Join-Path $artifactDir 'Echoes-RVC-Model-Layer-Windows.zip.sha256') -Encoding ascii
+
+      - name: Upload core asset proof and manifests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-real-core-assets-smoke
+          path: |
+            ${{ env.RVC_RUNTIME_ROOT }}/control/rvc-core-assets-manifest.json
+            ${{ env.RVC_RUNTIME_ROOT }}/control/rvc-core-assets-smoke-proof.json
+            ${{ env.RVC_RUNTIME_ROOT }}/control/dependency-install.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Windows model-layer package
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-model-layer-windows
+          path: |
+            artifacts/Echoes-RVC-Model-Layer-Windows.zip
+            artifacts/Echoes-RVC-Model-Layer-Windows.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
