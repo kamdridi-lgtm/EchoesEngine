@@ -6,7 +6,7 @@
   "maxFilesPerRun": 10,
   "declareUserSong": true,
   "createControlBundle": true,
-  "openResultsOnInteractiveRun": true,
+  "openResultsOnInteractiveRun": false,
   "allowedExtensions": [
     ".wav",
     ".mp3",
