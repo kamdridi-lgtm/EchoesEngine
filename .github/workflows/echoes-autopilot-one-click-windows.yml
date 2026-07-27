@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/install-echoes-autopilot.ps1"
       - "scripts/invoke-echoes-autopilot.ps1"
+      - "tools/echoes_autopilot.py"
       - "config/echoes-autopilot-policy.v1.json"
       - "packaging/echoes-autopilot/**"
       - "docs/echoes-autopilot-one-click.md"
@@ -26,6 +27,7 @@ on:
     paths:
       - "scripts/install-echoes-autopilot.ps1"
       - "scripts/invoke-echoes-autopilot.ps1"
+      - "tools/echoes_autopilot.py"
       - "config/echoes-autopilot-policy.v1.json"
       - "packaging/echoes-autopilot/**"
       - "docs/echoes-autopilot-one-click.md"
@@ -60,6 +62,7 @@ jobs:
             tools/song_activity_timeline.py `
             tools/build_song_activity_timeline.py `
             tools/generate_local_song_activity_smoke_wav.py `
+            tools/echoes_autopilot.py `
             tools/validate_echoes_autopilot.py
           foreach ($path in @(
             'scripts/install-echoes-autopilot.ps1',
@@ -97,6 +100,7 @@ jobs:
             'tools/silero_speech_segments.py',
             'tools/song_activity_timeline.py',
             'tools/build_song_activity_timeline.py',
+            'tools/echoes_autopilot.py',
             'docs/echoes-autopilot-one-click.md'
           )) {
             $destination = Join-Path $package $relative
@@ -153,6 +157,9 @@ jobs:
           "INBOX_ROOT=$inbox" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "RESULTS_ROOT=$results" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "CONTROL_ROOT=$control" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          New-Item -ItemType Directory -Force -Path 'artifacts/autopilot-proof' | Out-Null
+          Copy-Item -LiteralPath (Join-Path $control 'autopilot-report-latest.json') -Destination 'artifacts/autopilot-proof/initial-autopilot-report.json'
+          Copy-Item -LiteralPath (Join-Path $control 'Echoes-Control-Bundle-Latest.zip') -Destination 'artifacts/autopilot-proof/initial-control-bundle.zip'
 
       - name: Prove autonomous rerun is idempotent
         shell: pwsh
@@ -168,24 +175,27 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Autopilot rerun failed with exit $LASTEXITCODE" }
           $jobs = @(Get-ChildItem -LiteralPath $env:RESULTS_ROOT -Directory)
           if ($jobs.Count -ne 1) { throw "Idempotent rerun created unexpected job count: $($jobs.Count)" }
+          $rerun = Get-Content -LiteralPath (Join-Path $env:CONTROL_ROOT 'autopilot-report-latest.json') -Raw | ConvertFrom-Json
+          if ($rerun.summary.attemptedFiles -ne 0 -or $rerun.summary.failedFiles -ne 0) {
+            throw 'Idempotent rerun unexpectedly attempted or failed a job'
+          }
 
       - name: Validate package, ledger and no-audio control bundle
         shell: pwsh
         run: |
           $source = Get-ChildItem -LiteralPath $env:INBOX_ROOT -Filter '*.wav' -File | Select-Object -First 1
           if (-not $source) { throw 'Proof source audio disappeared from the inbox' }
-          New-Item -ItemType Directory -Force -Path 'artifacts/autopilot-proof' | Out-Null
           python tools/validate_echoes_autopilot.py `
             --installation (Join-Path $env:CONTROL_ROOT 'autopilot-installation-manifest.json') `
-            --report (Join-Path $env:CONTROL_ROOT 'autopilot-report-latest.json') `
+            --report 'artifacts/autopilot-proof/initial-autopilot-report.json' `
             --ledger (Join-Path $env:CONTROL_ROOT 'autopilot-ledger.json') `
-            --bundle (Join-Path $env:CONTROL_ROOT 'Echoes-Control-Bundle-Latest.zip') `
+            --bundle 'artifacts/autopilot-proof/initial-control-bundle.zip' `
             --source $source.FullName `
             --output 'artifacts/autopilot-proof/echoes-autopilot-one-click-proof.json'
           Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'autopilot-installation-manifest.json') -Destination 'artifacts/autopilot-proof/'
-          Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'autopilot-report-latest.json') -Destination 'artifacts/autopilot-proof/'
+          Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'autopilot-report-latest.json') -Destination 'artifacts/autopilot-proof/rerun-autopilot-report.json'
           Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'autopilot-ledger.json') -Destination 'artifacts/autopilot-proof/'
-          Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'Echoes-Control-Bundle-Latest.zip') -Destination 'artifacts/autopilot-proof/'
+          Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'Echoes-Control-Bundle-Latest.zip') -Destination 'artifacts/autopilot-proof/rerun-control-bundle.zip'
           Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'STATUS.txt') -Destination 'artifacts/autopilot-proof/'
 
       - name: Upload one-click package
