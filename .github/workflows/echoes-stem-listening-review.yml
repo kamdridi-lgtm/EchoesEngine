@@ -1,0 +1,79 @@
+name: Echoes Stem Listening Review Contract
+
+on:
+  pull_request:
+    paths:
+      - "config/echoes-stem-listening-review.v1.json"
+      - "tools/review_stem_acapella.py"
+      - "tools/validate_stem_listening_review_contract.py"
+      - ".github/workflows/echoes-stem-listening-review.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "config/echoes-stem-listening-review.v1.json"
+      - "tools/review_stem_acapella.py"
+      - "tools/validate_stem_listening_review_contract.py"
+      - ".github/workflows/echoes-stem-listening-review.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  listening-review-contract:
+    name: Listening review gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout review gate sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            config/echoes-stem-listening-review.v1.json
+            tools/review_stem_acapella.py
+            tools/validate_stem_listening_review_contract.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up supported Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile review gate
+        run: >-
+          python -m py_compile
+          tools/review_stem_acapella.py
+          tools/validate_stem_listening_review_contract.py
+
+      - name: Prove truthful operator gate
+        run: >-
+          python tools/validate_stem_listening_review_contract.py
+          --tool tools/review_stem_acapella.py
+          --capability config/echoes-stem-listening-review.v1.json
+          --output artifacts/stem-listening-review-contract-proof.json
+
+      - name: Verify proof truth boundary
+        run: >-
+          python -c "import json,pathlib; p=json.loads(pathlib.Path('artifacts/stem-listening-review-contract-proof.json').read_text());
+          assert p['status']=='PASS'; assert p['approvalContractPassed'] is True;
+          assert p['rejectionContractPassed'] is True; assert p['missingConfirmationBlocked'] is True;
+          assert p['tamperedStemBlocked'] is True; assert p['failedTechnicalQcBlocked'] is True;
+          assert p['originalManifestPreserved'] is True; assert p['automaticApprovalUsed'] is False;
+          assert p['productionListeningReviewCompleted'] is False; assert p['kamDridiVocalStemApproved'] is False;
+          assert p['vocalIsolationQualityProven'] is False; assert p['voiceConversionProven'] is False;
+          print('Echoes stem listening review proof boundary PASS')"
+
+      - name: Upload listening review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-stem-listening-review-${{ matrix.os }}
+          path: artifacts/stem-listening-review-contract-proof.json
+          if-no-files-found: error
+          retention-days: 14
