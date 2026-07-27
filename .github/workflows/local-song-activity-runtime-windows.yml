@@ -1,0 +1,202 @@
+name: Echoes Local Song Activity Runtime Windows
+
+on:
+  pull_request:
+    paths:
+      - "scripts/install-song-activity-runtime.ps1"
+      - "scripts/analyze-song-activity.ps1"
+      - "requirements/song-activity-runtime-windows.txt"
+      - "config/local-song-activity-runtime.v1.json"
+      - "config/models/silero-vad-6.2.1.json"
+      - "tools/provision_silero_vad.py"
+      - "tools/prove_silero_vad.py"
+      - "tools/silero_speech_segments.py"
+      - "tools/song_activity_timeline.py"
+      - "tools/build_song_activity_timeline.py"
+      - "tools/generate_local_song_activity_smoke_wav.py"
+      - "tools/validate_local_song_activity_runtime.py"
+      - ".github/workflows/local-song-activity-runtime-windows.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/install-song-activity-runtime.ps1"
+      - "scripts/analyze-song-activity.ps1"
+      - "requirements/song-activity-runtime-windows.txt"
+      - "config/local-song-activity-runtime.v1.json"
+      - "config/models/silero-vad-6.2.1.json"
+      - "tools/provision_silero_vad.py"
+      - "tools/prove_silero_vad.py"
+      - "tools/silero_speech_segments.py"
+      - "tools/song_activity_timeline.py"
+      - "tools/build_song_activity_timeline.py"
+      - "tools/generate_local_song_activity_smoke_wav.py"
+      - "tools/validate_local_song_activity_runtime.py"
+      - ".github/workflows/local-song-activity-runtime-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  local-runtime-proof:
+    name: Local song activity runtime (windows-2022)
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - name: Checkout local runtime sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/install-song-activity-runtime.ps1
+            scripts/analyze-song-activity.ps1
+            requirements/song-activity-runtime-windows.txt
+            config/local-song-activity-runtime.v1.json
+            config/models/silero-vad-6.2.1.json
+            tools/provision_silero_vad.py
+            tools/prove_silero_vad.py
+            tools/silero_speech_segments.py
+            tools/song_activity_timeline.py
+            tools/build_song_activity_timeline.py
+            tools/generate_local_song_activity_smoke_wav.py
+            tools/validate_local_song_activity_runtime.py
+          sparse-checkout-cone-mode: true
+
+      - name: Set up supported Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile Python and PowerShell entrypoints
+        shell: pwsh
+        run: |
+          python -m py_compile `
+            tools/provision_silero_vad.py `
+            tools/prove_silero_vad.py `
+            tools/silero_speech_segments.py `
+            tools/song_activity_timeline.py `
+            tools/build_song_activity_timeline.py `
+            tools/generate_local_song_activity_smoke_wav.py `
+            tools/validate_local_song_activity_runtime.py
+          foreach ($script in @('scripts/install-song-activity-runtime.ps1','scripts/analyze-song-activity.ps1')) {
+            [void][scriptblock]::Create((Get-Content -LiteralPath $script -Raw))
+          }
+
+      - name: Prove production D-drive guard
+        shell: pwsh
+        run: |
+          $blocked = $false
+          try {
+            & ./scripts/install-song-activity-runtime.ps1 `
+              -InstallRoot 'C:\EchoesInvalidRuntime' `
+              -PythonExecutable 'python'
+          } catch {
+            if ($_.Exception.Message -like '*INSTALL_ROOT_BLOCKED*') { $blocked = $true }
+          }
+          if (-not $blocked) { throw 'Installer did not block a non-D production root' }
+
+      - name: Install isolated runtime with pinned model
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'Echoes Runtime Test'
+          & ./scripts/install-song-activity-runtime.ps1 `
+            -InstallRoot $root `
+            -PythonExecutable 'python' `
+            -AllowNonDDrive 2>&1 | Tee-Object local-runtime-install.log
+          if ($LASTEXITCODE -ne 0) { throw "Runtime installer failed with exit $LASTEXITCODE" }
+          "ECHOES_RUNTIME_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Generate deterministic local WAV
+        shell: pwsh
+        run: |
+          $input = Join-Path $env:RUNNER_TEMP 'Kam Dridi Runtime Smoke.wav'
+          python tools/generate_local_song_activity_smoke_wav.py --output $input
+          "ECHOES_SMOKE_WAV=$input" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Execute installed one-command analysis
+        shell: pwsh
+        run: |
+          $jobs = Join-Path $env:RUNNER_TEMP 'Echoes Runtime Jobs'
+          & (Join-Path $env:ECHOES_RUNTIME_ROOT 'Analyze-EchoesSong.ps1') `
+            -InputPath $env:ECHOES_SMOKE_WAV `
+            -OutputRoot $jobs `
+            -JobId 'ci_smoke' 2>&1 | Tee-Object local-runtime-analysis.log
+          if ($LASTEXITCODE -ne 0) { throw "Installed analysis failed with exit $LASTEXITCODE" }
+          "ECHOES_JOBS_ROOT=$jobs" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Validate runtime and analysis evidence
+        shell: pwsh
+        run: |
+          $job = Join-Path $env:ECHOES_JOBS_ROOT 'ci_smoke'
+          python tools/validate_local_song_activity_runtime.py `
+            --runtime-manifest (Join-Path $env:ECHOES_RUNTIME_ROOT 'runtime-manifest.json') `
+            --analysis-manifest (Join-Path $job 'analysis-run-manifest.json') `
+            --timeline-json (Join-Path $job 'timeline\song-activity-timeline.json') `
+            --timeline-csv (Join-Path $job 'timeline\song-activity-timeline.csv') `
+            --output local-runtime-proof.json
+          if ($LASTEXITCODE -ne 0) { throw "Local runtime proof validation failed with exit $LASTEXITCODE" }
+
+      - name: Prove duplicate job and input hash guards
+        shell: pwsh
+        run: |
+          $duplicateBlocked = $false
+          try {
+            & (Join-Path $env:ECHOES_RUNTIME_ROOT 'Analyze-EchoesSong.ps1') `
+              -InputPath $env:ECHOES_SMOKE_WAV `
+              -OutputRoot $env:ECHOES_JOBS_ROOT `
+              -JobId 'ci_smoke'
+          } catch {
+            if ($_.Exception.Message -like '*JOB_ALREADY_EXISTS*') { $duplicateBlocked = $true }
+          }
+          if (-not $duplicateBlocked) { throw 'Duplicate job was not blocked' }
+
+          $hashBlocked = $false
+          try {
+            & (Join-Path $env:ECHOES_RUNTIME_ROOT 'Analyze-EchoesSong.ps1') `
+              -InputPath $env:ECHOES_SMOKE_WAV `
+              -OutputRoot $env:ECHOES_JOBS_ROOT `
+              -JobId 'ci_bad_hash' `
+              -ExpectedInputSha256 ('0' * 64)
+          } catch {
+            if ($_.Exception.Message -like '*ExpectedInputSha256*') { $hashBlocked = $true }
+          }
+          if (-not $hashBlocked) { throw 'Incorrect input SHA-256 was not blocked' }
+
+      - name: Prove tampered model is blocked
+        shell: pwsh
+        run: |
+          $model = Join-Path $env:ECHOES_RUNTIME_ROOT 'models\silero_vad.onnx'
+          $backup = "$model.clean"
+          Copy-Item -LiteralPath $model -Destination $backup -Force
+          try {
+            $bytes = [IO.File]::ReadAllBytes($model)
+            $bytes[0] = $bytes[0] -bxor 1
+            [IO.File]::WriteAllBytes($model, $bytes)
+            $blocked = $false
+            try {
+              & (Join-Path $env:ECHOES_RUNTIME_ROOT 'Analyze-EchoesSong.ps1') `
+                -InputPath $env:ECHOES_SMOKE_WAV `
+                -OutputRoot $env:ECHOES_JOBS_ROOT `
+                -JobId 'ci_tampered_model'
+            } catch {
+              if ($_.Exception.Message -like '*failed SHA-256 verification*') { $blocked = $true }
+            }
+            if (-not $blocked) { throw 'Tampered ONNX model was not blocked' }
+          } finally {
+            Move-Item -LiteralPath $backup -Destination $model -Force
+          }
+
+      - name: Upload local runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-song-activity-runtime-windows-pass
+          path: |
+            local-runtime-install.log
+            local-runtime-analysis.log
+            local-runtime-proof.json
+            ${{ env.ECHOES_RUNTIME_ROOT }}/runtime-manifest.json
+            ${{ env.ECHOES_RUNTIME_ROOT }}/provisioning/silero-vad-provisioning.json
+            ${{ env.ECHOES_JOBS_ROOT }}/ci_smoke/analysis-run-manifest.json
+            ${{ env.ECHOES_JOBS_ROOT }}/ci_smoke/timeline/song-activity-timeline.json
+            ${{ env.ECHOES_JOBS_ROOT }}/ci_smoke/timeline/song-activity-timeline.csv
+          if-no-files-found: error
+          retention-days: 14
