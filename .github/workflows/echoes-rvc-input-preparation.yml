@@ -1,0 +1,85 @@
+name: Echoes RVC Input Preparation Contract
+
+on:
+  pull_request:
+    paths:
+      - "config/echoes-rvc-input-preparation.v1.json"
+      - "tools/review_stem_acapella.py"
+      - "tools/prepare_rvc_input_manifest.py"
+      - "tools/validate_rvc_input_preparation_contract.py"
+      - ".github/workflows/echoes-rvc-input-preparation.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "config/echoes-rvc-input-preparation.v1.json"
+      - "tools/review_stem_acapella.py"
+      - "tools/prepare_rvc_input_manifest.py"
+      - "tools/validate_rvc_input_preparation_contract.py"
+      - ".github/workflows/echoes-rvc-input-preparation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  rvc-input-preparation:
+    name: RVC input gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout RVC input gate sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            config/echoes-rvc-input-preparation.v1.json
+            tools/review_stem_acapella.py
+            tools/prepare_rvc_input_manifest.py
+            tools/validate_rvc_input_preparation_contract.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up supported Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile preparation gate
+        run: >-
+          python -m py_compile
+          tools/review_stem_acapella.py
+          tools/prepare_rvc_input_manifest.py
+          tools/validate_rvc_input_preparation_contract.py
+
+      - name: Prove fail-closed RVC input preparation
+        run: >-
+          python tools/validate_rvc_input_preparation_contract.py
+          --review-tool tools/review_stem_acapella.py
+          --preparation-tool tools/prepare_rvc_input_manifest.py
+          --capability config/echoes-rvc-input-preparation.v1.json
+          --output artifacts/rvc-input-preparation-contract-proof.json
+
+      - name: Verify RVC truth boundary
+        run: >-
+          python -c "import json,pathlib; p=json.loads(pathlib.Path('artifacts/rvc-input-preparation-contract-proof.json').read_text());
+          assert p['status']=='PASS'; assert p['approvedReviewPreparedInput'] is True;
+          assert p['rejectedReviewBlocked'] is True; assert p['tamperedVocalStemBlocked'] is True;
+          assert p['alteredReviewBlocked'] is True; assert p['wrongSourceShaBlocked'] is True;
+          assert p['audioCopied'] is False; assert p['audioUploaded'] is False;
+          assert p['productionRvcInputPrepared'] is False; assert p['kamDridiVocalStemPrepared'] is False;
+          assert p['rvcRuntimeProven'] is False; assert p['voiceModelProvisioned'] is False;
+          assert p['voiceConversionProven'] is False; assert p['executionAuthorized'] is False;
+          print('Echoes RVC input preparation proof boundary PASS')"
+
+      - name: Upload RVC input preparation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-input-preparation-${{ matrix.os }}
+          path: artifacts/rvc-input-preparation-contract-proof.json
+          if-no-files-found: error
+          retention-days: 14
