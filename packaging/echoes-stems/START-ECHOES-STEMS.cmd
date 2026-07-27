@@ -15,6 +15,15 @@ if not "%EXITCODE%"=="0" (
   pause
   exit /b %EXITCODE%
 )
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\install-echoes-stem-qc-update.ps1" -SourceRoot "%ROOT%"
+set "QCEXIT=%ERRORLEVEL%"
+if not "%QCEXIT%"=="0" (
+  echo.
+  echo Echoes Stem technical QC stopped with error %QCEXIT%.
+  echo Read D:\A.I\EchoesControl\STEM-STATUS.txt or the visible error above.
+  pause
+  exit /b %QCEXIT%
+)
 echo.
 echo ECHOES STEM AUTOPILOT IS INSTALLED AND RUNNING.
 echo Results: D:\A.I\EchoesResults
