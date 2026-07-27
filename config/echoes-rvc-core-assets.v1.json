@@ -1,0 +1,93 @@
+{
+  "schema": "echoes.rvc-core-assets-capability.v1",
+  "version": "1.0.0",
+  "status": "PARTIAL",
+  "purpose": "Provision and verify the pinned HuBERT and RMVPE assets required before any controlled RVC inference.",
+  "runtimeRoot": "D:\\A.I\\EchoesRvcRuntime",
+  "runtimeSource": {
+    "repository": "RVC-Project/Retrieval-based-Voice-Conversion-WebUI",
+    "commit": "4338f12c3c28c80b3ac015e2d0df66c41592746d"
+  },
+  "assetSource": {
+    "repository": "lj1995/VoiceConversionWebUI",
+    "revision": "5836e9ea8ad6b7852f906acfa440e65a36e72396",
+    "license": "MIT"
+  },
+  "requiredAssets": [
+    {
+      "id": "hubert-config",
+      "remotePath": "hubert_base/config.json",
+      "targetPath": "assets/hubert_base/config.json",
+      "minimumBytes": 512,
+      "kind": "json"
+    },
+    {
+      "id": "hubert-preprocessor",
+      "remotePath": "hubert_base/preprocessor_config.json",
+      "targetPath": "assets/hubert_base/preprocessor_config.json",
+      "minimumBytes": 100,
+      "kind": "json"
+    },
+    {
+      "id": "hubert-weights",
+      "remotePath": "hubert_base/pytorch_model.bin",
+      "targetPath": "assets/hubert_base/pytorch_model.bin",
+      "minimumBytes": 100000000,
+      "kind": "pytorch"
+    },
+    {
+      "id": "rmvpe-weights",
+      "remotePath": "rmvpe.pt",
+      "targetPath": "assets/rmvpe/rmvpe.pt",
+      "minimumBytes": 100000000,
+      "kind": "pytorch"
+    }
+  ],
+  "optionalWindowsSupport": [
+    {
+      "id": "rmvpe-directml",
+      "remotePath": "rmvpe.onnx",
+      "targetPath": "assets/rmvpe/rmvpe.onnx",
+      "minimumBytes": 100000000,
+      "kind": "onnx"
+    },
+    {
+      "id": "ffmpeg-windows",
+      "remotePath": "ffmpeg.exe",
+      "targetPath": "ffmpeg.exe",
+      "minimumBytes": 10000000,
+      "kind": "pe"
+    },
+    {
+      "id": "ffprobe-windows",
+      "remotePath": "ffprobe.exe",
+      "targetPath": "ffprobe.exe",
+      "minimumBytes": 10000000,
+      "kind": "pe"
+    }
+  ],
+  "requiredEvidence": {
+    "runtimeManifestSchema": "echoes.rvc-runtime-installation.v1",
+    "runtimeStatus": "PASS",
+    "allRequiredAssetFilesPresent": true,
+    "allRequiredAssetSha256Recorded": true,
+    "pinnedAssetRevisionRequired": true,
+    "syntheticOnlySmokeAllowed": true,
+    "userAudioRequired": false
+  },
+  "truthBoundary": {
+    "provisioningToolImplemented": true,
+    "coreAssetProbeImplemented": true,
+    "pinnedAssetRevisionSelected": true,
+    "productionAssetsProvisioned": false,
+    "hpOmenAssetsProvisioned": false,
+    "hubertLoadProven": false,
+    "rmvpeLoadProven": false,
+    "kamDridiVoiceModelLoaded": false,
+    "rvcInferenceProven": false,
+    "voiceConversionProven": false,
+    "convertedAudioGenerated": false,
+    "audioUploaded": false,
+    "executionAuthorized": false
+  }
+}
