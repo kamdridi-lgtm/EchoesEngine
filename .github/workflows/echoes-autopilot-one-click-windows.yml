@@ -1,0 +1,216 @@
+name: Echoes Autopilot One-Click Windows
+
+on:
+  pull_request:
+    paths:
+      - "scripts/install-echoes-autopilot.ps1"
+      - "scripts/invoke-echoes-autopilot.ps1"
+      - "tools/echoes_autopilot.py"
+      - "config/echoes-autopilot-policy.v1.json"
+      - "packaging/echoes-autopilot/**"
+      - "docs/echoes-autopilot-one-click.md"
+      - "tools/validate_echoes_autopilot.py"
+      - ".github/workflows/echoes-autopilot-one-click-windows.yml"
+      - "scripts/install-song-activity-runtime.ps1"
+      - "scripts/analyze-song-activity.ps1"
+      - "requirements/song-activity-runtime-windows.txt"
+      - "tools/provision_silero_vad.py"
+      - "tools/prove_silero_vad.py"
+      - "tools/silero_speech_segments.py"
+      - "tools/song_activity_timeline.py"
+      - "tools/build_song_activity_timeline.py"
+      - "tools/generate_local_song_activity_smoke_wav.py"
+      - "config/local-song-activity-runtime.v1.json"
+      - "config/models/silero-vad-6.2.1.json"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/install-echoes-autopilot.ps1"
+      - "scripts/invoke-echoes-autopilot.ps1"
+      - "tools/echoes_autopilot.py"
+      - "config/echoes-autopilot-policy.v1.json"
+      - "packaging/echoes-autopilot/**"
+      - "docs/echoes-autopilot-one-click.md"
+      - "tools/validate_echoes_autopilot.py"
+      - ".github/workflows/echoes-autopilot-one-click-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  one-click-proof:
+    name: Echoes Autopilot package and proof (windows-2022)
+    runs-on: windows-2022
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout package sources
+        uses: actions/checkout@v4
+
+      - name: Set up supported Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile Python and parse PowerShell
+        shell: pwsh
+        run: |
+          python -m py_compile `
+            tools/provision_silero_vad.py `
+            tools/prove_silero_vad.py `
+            tools/silero_speech_segments.py `
+            tools/song_activity_timeline.py `
+            tools/build_song_activity_timeline.py `
+            tools/generate_local_song_activity_smoke_wav.py `
+            tools/echoes_autopilot.py `
+            tools/validate_echoes_autopilot.py
+          foreach ($path in @(
+            'scripts/install-echoes-autopilot.ps1',
+            'scripts/invoke-echoes-autopilot.ps1',
+            'scripts/install-song-activity-runtime.ps1',
+            'scripts/analyze-song-activity.ps1'
+          )) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $path), [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $errors | Format-List | Out-String | Write-Error
+              throw "PowerShell parser rejected $path"
+            }
+          }
+
+      - name: Assemble clean one-click package
+        shell: pwsh
+        run: |
+          $package = Join-Path $PWD 'artifacts/Echoes-Autopilot-OneClick-Windows'
+          New-Item -ItemType Directory -Force -Path $package | Out-Null
+          Copy-Item -LiteralPath 'packaging/echoes-autopilot/START-ECHOES-AUTOPILOT.cmd' -Destination $package
+          Copy-Item -LiteralPath 'packaging/echoes-autopilot/SONGS-TO-ANALYZE' -Destination $package -Recurse
+          foreach ($relative in @(
+            'scripts/install-echoes-autopilot.ps1',
+            'scripts/invoke-echoes-autopilot.ps1',
+            'scripts/install-song-activity-runtime.ps1',
+            'scripts/analyze-song-activity.ps1',
+            'config/echoes-autopilot-policy.v1.json',
+            'config/local-song-activity-runtime.v1.json',
+            'config/models/silero-vad-6.2.1.json',
+            'requirements/song-activity-runtime-windows.txt',
+            'tools/provision_silero_vad.py',
+            'tools/prove_silero_vad.py',
+            'tools/silero_speech_segments.py',
+            'tools/song_activity_timeline.py',
+            'tools/build_song_activity_timeline.py',
+            'tools/echoes_autopilot.py',
+            'docs/echoes-autopilot-one-click.md'
+          )) {
+            $destination = Join-Path $package $relative
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
+            Copy-Item -LiteralPath $relative -Destination $destination
+          }
+          @'
+          ECHOES AUTOPILOT ONE-CLICK
+
+          1. Put songs in SONGS-TO-ANALYZE.
+          2. Double-click START-ECHOES-AUTOPILOT.cmd.
+          3. The package installs under D:\A.I and continues scanning automatically.
+
+          Source audio is never deleted or uploaded.
+          '@ | Set-Content -LiteralPath (Join-Path $package 'READ-ME-FIRST.txt') -Encoding utf8
+          Compress-Archive -Path (Join-Path $package '*') -DestinationPath 'artifacts/Echoes-Autopilot-OneClick-Windows.zip' -CompressionLevel Optimal
+
+      - name: Prepare isolated proof copy and duplicate audio
+        shell: pwsh
+        run: |
+          $proofPackage = Join-Path $env:RUNNER_TEMP 'Echoes Autopilot Proof Package With Spaces'
+          Copy-Item -LiteralPath 'artifacts/Echoes-Autopilot-OneClick-Windows' -Destination $proofPackage -Recurse
+          $seed = Join-Path $proofPackage 'SONGS-TO-ANALYZE'
+          python tools/generate_local_song_activity_smoke_wav.py --output (Join-Path $seed 'Kam Dridi Proof One.wav')
+          Copy-Item -LiteralPath (Join-Path $seed 'Kam Dridi Proof One.wav') -Destination (Join-Path $seed 'Kam Dridi Proof Duplicate.wav')
+          "PROOF_PACKAGE=$proofPackage" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install and execute one-click controller
+        shell: pwsh
+        run: |
+          $base = Join-Path $env:RUNNER_TEMP 'Echoes Autopilot Installed With Spaces'
+          $autopilot = Join-Path $base 'Autopilot'
+          $runtime = Join-Path $base 'Runtime'
+          $inbox = Join-Path $base 'Inbox'
+          $results = Join-Path $base 'Results'
+          $control = Join-Path $base 'Control'
+          $python = (Get-Command python).Source
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:PROOF_PACKAGE 'scripts/install-echoes-autopilot.ps1') `
+            -SourceRoot $env:PROOF_PACKAGE `
+            -AutopilotRoot $autopilot `
+            -RuntimeRoot $runtime `
+            -InboxRoot $inbox `
+            -ResultsRoot $results `
+            -ControlRoot $control `
+            -PythonExecutable $python `
+            -AllowNonDDrive `
+            -SkipPrerequisiteInstall `
+            -SkipScheduledTask `
+            -SkipRemotePolicy `
+            -NoOpen
+          if ($LASTEXITCODE -ne 0) { throw "One-click installation failed with exit $LASTEXITCODE" }
+          "AUTOPILOT_ROOT=$autopilot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "INBOX_ROOT=$inbox" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RESULTS_ROOT=$results" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CONTROL_ROOT=$control" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          New-Item -ItemType Directory -Force -Path 'artifacts/autopilot-proof' | Out-Null
+          Copy-Item -LiteralPath (Join-Path $control 'autopilot-report-latest.json') -Destination 'artifacts/autopilot-proof/initial-autopilot-report.json'
+          Copy-Item -LiteralPath (Join-Path $control 'Echoes-Control-Bundle-Latest.zip') -Destination 'artifacts/autopilot-proof/initial-control-bundle.zip'
+
+      - name: Prove autonomous rerun is idempotent
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:AUTOPILOT_ROOT 'Invoke-EchoesAutopilot.ps1') `
+            -AutopilotRoot $env:AUTOPILOT_ROOT `
+            -RuntimeRoot $env:RUNTIME_ROOT `
+            -InboxRoot $env:INBOX_ROOT `
+            -ResultsRoot $env:RESULTS_ROOT `
+            -ControlRoot $env:CONTROL_ROOT `
+            -PolicyPath (Join-Path $env:AUTOPILOT_ROOT 'echoes-autopilot-policy.v1.json') `
+            -SkipRemotePolicy
+          if ($LASTEXITCODE -ne 0) { throw "Autopilot rerun failed with exit $LASTEXITCODE" }
+          $jobs = @(Get-ChildItem -LiteralPath $env:RESULTS_ROOT -Directory)
+          if ($jobs.Count -ne 1) { throw "Idempotent rerun created unexpected job count: $($jobs.Count)" }
+          $rerun = Get-Content -LiteralPath (Join-Path $env:CONTROL_ROOT 'autopilot-report-latest.json') -Raw | ConvertFrom-Json
+          if ($rerun.summary.attemptedFiles -ne 0 -or $rerun.summary.failedFiles -ne 0) {
+            throw 'Idempotent rerun unexpectedly attempted or failed a job'
+          }
+
+      - name: Validate package, ledger and no-audio control bundle
+        shell: pwsh
+        run: |
+          $source = Get-ChildItem -LiteralPath $env:INBOX_ROOT -Filter '*.wav' -File | Select-Object -First 1
+          if (-not $source) { throw 'Proof source audio disappeared from the inbox' }
+          python tools/validate_echoes_autopilot.py `
+            --installation (Join-Path $env:CONTROL_ROOT 'autopilot-installation-manifest.json') `
+            --report 'artifacts/autopilot-proof/initial-autopilot-report.json' `
+            --ledger (Join-Path $env:CONTROL_ROOT 'autopilot-ledger.json') `
+            --bundle 'artifacts/autopilot-proof/initial-control-bundle.zip' `
+            --source $source.FullName `
+            --output 'artifacts/autopilot-proof/echoes-autopilot-one-click-proof.json'
+          Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'autopilot-installation-manifest.json') -Destination 'artifacts/autopilot-proof/'
+          Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'autopilot-report-latest.json') -Destination 'artifacts/autopilot-proof/rerun-autopilot-report.json'
+          Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'autopilot-ledger.json') -Destination 'artifacts/autopilot-proof/'
+          Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'Echoes-Control-Bundle-Latest.zip') -Destination 'artifacts/autopilot-proof/rerun-control-bundle.zip'
+          Copy-Item -LiteralPath (Join-Path $env:CONTROL_ROOT 'STATUS.txt') -Destination 'artifacts/autopilot-proof/'
+
+      - name: Upload one-click package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Echoes-Autopilot-OneClick-Windows
+          path: artifacts/Echoes-Autopilot-OneClick-Windows.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload autonomous control proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-autopilot-one-click-windows-proof
+          path: artifacts/autopilot-proof
+          if-no-files-found: warn
+          retention-days: 14

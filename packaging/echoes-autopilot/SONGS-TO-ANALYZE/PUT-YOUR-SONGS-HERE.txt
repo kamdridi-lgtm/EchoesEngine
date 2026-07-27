@@ -1,0 +1,4 @@
+Put WAV, MP3, FLAC, M4A, AAC or OGG files in this folder before double-clicking START-ECHOES-AUTOPILOT.cmd.
+
+The installer copies them to D:\A.I\EchoesInbox without deleting the originals.
+You may also place songs directly in D:\A.I\EchoesInbox after installation.

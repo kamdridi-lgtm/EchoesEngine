@@ -1,0 +1,33 @@
+{
+  "schema": "echoes.autopilot-policy.v1",
+  "version": "1.0.0",
+  "enabled": true,
+  "scanIntervalMinutes": 5,
+  "maxFilesPerRun": 10,
+  "declareUserSong": true,
+  "createControlBundle": true,
+  "openResultsOnInteractiveRun": false,
+  "allowedExtensions": [
+    ".wav",
+    ".mp3",
+    ".flac",
+    ".m4a",
+    ".aac",
+    ".ogg"
+  ],
+  "safety": {
+    "allowAudioUpload": false,
+    "allowSourceDeletion": false,
+    "allowArbitraryCommands": false,
+    "requireHashLedger": true,
+    "requireOperatorApprovalForExecution": true
+  },
+  "truthBoundary": {
+    "remotePolicyControlProven": false,
+    "hpOmenExecutionProven": false,
+    "userSongAnalyzed": false,
+    "audioUploadAuthorized": false,
+    "sourceDeletionAuthorized": false,
+    "autonomousExecutionProven": false
+  }
+}
