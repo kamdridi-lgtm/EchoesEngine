@@ -1,0 +1,51 @@
+{
+  "schema": "echoes.stem-runtime.v1",
+  "version": "1.0.0",
+  "status": "REAL",
+  "platform": "windows",
+  "installRoot": "D:\\A.I\\EchoesStemRuntime",
+  "python": {
+    "supported": ["3.10", "3.11"]
+  },
+  "packages": {
+    "demucs": "4.1.0",
+    "demucsWheelSha256": "4916a804702033ce934a6cdfa7e38dde03f7a7a6e85f41d0120eefe9e2966758",
+    "torch": "2.7.1",
+    "torchaudio": "2.7.1",
+    "cudaWheelIndex": "https://download.pytorch.org/whl/cu118",
+    "cpuWheelIndex": "https://download.pytorch.org/whl/cpu"
+  },
+  "model": {
+    "id": "htdemucs",
+    "signature": "955717e8",
+    "filename": "955717e8-8726e21a.th",
+    "url": "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/955717e8-8726e21a.th",
+    "sha256": "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4",
+    "sizeBytes": 84085085,
+    "license": "MIT",
+    "sources": ["drums", "bass", "other", "vocals"],
+    "sampleRate": 44100,
+    "channels": 2
+  },
+  "separation": {
+    "segmentSeconds": 6,
+    "shifts": 1,
+    "overlap": 0.25,
+    "outputBitDepth": 24,
+    "gpuPreferred": true,
+    "cpuFallback": true,
+    "sourceAudioDeletion": false,
+    "sourceAudioUpload": false
+  },
+  "truthBoundary": {
+    "packageContractDefined": true,
+    "realModelInferenceRequiredForPass": true,
+    "hpOmenExecutionProven": false,
+    "userSongSeparated": false,
+    "vocalIsolationProven": false,
+    "stemSeparationProven": false,
+    "gpuInferenceProven": false,
+    "voiceConversionProven": false,
+    "autonomousExecutionProven": false
+  }
+}
