@@ -109,7 +109,7 @@ $runtimeManifest | Add-Member -Force -NotePropertyName listeningReviewUpdate -No
 if ($null -eq $runtimeManifest.truthBoundary) {
     $runtimeManifest | Add-Member -NotePropertyName truthBoundary -NotePropertyValue ([pscustomobject]@{})
 }
-foreach ($entry in [ordered]@{
+$truthFields = [ordered]@{
     humanListeningReviewCompleted = $false
     kamDridiVocalStemApproved = $false
     vocalIsolationQualityProven = $false
@@ -117,7 +117,8 @@ foreach ($entry in [ordered]@{
     voiceConversionInputReady = $false
     voiceConversionProven = $false
     automaticApprovalAllowed = $false
-}.GetEnumerator()) {
+}
+foreach ($entry in $truthFields.GetEnumerator()) {
     $runtimeManifest.truthBoundary | Add-Member -Force -NotePropertyName $entry.Key -NotePropertyValue $entry.Value
 }
 Write-JsonAtomic $runtimeManifestPath $runtimeManifest
