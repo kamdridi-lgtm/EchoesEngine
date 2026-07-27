@@ -22,6 +22,10 @@ The controller identifies files by SHA-256, never deletes source audio, never up
 
 A constrained policy may be refreshed from the EchoesEngine GitHub repository. The policy may enable/disable processing and set safe scan limits. It cannot authorize uploads, deletion, arbitrary commands, stem separation or GPU execution.
 
+## Windows proof contract
+
+The release workflow assembles a clean ZIP without Git metadata, places two differently named audio files with the same SHA-256 in the seed folder, installs the runtime in paths containing spaces, performs one real ONNX CPU analysis, rejects the duplicate by hash, runs the controller a second time without creating another job, preserves the source files and verifies that the control bundle contains no source audio.
+
 ## Current truth boundary
 
 The package and its autonomous loop are proven on GitHub Windows runners only after the associated workflow passes. HP Omen installation, scheduled execution and Kam Dridi song analysis remain unproven until the package runs locally and its control bundle is inspected.
