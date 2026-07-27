@@ -8,6 +8,7 @@
     "supported": ["3.10", "3.11"]
   },
   "packages": {
+    "numpy": "1.26.4",
     "demucs": "4.1.0",
     "demucsWheelSha256": "4916a804702033ce934a6cdfa7e38dde03f7a7a6e85f41d0120eefe9e2966758",
     "torch": "2.7.1",
@@ -21,7 +22,7 @@
     "filename": "955717e8-8726e21a.th",
     "url": "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/955717e8-8726e21a.th",
     "sha256": "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4",
-    "sizeBytes": 84085085,
+    "sizeBytes": 84141911,
     "license": "MIT",
     "sources": ["drums", "bass", "other", "vocals"],
     "sampleRate": 44100,
