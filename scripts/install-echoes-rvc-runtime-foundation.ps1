@@ -43,6 +43,21 @@ function Invoke-External([string]$Executable, [string[]]$Arguments, [string]$Lab
     }
 }
 
+function Invoke-NativeCapture([string]$Executable, [string[]]$Arguments) {
+    $savedPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $output = & $Executable @Arguments 2>&1
+        $exitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $savedPreference
+    }
+    return [pscustomobject]@{
+        Output = @($output)
+        ExitCode = [int]$exitCode
+    }
+}
+
 function Resolve-Python312([string]$Explicit) {
     $candidates = @()
     if (-not [string]::IsNullOrWhiteSpace($Explicit)) {
@@ -168,9 +183,8 @@ if (-not $SkipDependencyInstall) {
     $requirements | Set-Content -LiteralPath $requirementsGenerated -Encoding utf8
 
     $allOutput = New-Object System.Collections.Generic.List[string]
-    $commands = @(
-        @("-m", "pip", "install", "--upgrade", "pip", "setuptools<81", "wheel")
-    )
+    $commands = @()
+    $commands += ,@("-m", "pip", "install", "--upgrade", "pip", "setuptools<81", "wheel")
     if ($useCuda) {
         $commands += ,@(
             "-m", "pip", "install",
@@ -181,19 +195,21 @@ if (-not $SkipDependencyInstall) {
     }
     $commands += ,@("-m", "pip", "install", "-r", $requirementsGenerated)
 
-    foreach ($arguments in $commands) {
-        $output = & $venvPython @arguments 2>&1
-        foreach ($line in $output) { $allOutput.Add([string]$line) }
-        if ($LASTEXITCODE -ne 0) {
+    foreach ($commandArguments in $commands) {
+        $captured = Invoke-NativeCapture $venvPython ([string[]]$commandArguments)
+        foreach ($line in $captured.Output) { $allOutput.Add([string]$line) }
+        if ($captured.ExitCode -ne 0) {
             $allOutput | Set-Content -LiteralPath $dependencyLog -Encoding utf8
-            throw "RVC dependency installation failed; see $dependencyLog"
+            throw "RVC dependency installation failed with exit code $($captured.ExitCode); see $dependencyLog"
         }
     }
     $allOutput | Set-Content -LiteralPath $dependencyLog -Encoding utf8
 
-    $torchJson = & $venvPython -c "import json,torch,torchaudio; print(json.dumps({'torch':torch.__version__,'torchaudio':torchaudio.__version__,'cudaAvailable':torch.cuda.is_available(),'cudaVersion':torch.version.cuda}))"
-    if ($LASTEXITCODE -ne 0) { throw "Installed RVC Torch/Torchaudio import proof failed" }
-    $parsedTorch = $torchJson | ConvertFrom-Json
+    $torchProbe = Invoke-NativeCapture $venvPython @("-c", "import json,torch,torchaudio; print(json.dumps({'torch':torch.__version__,'torchaudio':torchaudio.__version__,'cudaAvailable':torch.cuda.is_available(),'cudaVersion':torch.version.cuda}))")
+    if ($torchProbe.ExitCode -ne 0) { throw "Installed RVC Torch/Torchaudio import proof failed" }
+    $torchJson = @($torchProbe.Output | ForEach-Object { [string]$_ } | Where-Object { $_.Trim().StartsWith("{") } | Select-Object -Last 1)
+    if ($torchJson.Count -ne 1) { throw "Installed RVC Torch probe did not emit JSON" }
+    $parsedTorch = $torchJson[0] | ConvertFrom-Json
     $actualTorch = [string]$parsedTorch.torch
     $actualTorchaudio = [string]$parsedTorch.torchaudio
 
@@ -211,8 +227,8 @@ if (-not $SkipDependencyInstall) {
         if ($parsedTorch.cudaAvailable -eq $true -or $null -ne $parsedTorch.cudaVersion) {
             throw "CPU/DirectML RVC provider unexpectedly reports CUDA"
         }
-        & $venvPython -c "import torch_directml; print(torch_directml.__version__ if hasattr(torch_directml,'__version__') else 'available')" | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "CPU/DirectML RVC provider cannot import torch_directml" }
+        $directMlProbe = Invoke-NativeCapture $venvPython @("-c", "import torch_directml; print(torch_directml.__version__ if hasattr(torch_directml,'__version__') else 'available')")
+        if ($directMlProbe.ExitCode -ne 0) { throw "CPU/DirectML RVC provider cannot import torch_directml" }
     }
 
     $torchInfo = [ordered]@{
