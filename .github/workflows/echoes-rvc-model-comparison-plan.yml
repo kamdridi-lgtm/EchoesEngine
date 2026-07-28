@@ -1,0 +1,82 @@
+name: Echoes RVC Three-Model Comparison Plan
+
+on:
+  pull_request:
+    paths:
+      - "tools/plan_rvc_model_comparison.py"
+      - "tools/validate_rvc_model_comparison_plan.py"
+      - ".github/workflows/echoes-rvc-model-comparison-plan.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/plan_rvc_model_comparison.py"
+      - "tools/validate_rvc_model_comparison_plan.py"
+      - ".github/workflows/echoes-rvc-model-comparison-plan.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  comparison-plan-contract:
+    name: Three-model comparison plan contract (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Checkout comparison planner
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/plan_rvc_model_comparison.py
+            tools/validate_rvc_model_comparison_plan.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile comparison tools
+        run: >-
+          python -m py_compile
+          tools/plan_rvc_model_comparison.py
+          tools/validate_rvc_model_comparison_plan.py
+
+      - name: Prove fail-closed three-model comparison planning
+        run: >-
+          python tools/validate_rvc_model_comparison_plan.py
+          --tool tools/plan_rvc_model_comparison.py
+          --output artifacts/rvc-model-comparison-plan-proof.json
+
+      - name: Verify comparison truth boundary
+        shell: pwsh
+        run: |
+          $proof = Get-Content -LiteralPath 'artifacts/rvc-model-comparison-plan-proof.json' -Raw | ConvertFrom-Json
+          if ($proof.status -ne 'PASS') { throw 'RVC comparison plan proof did not pass' }
+          if ($proof.cases.validComparison.status -ne 'READY') { throw 'Valid comparison plan was not READY' }
+          if (($proof.cases.validComparison.labels -join ',') -ne '700,1000,1500') { throw 'Comparison order drifted' }
+          if ($proof.cases.mismatchedIndex -ne 'BLOCKED') { throw 'Mismatched index was not blocked' }
+          if ($proof.cases.blockedInput -ne 'BLOCKED') { throw 'Blocked input was not blocked' }
+          foreach ($field in @(
+            'realKamDridiModelsRead',
+            'userAudioRead',
+            'modelDeserializationAttempted',
+            'voiceModelLoadProven',
+            'rvcInferenceProven',
+            'voiceConversionProven',
+            'convertedAudioGenerated',
+            'executionAuthorized'
+          )) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "Comparison proof falsely promoted capability: $field" }
+          }
+
+      - name: Upload comparison-plan proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-model-comparison-plan-${{ matrix.os }}
+          path: artifacts/rvc-model-comparison-plan-proof.json
+          if-no-files-found: error
+          retention-days: 14
