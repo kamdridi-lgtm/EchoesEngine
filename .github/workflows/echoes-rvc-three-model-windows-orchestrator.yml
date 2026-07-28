@@ -1,0 +1,153 @@
+name: Echoes RVC Three-Model Windows Orchestrator
+
+on:
+  pull_request:
+    paths:
+      - "scripts/prepare-echoes-rvc-three-model-comparison.ps1"
+      - "tools/register_rvc_voice_model.py"
+      - "tools/plan_rvc_model_comparison.py"
+      - "tools/validate_rvc_three_model_windows_orchestrator.py"
+      - ".github/workflows/echoes-rvc-three-model-windows-orchestrator.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/prepare-echoes-rvc-three-model-comparison.ps1"
+      - "tools/register_rvc_voice_model.py"
+      - "tools/plan_rvc_model_comparison.py"
+      - "tools/validate_rvc_three_model_windows_orchestrator.py"
+      - ".github/workflows/echoes-rvc-three-model-windows-orchestrator.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  windows-orchestrator-contract:
+    name: Recovered three-model Windows contract
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - name: Checkout orchestrator sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/prepare-echoes-rvc-three-model-comparison.ps1
+            tools/register_rvc_voice_model.py
+            tools/plan_rvc_model_comparison.py
+            tools/validate_rvc_three_model_windows_orchestrator.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile tools and parse PowerShell 5 script
+        shell: powershell
+        run: |
+          python -m py_compile `
+            tools/register_rvc_voice_model.py `
+            tools/plan_rvc_model_comparison.py `
+            tools/validate_rvc_three_model_windows_orchestrator.py
+          $null = [scriptblock]::Create((Get-Content -LiteralPath 'scripts/prepare-echoes-rvc-three-model-comparison.ps1' -Raw))
+
+      - name: Prove registration and comparison preparation
+        shell: powershell
+        run: |
+          python tools/validate_rvc_three_model_windows_orchestrator.py `
+            --script scripts/prepare-echoes-rvc-three-model-comparison.ps1 `
+            --source-root . `
+            --output artifacts/rvc-three-model-windows-orchestrator-proof.json
+          if ($LASTEXITCODE -ne 0) { throw "Windows orchestrator proof failed: $LASTEXITCODE" }
+
+      - name: Verify proof truth boundary
+        shell: powershell
+        run: |
+          $proof = Get-Content -LiteralPath 'artifacts/rvc-three-model-windows-orchestrator-proof.json' -Raw | ConvertFrom-Json
+          if ($proof.status -ne 'PASS') { throw 'Windows orchestrator proof did not pass' }
+          if ($proof.cases.validPreparation.status -ne 'READY') { throw 'Valid preparation was not READY' }
+          if (($proof.cases.validPreparation.labels -join ',') -ne '700,1000,1500') { throw 'Prepared comparison order drifted' }
+          if ($proof.cases.missing1000Checkpoint -ne 'BLOCKED') { throw 'Missing checkpoint was not blocked' }
+          foreach ($field in @(
+            'realKamDridiModelsRead',
+            'userAudioRead',
+            'modelDeserializationAttempted',
+            'voiceModelLoadProven',
+            'rvcInferenceProven',
+            'voiceConversionProven',
+            'convertedAudioGenerated',
+            'executionAuthorized'
+          )) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "Windows orchestrator proof falsely promoted capability: $field" }
+          }
+
+      - name: Assemble clean one-click Windows package
+        shell: powershell
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP 'Echoes-RVC-700-1000-1500-Windows'
+          $artifactDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          New-Item -ItemType Directory -Force -Path `
+            $package, `
+            (Join-Path $package 'scripts'), `
+            (Join-Path $package 'tools'), `
+            $artifactDir | Out-Null
+
+          Copy-Item -LiteralPath 'scripts/prepare-echoes-rvc-three-model-comparison.ps1' -Destination (Join-Path $package 'scripts')
+          Copy-Item -LiteralPath 'tools/register_rvc_voice_model.py' -Destination (Join-Path $package 'tools')
+          Copy-Item -LiteralPath 'tools/plan_rvc_model_comparison.py' -Destination (Join-Path $package 'tools')
+
+          $starter = @'
+          @echo off
+          setlocal
+          set "ROOT=%~dp0"
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\prepare-echoes-rvc-three-model-comparison.ps1" -SourceRoot "%ROOT%" -DeclareUserOwnedModel -ConfirmOwnerConsent -AuthorizeVoiceConversion -ForbidThirdPartyImpersonation
+          if errorlevel 1 (
+            echo.
+            echo ECHOES RVC 700 1000 1500 PREPARATION FAILED
+            pause
+            exit /b 1
+          )
+          echo.
+          echo ECHOES RVC 700 1000 1500 PLAN READY
+          echo NO VOICE CONVERSION WAS EXECUTED
+          pause
+          '@
+          $starter.Trim() | Set-Content -LiteralPath (Join-Path $package 'START-ECHOES-RVC-700-1000-1500.cmd') -Encoding ascii
+
+          $readme = @'
+          ECHOES RVC 700 / 1000 / 1500 - WINDOWS
+
+          DEFAULT RECOVERED MODELS
+          D:\A.I\EchoesRvcRecovered\model_2\model_2_700e_63700s.pth
+          D:\A.I\EchoesRvcRecovered\model_2\model_2_1000e_91000s.pth
+          D:\A.I\EchoesRvcRecovered\model_2\model_2_1500e_136500s.pth
+          D:\A.I\EchoesRvcRecovered\model_2\model_2.index
+
+          REQUIREMENTS
+          1. D:\A.I\EchoesRvcRuntime must have a PASS runtime manifest.
+          2. Its pinned core-assets manifest must be VERIFIED.
+          3. D:\A.I\EchoesRvcRuntime\control\rvc-input-manifest.json must be READY.
+
+          ACTION
+          Double-click START-ECHOES-RVC-700-1000-1500.cmd.
+
+          The package registers and hashes the three user-owned checkpoints, verifies their shared index, and creates a deterministic comparison plan using RMVPE and zero pitch shift.
+
+          It does not deserialize a voice model, execute RVC inference, convert audio, generate WAV files or choose the best checkpoint.
+          '@
+          $readme.Trim() | Set-Content -LiteralPath (Join-Path $package 'README-ECHOES-RVC-700-1000-1500.txt') -Encoding utf8
+
+          $zip = Join-Path $artifactDir 'Echoes-RVC-700-1000-1500-Windows.zip'
+          Compress-Archive -LiteralPath $package -DestinationPath $zip -CompressionLevel Optimal -Force
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Echoes-RVC-700-1000-1500-Windows.zip" | Set-Content -LiteralPath (Join-Path $artifactDir 'Echoes-RVC-700-1000-1500-Windows.zip.sha256') -Encoding ascii
+
+      - name: Upload proof and one-click package
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-700-1000-1500-windows
+          path: |
+            artifacts/rvc-three-model-windows-orchestrator-proof.json
+            artifacts/Echoes-RVC-700-1000-1500-Windows.zip
+            artifacts/Echoes-RVC-700-1000-1500-Windows.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
