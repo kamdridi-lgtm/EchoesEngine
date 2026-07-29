@@ -1,0 +1,54 @@
+name: Echoes Audio Pipeline Status Board
+
+on:
+  pull_request:
+    paths:
+      - "tools/build_audio_pipeline_status.py"
+      - "tools/validate_audio_pipeline_status.py"
+      - ".github/workflows/echoes-audio-pipeline-status-board.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/build_audio_pipeline_status.py"
+      - "tools/validate_audio_pipeline_status.py"
+      - ".github/workflows/echoes-audio-pipeline-status-board.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  status-board-contract:
+    name: Audio pipeline status contract (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/build_audio_pipeline_status.py
+            tools/validate_audio_pipeline_status.py
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile status tools
+        run: python -m py_compile tools/build_audio_pipeline_status.py tools/validate_audio_pipeline_status.py
+
+      - name: Prove cross-stage status aggregation
+        run: >-
+          python tools/validate_audio_pipeline_status.py
+          --tool tools/build_audio_pipeline_status.py
+          --output artifacts/audio-pipeline-status-contract.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: echoes-audio-pipeline-status-${{ matrix.os }}
+          path: artifacts/audio-pipeline-status-contract.json
+          if-no-files-found: error
+          retention-days: 14
