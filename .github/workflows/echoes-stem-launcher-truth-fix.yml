@@ -1,0 +1,67 @@
+name: Echoes Stem Launcher Truth Fix
+
+on:
+  pull_request:
+    paths:
+      - "scripts/invoke-echoes-stem-autopilot.ps1"
+      - "tools/validate_stem_launcher_truth_fix.py"
+      - ".github/workflows/echoes-stem-launcher-truth-fix.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/invoke-echoes-stem-autopilot.ps1"
+      - "tools/validate_stem_launcher_truth_fix.py"
+      - ".github/workflows/echoes-stem-launcher-truth-fix.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  truth-fix-contract:
+    name: Stem launcher truth fix (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/invoke-echoes-stem-autopilot.ps1
+            tools/validate_stem_launcher_truth_fix.py
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile validator
+        run: python -m py_compile tools/validate_stem_launcher_truth_fix.py
+
+      - name: Validate launcher contract
+        run: >-
+          python tools/validate_stem_launcher_truth_fix.py
+          --launcher scripts/invoke-echoes-stem-autopilot.ps1
+          --output artifacts/stem-launcher-truth-fix-proof.json
+
+      - name: Parse PowerShell on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'scripts/invoke-echoes-stem-autopilot.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: echoes-stem-launcher-truth-fix-${{ matrix.os }}
+          path: artifacts/stem-launcher-truth-fix-proof.json
+          if-no-files-found: error
+          retention-days: 14
