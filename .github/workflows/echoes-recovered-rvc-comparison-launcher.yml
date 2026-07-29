@@ -4,15 +4,23 @@ on:
   pull_request:
     paths:
       - "scripts/run-recovered-rvc-comparison.ps1"
+      - "scripts/review-recovered-rvc-comparison.ps1"
+      - "tools/record_rvc_comparison_listening_review.py"
       - "tools/validate_recovered_rvc_comparison_launcher.py"
+      - "tools/validate_rvc_review_windows_launcher.py"
       - "windows/START-ECHOES-RVC-COMPARISON.cmd"
+      - "windows/CHOOSE-ECHOES-RVC-MODEL.cmd"
       - ".github/workflows/echoes-recovered-rvc-comparison-launcher.yml"
   push:
     branches: [main]
     paths:
       - "scripts/run-recovered-rvc-comparison.ps1"
+      - "scripts/review-recovered-rvc-comparison.ps1"
+      - "tools/record_rvc_comparison_listening_review.py"
       - "tools/validate_recovered_rvc_comparison_launcher.py"
+      - "tools/validate_rvc_review_windows_launcher.py"
       - "windows/START-ECHOES-RVC-COMPARISON.cmd"
+      - "windows/CHOOSE-ECHOES-RVC-MODEL.cmd"
       - ".github/workflows/echoes-recovered-rvc-comparison-launcher.yml"
 
 permissions:
@@ -29,8 +37,12 @@ jobs:
         with:
           sparse-checkout: |
             scripts/run-recovered-rvc-comparison.ps1
+            scripts/review-recovered-rvc-comparison.ps1
+            tools/record_rvc_comparison_listening_review.py
             tools/validate_recovered_rvc_comparison_launcher.py
+            tools/validate_rvc_review_windows_launcher.py
             windows/START-ECHOES-RVC-COMPARISON.cmd
+            windows/CHOOSE-ECHOES-RVC-MODEL.cmd
           sparse-checkout-cone-mode: false
 
       - name: Set up Python 3.12
@@ -38,40 +50,67 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Compile validator and parse PowerShell
+      - name: Compile validators and parse PowerShell
         shell: pwsh
         run: |
-          python -m py_compile tools/validate_recovered_rvc_comparison_launcher.py
+          python -m py_compile `
+            tools/record_rvc_comparison_listening_review.py `
+            tools/validate_recovered_rvc_comparison_launcher.py `
+            tools/validate_rvc_review_windows_launcher.py
           $null = [scriptblock]::Create((Get-Content -LiteralPath 'scripts/run-recovered-rvc-comparison.ps1' -Raw))
-          if (-not (Test-Path -LiteralPath 'windows/START-ECHOES-RVC-COMPARISON.cmd' -PathType Leaf)) { throw 'Double-click entrypoint is missing' }
+          $null = [scriptblock]::Create((Get-Content -LiteralPath 'scripts/review-recovered-rvc-comparison.ps1' -Raw))
+          foreach ($entrypoint in @('windows/START-ECHOES-RVC-COMPARISON.cmd','windows/CHOOSE-ECHOES-RVC-MODEL.cmd')) {
+            if (-not (Test-Path -LiteralPath $entrypoint -PathType Leaf)) { throw "Double-click entrypoint is missing: $entrypoint" }
+          }
 
-      - name: Prove launcher orchestration with controlled stub runtime
+      - name: Prove comparison orchestration with controlled stub runtime
         run: >-
           python tools/validate_recovered_rvc_comparison_launcher.py
           --script scripts/run-recovered-rvc-comparison.ps1
           --output artifacts/recovered-rvc-comparison-launcher-proof.json
 
-      - name: Verify proof truth boundary
+      - name: Prove one-click manual listening choice
+        run: >-
+          python tools/validate_rvc_review_windows_launcher.py
+          --script scripts/review-recovered-rvc-comparison.ps1
+          --tool tools/record_rvc_comparison_listening_review.py
+          --output artifacts/rvc-review-windows-launcher-proof.json
+
+      - name: Verify proof truth boundaries
         shell: pwsh
         run: |
-          $proof = Get-Content -LiteralPath 'artifacts/recovered-rvc-comparison-launcher-proof.json' -Raw | ConvertFrom-Json
-          if ($proof.status -ne 'PASS') { throw 'Recovered RVC launcher proof did not pass' }
-          if (($proof.cases.validOrchestration.labels -join ',') -ne '700,1000,1500') { throw 'Recovered comparison order drifted' }
-          if ($proof.cases.missingModel -ne 'BLOCKED') { throw 'Missing model was not blocked' }
+          $comparison = Get-Content -LiteralPath 'artifacts/recovered-rvc-comparison-launcher-proof.json' -Raw | ConvertFrom-Json
+          if ($comparison.status -ne 'PASS') { throw 'Recovered RVC launcher proof did not pass' }
+          if (($comparison.cases.validOrchestration.labels -join ',') -ne '700,1000,1500') { throw 'Recovered comparison order drifted' }
+          if ($comparison.cases.missingModel -ne 'BLOCKED') { throw 'Missing model was not blocked' }
           foreach ($field in @('windowsLauncherOrchestrationProven','sameInputAndIndexEnforced','threeDistinctOutputsVerified')) {
-            if ($proof.truthBoundary.$field -ne $true) { throw "Recovered launcher proof missing: $field" }
+            if ($comparison.truthBoundary.$field -ne $true) { throw "Recovered launcher proof missing: $field" }
           }
           foreach ($field in @('realKamDridiModelsLoaded','realKamDridiAudioRead','realRvcInferenceProven','realVoiceConversionProven','bestModelSelected','audioUploaded')) {
-            if ($proof.truthBoundary.$field -ne $false) { throw "Recovered launcher proof falsely promoted capability: $field" }
+            if ($comparison.truthBoundary.$field -ne $false) { throw "Recovered launcher proof falsely promoted capability: $field" }
+          }
+
+          $review = Get-Content -LiteralPath 'artifacts/rvc-review-windows-launcher-proof.json' -Raw | ConvertFrom-Json
+          if ($review.status -ne 'PASS') { throw 'RVC review Windows launcher proof did not pass' }
+          if ($review.cases.confirmedManualSelection -ne 'APPROVED') { throw 'Confirmed manual selection was not approved' }
+          if ($review.cases.missingConfirmation -ne 'BLOCKED') { throw 'Missing listening confirmation was not blocked' }
+          foreach ($field in @('windowsWrapperExecuted','threeListeningConfirmationsEnforced','manualSelectionRecorded','selectionSummaryCreated')) {
+            if ($review.truthBoundary.$field -ne $true) { throw "RVC review launcher proof missing: $field" }
+          }
+          foreach ($field in @('realKamDridiAudioPlayed','realHumanListeningPerformed','modelPromotionExecuted')) {
+            if ($review.truthBoundary.$field -ne $false) { throw "RVC review launcher falsely promoted capability: $field" }
           }
 
       - name: Assemble one-click Windows package
         shell: pwsh
         run: |
           $package = Join-Path $env:RUNNER_TEMP 'Echoes-RVC-Recovered-Comparison-Windows'
-          New-Item -ItemType Directory -Force -Path $package, (Join-Path $package 'scripts') | Out-Null
+          New-Item -ItemType Directory -Force -Path $package, (Join-Path $package 'scripts'), (Join-Path $package 'tools') | Out-Null
           Copy-Item -LiteralPath 'scripts/run-recovered-rvc-comparison.ps1' -Destination (Join-Path $package 'scripts')
+          Copy-Item -LiteralPath 'scripts/review-recovered-rvc-comparison.ps1' -Destination (Join-Path $package 'scripts')
+          Copy-Item -LiteralPath 'tools/record_rvc_comparison_listening_review.py' -Destination (Join-Path $package 'tools')
           Copy-Item -LiteralPath 'windows/START-ECHOES-RVC-COMPARISON.cmd' -Destination $package
+          Copy-Item -LiteralPath 'windows/CHOOSE-ECHOES-RVC-MODEL.cmd' -Destination $package
           $readme = @'
           ECHOES RVC RECOVERED COMPARISON - WINDOWS
 
@@ -81,13 +120,17 @@ jobs:
           D:\A.I\EchoesRvcRecovered\model_2\model_2_1500e_136500s.pth
           D:\A.I\EchoesRvcRecovered\model_2\model_2.index
 
-          ACTION
+          STEP 1
           Double-click START-ECHOES-RVC-COMPARISON.cmd and choose one vocals-only audio file.
+
+          STEP 2
+          Listen to all three WAV files, then double-click CHOOSE-ECHOES-RVC-MODEL.cmd.
+          Type 700, 1000 or 1500 and confirm that all three were heard.
 
           OUTPUT
           D:\A.I\EchoesRvcRecovered\comparison_output
 
-          The launcher uses the same source and shared index for 700, 1000 and 1500. It creates three WAV files, a playlist and a SHA-256 report. It never deletes source audio or recovered models and does not choose the winner.
+          The comparison uses the same source and shared index for all three checkpoints. The review verifies every SHA-256 and records the human decision. It never deletes source audio, modifies recovered models, chooses a winner automatically or promotes a model automatically.
           '@
           $readme.Trim() | Set-Content -LiteralPath (Join-Path $package 'README-FIRST.txt') -Encoding utf8
           $zip = Join-Path $env:GITHUB_WORKSPACE 'artifacts/Echoes-RVC-Recovered-Comparison-Windows.zip'
@@ -101,12 +144,13 @@ jobs:
           finally { $stream.Dispose() }
           "$hash  Echoes-RVC-Recovered-Comparison-Windows.zip" | Set-Content -LiteralPath 'artifacts/Echoes-RVC-Recovered-Comparison-Windows.zip.sha256' -Encoding ascii
 
-      - name: Upload recovered launcher proof and package
+      - name: Upload recovered launcher proofs and package
         uses: actions/upload-artifact@v4
         with:
           name: echoes-recovered-rvc-comparison-launcher-windows
           path: |
             artifacts/recovered-rvc-comparison-launcher-proof.json
+            artifacts/rvc-review-windows-launcher-proof.json
             artifacts/Echoes-RVC-Recovered-Comparison-Windows.zip
             artifacts/Echoes-RVC-Recovered-Comparison-Windows.zip.sha256
           if-no-files-found: error
