@@ -1,0 +1,76 @@
+name: Echoes RVC Comparison Listening Review
+
+on:
+  pull_request:
+    paths:
+      - "tools/record_rvc_comparison_listening_review.py"
+      - "tools/validate_rvc_comparison_listening_review.py"
+      - ".github/workflows/echoes-rvc-comparison-listening-review.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/record_rvc_comparison_listening_review.py"
+      - "tools/validate_rvc_comparison_listening_review.py"
+      - ".github/workflows/echoes-rvc-comparison-listening-review.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  listening-review-contract:
+    name: Manual RVC listening review contract (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Checkout listening review tools
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/record_rvc_comparison_listening_review.py
+            tools/validate_rvc_comparison_listening_review.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile listening review tools
+        run: >-
+          python -m py_compile
+          tools/record_rvc_comparison_listening_review.py
+          tools/validate_rvc_comparison_listening_review.py
+
+      - name: Prove fail-closed manual listening review
+        run: >-
+          python tools/validate_rvc_comparison_listening_review.py
+          --tool tools/record_rvc_comparison_listening_review.py
+          --output artifacts/rvc-comparison-listening-review-proof.json
+
+      - name: Verify review truth boundary
+        shell: pwsh
+        run: |
+          $proof = Get-Content -LiteralPath 'artifacts/rvc-comparison-listening-review-proof.json' -Raw | ConvertFrom-Json
+          if ($proof.status -ne 'PASS') { throw 'RVC listening review contract did not pass' }
+          if ($proof.cases.validManualSelection.status -ne 'APPROVED') { throw 'Valid manual selection was not approved' }
+          if ($proof.cases.validManualSelection.selectedLabel -ne '1000') { throw 'Manual selection drifted' }
+          if ($proof.cases.missingListeningConfirmation -ne 'BLOCKED') { throw 'Missing listening confirmation was not blocked' }
+          if ($proof.cases.tamperedOutput -ne 'BLOCKED') { throw 'Tampered comparison output was not blocked' }
+          foreach ($field in @('manualReviewContractProven','allThreeConfirmationsRequired','outputIntegrityEnforced')) {
+            if ($proof.truthBoundary.$field -ne $true) { throw "Review proof missing: $field" }
+          }
+          foreach ($field in @('realKamDridiAudioPlayed','realHumanListeningPerformed','automaticWinnerSelectionUsed','modelPromotionExecuted','audioUploaded')) {
+            if ($proof.truthBoundary.$field -ne $false) { throw "Review proof falsely promoted capability: $field" }
+          }
+
+      - name: Upload review proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoes-rvc-comparison-listening-review-${{ matrix.os }}
+          path: artifacts/rvc-comparison-listening-review-proof.json
+          if-no-files-found: error
+          retention-days: 14
