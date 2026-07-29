@@ -175,7 +175,7 @@ $inputHash = Get-Sha256 $input
 $indexHash = Get-Sha256 $indexPath
 $baseName = [IO.Path]::GetFileNameWithoutExtension($input)
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$results = New-Object System.Collections.Generic.List[object]
+$results = @()
 
 foreach ($model in $models) {
     $outputPath = Join-Path $outputDirectory ("{0}_RVC_{1}E.wav" -f $baseName, $model.Label)
@@ -201,7 +201,7 @@ foreach ($model in $models) {
     if ($outputItem.Length -le 44) {
         throw "RVC comparison output $($model.Label) is too small to be a valid WAV"
     }
-    $results.Add([pscustomobject]@{
+    $results += [pscustomobject]@{
         label = $model.Label
         modelPath = $model.Path
         modelSha256 = Get-Sha256 $model.Path
@@ -215,7 +215,7 @@ foreach ($model in $models) {
         exitCode = $exitCode
         logPath = $runLog
         status = "PASS"
-    })
+    }
 }
 
 $playlistPath = Join-Path $outputDirectory "ECOUTER-700-1000-1500.m3u8"
@@ -239,7 +239,7 @@ $report = [ordered]@{
         masteringApplied = $false
         instrumentalMixed = $false
     }
-    runs = @($results)
+    runs = $results
     playlistPath = $playlistPath
     truthBoundary = [ordered]@{
         localApplioRuntimeExecuted = $true
