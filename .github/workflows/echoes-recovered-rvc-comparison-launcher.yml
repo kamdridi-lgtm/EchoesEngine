@@ -5,12 +5,14 @@ on:
     paths:
       - "scripts/run-recovered-rvc-comparison.ps1"
       - "tools/validate_recovered_rvc_comparison_launcher.py"
+      - "windows/START-ECHOES-RVC-COMPARISON.cmd"
       - ".github/workflows/echoes-recovered-rvc-comparison-launcher.yml"
   push:
     branches: [main]
     paths:
       - "scripts/run-recovered-rvc-comparison.ps1"
       - "tools/validate_recovered_rvc_comparison_launcher.py"
+      - "windows/START-ECHOES-RVC-COMPARISON.cmd"
       - ".github/workflows/echoes-recovered-rvc-comparison-launcher.yml"
 
 permissions:
@@ -28,6 +30,7 @@ jobs:
           sparse-checkout: |
             scripts/run-recovered-rvc-comparison.ps1
             tools/validate_recovered_rvc_comparison_launcher.py
+            windows/START-ECHOES-RVC-COMPARISON.cmd
           sparse-checkout-cone-mode: false
 
       - name: Set up Python 3.12
@@ -40,6 +43,7 @@ jobs:
         run: |
           python -m py_compile tools/validate_recovered_rvc_comparison_launcher.py
           $null = [scriptblock]::Create((Get-Content -LiteralPath 'scripts/run-recovered-rvc-comparison.ps1' -Raw))
+          if (-not (Test-Path -LiteralPath 'windows/START-ECHOES-RVC-COMPARISON.cmd' -PathType Leaf)) { throw 'Double-click entrypoint is missing' }
 
       - name: Prove launcher orchestration with controlled stub runtime
         run: >-
@@ -61,10 +65,49 @@ jobs:
             if ($proof.truthBoundary.$field -ne $false) { throw "Recovered launcher proof falsely promoted capability: $field" }
           }
 
-      - name: Upload recovered launcher proof
+      - name: Assemble one-click Windows package
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP 'Echoes-RVC-Recovered-Comparison-Windows'
+          New-Item -ItemType Directory -Force -Path $package, (Join-Path $package 'scripts') | Out-Null
+          Copy-Item -LiteralPath 'scripts/run-recovered-rvc-comparison.ps1' -Destination (Join-Path $package 'scripts')
+          Copy-Item -LiteralPath 'windows/START-ECHOES-RVC-COMPARISON.cmd' -Destination $package
+          $readme = @'
+          ECHOES RVC RECOVERED COMPARISON - WINDOWS
+
+          EXPECTED MODELS
+          D:\A.I\EchoesRvcRecovered\model_2\model_2_700e_63700s.pth
+          D:\A.I\EchoesRvcRecovered\model_2\model_2_1000e_91000s.pth
+          D:\A.I\EchoesRvcRecovered\model_2\model_2_1500e_136500s.pth
+          D:\A.I\EchoesRvcRecovered\model_2\model_2.index
+
+          ACTION
+          Double-click START-ECHOES-RVC-COMPARISON.cmd and choose one vocals-only audio file.
+
+          OUTPUT
+          D:\A.I\EchoesRvcRecovered\comparison_output
+
+          The launcher uses the same source and shared index for 700, 1000 and 1500. It creates three WAV files, a playlist and a SHA-256 report. It never deletes source audio or recovered models and does not choose the winner.
+          '@
+          $readme.Trim() | Set-Content -LiteralPath (Join-Path $package 'README-FIRST.txt') -Encoding utf8
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'artifacts/Echoes-RVC-Recovered-Comparison-Windows.zip'
+          Compress-Archive -LiteralPath $package -DestinationPath $zip -CompressionLevel Optimal -Force
+          $stream = [IO.File]::OpenRead($zip)
+          try {
+            $sha = [Security.Cryptography.SHA256]::Create()
+            try { $hash = ([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-', '').ToLowerInvariant() }
+            finally { $sha.Dispose() }
+          }
+          finally { $stream.Dispose() }
+          "$hash  Echoes-RVC-Recovered-Comparison-Windows.zip" | Set-Content -LiteralPath 'artifacts/Echoes-RVC-Recovered-Comparison-Windows.zip.sha256' -Encoding ascii
+
+      - name: Upload recovered launcher proof and package
         uses: actions/upload-artifact@v4
         with:
           name: echoes-recovered-rvc-comparison-launcher-windows
-          path: artifacts/recovered-rvc-comparison-launcher-proof.json
+          path: |
+            artifacts/recovered-rvc-comparison-launcher-proof.json
+            artifacts/Echoes-RVC-Recovered-Comparison-Windows.zip
+            artifacts/Echoes-RVC-Recovered-Comparison-Windows.zip.sha256
           if-no-files-found: error
           retention-days: 14
